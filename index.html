@@ -33,105 +33,67 @@
 /* ================= CONFIG ================= */
 const MEMBERS = ["Gerald","Member 2","Member 3","Member 4","Member 5"];
 const ADMIN_PIN = "1234";
-const MONTHLY_INTEREST = 0.05;
-
-/* ================= EXPORT HELPERS ================= */
-const downloadCSV = (filename, rows) => {
-  const processRow = row =>
-    row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",");
-  const csv = rows.map(processRow).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
-};
 
 /* ================= APP ================= */
 function App() {
   const [user, setUser] = React.useState(null);
   const [data, setData] = React.useState({});
-  const [askPin, setAskPin] = React.useState(false);
-  const [pinValue, setPinValue] = React.useState("");
-  const [afterPinAction, setAfterPinAction] = React.useState(null);
+  const [logo, setLogo] = React.useState(localStorage.getItem("sacco_logo"));
+  const [photos, setPhotos] = React.useState(
+    JSON.parse(localStorage.getItem("member_photos") || "{}")
+  );
 
   /* -------- INIT -------- */
   React.useEffect(() => {
     const raw = localStorage.getItem("elites_sacco");
     let parsed = raw ? JSON.parse(raw) : {};
+
     MEMBERS.forEach(m => {
       if (!parsed[m]) parsed[m] = {};
       if (!Array.isArray(parsed[m].ledger)) parsed[m].ledger = [];
       if (!Array.isArray(parsed[m].loans)) parsed[m].loans = [];
-    });
-    if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
-    setData(parsed);
-  }, []);
 
-  /* -------- PIN -------- */
-  const requestPinThen = action => {
-    setAfterPinAction(() => action);
-    setPinValue("");
-    setAskPin(true);
-  };
-
-  const verifyPin = () => {
-    if (pinValue === ADMIN_PIN) {
-      setAskPin(false);
-      afterPinAction && afterPinAction();
-      setAfterPinAction(null);
-    } else alert("Incorrect PIN");
-  };
-
-  /* ================= EXPORT FUNCTIONS ================= */
-
-  const exportContributions = () => {
-    const rows = [
-      ["Member","Month","Expected","Paid","Late Fee","Status"]
-    ];
-    MEMBERS.forEach(m=>{
-      data[m].ledger.forEach(r=>{
-        rows.push([
-          m, r.month, r.expected, r.paid, r.lateFee, r.status
-        ]);
-      });
-    });
-    downloadCSV("elites_contributions.csv", rows);
-  };
-
-  const exportLoans = () => {
-    const rows = [
-      ["Member","Loan ID","Principal","Start Date","Current Balance","Manual Override","Repayment Date","Repayment Amount"]
-    ];
-    MEMBERS.forEach(m=>{
-      data[m].loans.forEach(l=>{
-        if(l.repayments.length===0){
-          rows.push([m,l.id,l.principal,l.startDate,l.currentBalance,l.manualOverride,"",""]);
-        } else {
-          l.repayments.forEach(r=>{
-            rows.push([m,l.id,l.principal,l.startDate,l.currentBalance,l.manualOverride,r.date,r.amount]);
-          });
+      // 🔧 Normalize loan status (fixes UNDEFINED)
+      parsed[m].loans.forEach(l => {
+        if (!l.status) {
+          l.status = l.currentBalance > 0 ? "ACTIVE" : "CLEARED";
         }
       });
     });
-    downloadCSV("elites_loans.csv", rows);
+
+    if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
+    setData(parsed);
+    localStorage.setItem("elites_sacco", JSON.stringify(parsed));
+  }, []);
+
+  /* -------- IMAGE HELPERS -------- */
+  const readImage = (file, callback) => {
+    const reader = new FileReader();
+    reader.onload = e => callback(e.target.result);
+    reader.readAsDataURL(file);
   };
 
-  const exportExpenses = () => {
-    const rows = [
-      ["Date","Description","Category","Amount"]
-    ];
-    data.expenses.forEach(e=>{
-      rows.push([e.date,e.description,e.category||"",e.amount]);
+  const uploadLogo = file => {
+    readImage(file, img => {
+      localStorage.setItem("sacco_logo", img);
+      setLogo(img);
     });
-    downloadCSV("elites_expenses.csv", rows);
+  };
+
+  const uploadPhoto = (member, file) => {
+    readImage(file, img => {
+      const updated = { ...photos, [member]: img };
+      localStorage.setItem("member_photos", JSON.stringify(updated));
+      setPhotos(updated);
+    });
   };
 
   /* -------- LOGIN -------- */
   if (!user) {
     return (
-      <div className="p-8 max-w-md mx-auto">
-        <h1 className="text-3xl font-bold text-dark mb-6 text-center">Elites SACCO</h1>
+      <div className="p-8 max-w-md mx-auto text-center">
+        {logo && <img src={logo} className="mx-auto h-20 mb-4 rounded" />}
+        <h1 className="text-3xl font-bold text-dark mb-6">Elites SACCO</h1>
         {MEMBERS.map(m => (
           <button key={m}
             className="w-full mb-3 bg-dark text-white p-3 rounded-lg hover:bg-gold"
@@ -144,44 +106,56 @@ function App() {
   }
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
-      <header className="bg-dark text-white p-4 rounded-xl mb-6 flex justify-between">
-        <h1 className="text-2xl font-bold">Elites SACCO</h1>
-        <span className="text-gold text-sm">{user.name}</span>
+    <div className="p-4 max-w-6xl mx-auto">
+      {/* ===== HEADER ===== */}
+      <header className="bg-dark text-white p-4 rounded-xl mb-6 flex items-center gap-4">
+        {logo && <img src={logo} className="h-12 rounded" />}
+        <div>
+          <h1 className="text-2xl font-bold">Elites SACCO</h1>
+          <p className="text-gold text-sm">Logged in as {user.name}</p>
+        </div>
       </header>
 
-      {user.role==="admin" && (
-        <div className="bg-white p-4 rounded-xl shadow">
-          <h2 className="font-semibold mb-4">Export Data</h2>
-
-          <button className="bg-dark text-white p-2 w-full rounded mb-2"
-            onClick={()=>requestPinThen(exportContributions)}>
-            Export Contributions
-          </button>
-
-          <button className="bg-dark text-white p-2 w-full rounded mb-2"
-            onClick={()=>requestPinThen(exportLoans)}>
-            Export Loans & Repayments
-          </button>
-
-          <button className="bg-dark text-white p-2 w-full rounded"
-            onClick={()=>requestPinThen(exportExpenses)}>
-            Export Expenses
-          </button>
+      {/* ===== LOGO UPLOAD ===== */}
+      {user.role === "admin" && (
+        <div className="bg-white p-4 rounded-xl shadow mb-6">
+          <h2 className="font-semibold mb-2">SACCO Branding</h2>
+          <label className="block mb-2">
+            Upload SACCO Logo:
+            <input type="file" accept="image/*"
+              onChange={e => uploadLogo(e.target.files[0])}
+              className="block mt-1" />
+          </label>
         </div>
       )}
 
-      {askPin && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
-          <div className="bg-white p-4 rounded-xl max-w-xs w-full">
-            <h3 className="font-bold mb-2">Admin PIN</h3>
-            <input type="password" className="border p-2 w-full mb-2"
-              value={pinValue} onChange={e=>setPinValue(e.target.value)} />
-            <button className="bg-dark text-white p-2 w-full rounded"
-              onClick={verifyPin}>Verify</button>
+      {/* ===== MEMBERS ===== */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {MEMBERS.map(m => (
+          <div key={m} className="bg-white p-4 rounded-xl shadow flex gap-4 items-center">
+            <div>
+              {photos[m] ? (
+                <img src={photos[m]} className="h-14 w-14 rounded-full object-cover" />
+              ) : (
+                <div className="h-14 w-14 rounded-full bg-gold flex items-center justify-center text-white">
+                  {m[0]}
+                </div>
+              )}
+              {user.role==="admin" && (
+                <input type="file" accept="image/*"
+                  className="text-xs mt-1"
+                  onChange={e => uploadPhoto(m, e.target.files[0])} />
+              )}
+            </div>
+            <div>
+              <h3 className="font-semibold">{m}</h3>
+              <p className="text-sm text-gray-600">
+                Loans: {data[m].loans.filter(l=>l.status==="ACTIVE").length} active
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
