@@ -40,9 +40,8 @@ const calculateLateFee = (ym, paidDate) => {
   return Math.min(weeksLate * WEEKLY_LATE_FEE, MAX_LATE_FEE);
 };
 
-const downloadCSV = (filename, rows) => {
-  const csv = rows.map(r => r.join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
+const downloadFile = (filename, content) => {
+  const blob = new Blob([content], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -57,6 +56,7 @@ function App() {
   const [data, setData] = React.useState({});
   const [activeForm, setActiveForm] = React.useState(null);
   const [ledgerMember, setLedgerMember] = React.useState(null);
+
   const [askPin, setAskPin] = React.useState(false);
   const [pinValue, setPinValue] = React.useState("");
   const [afterPinAction, setAfterPinAction] = React.useState(null);
@@ -79,6 +79,7 @@ function App() {
     localStorage.setItem("elites_sacco", JSON.stringify(newData));
   };
 
+  /* -------- PIN FLOW -------- */
   const requestPinThen = action => {
     setAfterPinAction(() => action);
     setPinValue("");
@@ -90,9 +91,33 @@ function App() {
       setAskPin(false);
       if (afterPinAction) afterPinAction();
       setAfterPinAction(null);
-    } else alert("Incorrect PIN");
+    } else {
+      alert("Incorrect PIN");
+    }
   };
 
+  /* -------- BACKUP & RESTORE -------- */
+  const backupData = () => {
+    const timestamp = new Date().toISOString().slice(0,19).replace(/:/g,"-");
+    downloadFile(`elites_sacco_backup_${timestamp}.json`, JSON.stringify(data, null, 2));
+  };
+
+  const restoreData = (file) => {
+    if (!window.confirm("This will overwrite all current data. Continue?")) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const restored = JSON.parse(e.target.result);
+        save(restored);
+        alert("Data restored successfully");
+      } catch {
+        alert("Invalid backup file");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  /* -------- LOGIN -------- */
   if (!user) {
     return (
       <div className="p-6 max-w-md mx-auto">
@@ -108,6 +133,7 @@ function App() {
     );
   }
 
+  /* -------- TOTALS -------- */
   const totals = MEMBERS.reduce((acc, m) => {
     data[m].ledger.forEach(r => {
       acc.contributions += r.paid;
@@ -120,60 +146,29 @@ function App() {
   const expenses = data.expenses.reduce((a,b)=>a+b.amount,0);
   const netBalance = totals.contributions - totals.loans - expenses;
 
-  const exportSummary = () => {
-    const rows = [
-      ["Member","Total Paid","Late Fees","Loan Balance"]
-    ];
-    MEMBERS.forEach(m => {
-      rows.push([
-        m,
-        data[m].ledger.reduce((a,b)=>a+b.paid,0),
-        data[m].ledger.reduce((a,b)=>a+b.lateFee,0),
-        data[m].loan
-      ]);
-    });
-    downloadCSV("elites_sacco_summary.csv", rows);
-  };
-
-  const exportLedger = (member) => {
-    const rows = [
-      ["Month","Expected","Paid","Late Fee","Date Paid"]
-    ];
-    data[member].ledger.forEach(r => {
-      rows.push([r.month, r.expected, r.paid, r.lateFee, r.datePaid]);
-    });
-    downloadCSV(`${member}_ledger.csv`, rows);
-  };
-
+  /* ================= UI ================= */
   return (
     <div className="p-4 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold">Elites SACCO</h1>
       <p className="text-sm mb-4">Logged in as {user.name}</p>
 
-      <div className="mb-4">
-        <button className="bg-black text-white px-3 py-1 rounded"
-          onClick={exportSummary}>
-          Export SACCO Summary (Excel)
-        </button>
-      </div>
+      {user.role === "admin" && (
+        <div className="bg-white p-3 rounded shadow mb-4">
+          <h2 className="font-semibold mb-2">Backup & Restore</h2>
+          <button className="bg-black text-white px-3 py-1 rounded mr-2"
+            onClick={backupData}>
+            Backup to File
+          </button>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {MEMBERS.map(m => (
-          <div key={m} className="bg-white p-4 rounded shadow">
-            <h2 className="font-semibold">{m}</h2>
-            <p>Total Paid: {data[m].ledger.reduce((a,b)=>a+b.paid,0)}</p>
-            <p>Late Fees: {data[m].ledger.reduce((a,b)=>a+b.lateFee,0)}</p>
-            <p>Loan Balance: {data[m].loan}</p>
+          <label className="underline cursor-pointer text-sm">
+            Restore Backup
+            <input type="file" accept=".json" hidden
+              onChange={e => requestPinThen(() => restoreData(e.target.files[0]))} />
+          </label>
+        </div>
+      )}
 
-            <button className="underline text-sm"
-              onClick={() => exportLedger(m)}>
-              Export Member Ledger (Excel)
-            </button>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-white p-4 mt-6 rounded shadow">
+      <div className="bg-white p-4 rounded shadow">
         <p>Total Contributions: {totals.contributions}</p>
         <p>Total Loans: {totals.loans}</p>
         <p>Total Expenses: {expenses}</p>
