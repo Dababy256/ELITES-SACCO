@@ -33,8 +33,7 @@
 /* ================= CONFIG ================= */
 const MEMBERS = ["Gerald","Member 2","Member 3","Member 4","Member 5"];
 const ADMIN_PIN = "1234";
-const WEEKLY_LATE_FEE = 5000;
-const MAX_LATE_FEE = 15000;
+const MONTHLY_INTEREST = 0.05;
 
 const CONTRIBUTION_RULES = [
   { from: "2024-02", to: "2024-07", amount: 80000 },
@@ -42,65 +41,102 @@ const CONTRIBUTION_RULES = [
 ];
 
 /* ================= HELPERS ================= */
-const getContributionForMonth = ym =>
-  (CONTRIBUTION_RULES.find(r => ym >= r.from && ym <= r.to) || {}).amount || 0;
+const monthsDiff = (start, end = new Date()) =>
+  (end.getFullYear() - start.getFullYear()) * 12 +
+  (end.getMonth() - start.getMonth());
 
-const calculateLateFee = (ym, paidDate) => {
-  const due = new Date(ym + "-10");
-  const paid = new Date(paidDate);
-  if (paid <= due) return 0;
-  const weeks = Math.min(Math.ceil((paid - due) / (1000*60*60*24*7)), 3);
-  return Math.min(weeks * WEEKLY_LATE_FEE, MAX_LATE_FEE);
-};
+const compound = (principal, months) =>
+  Math.round(principal * Math.pow(1 + MONTHLY_INTEREST, months));
 
 /* ================= APP ================= */
 function App() {
-  const [user,setUser] = React.useState(null);
-  const [data,setData] = React.useState({});
-  const [ledgerView,setLedgerView] = React.useState(null);
-  const [ledgerYear,setLedgerYear] = React.useState("ALL");
-  const [askPin,setAskPin] = React.useState(false);
-  const [pinValue,setPinValue] = React.useState("");
-  const [afterPinAction,setAfterPinAction] = React.useState(null);
-  const [manual,setManual] = React.useState({member:"",month:"",paid:"",date:""});
+  const [user, setUser] = React.useState(null);
+  const [data, setData] = React.useState({});
+  const [askPin, setAskPin] = React.useState(false);
+  const [pinValue, setPinValue] = React.useState("");
+  const [afterPinAction, setAfterPinAction] = React.useState(null);
 
-  React.useEffect(()=>{
+  const [loanForm, setLoanForm] = React.useState({
+    member: "",
+    principal: "",
+    startDate: "",
+    manualBalance: ""
+  });
+
+  /* -------- INIT -------- */
+  React.useEffect(() => {
     const raw = localStorage.getItem("elites_sacco");
     let parsed = raw ? JSON.parse(raw) : {};
-    MEMBERS.forEach(m=>{
-      if(!parsed[m]) parsed[m]={ledger:[],loan:0};
+
+    MEMBERS.forEach(m => {
+      if (!parsed[m]) parsed[m] = {};
+      if (!Array.isArray(parsed[m].ledger)) parsed[m].ledger = [];
+      if (!Array.isArray(parsed[m].loans)) parsed[m].loans = [];
     });
+
     setData(parsed);
     localStorage.setItem("elites_sacco", JSON.stringify(parsed));
-  },[]);
+  }, []);
 
   const save = d => {
     setData(d);
     localStorage.setItem("elites_sacco", JSON.stringify(d));
   };
 
+  /* -------- PIN -------- */
   const requestPinThen = action => {
-    setAfterPinAction(()=>action);
+    setAfterPinAction(() => action);
     setPinValue("");
     setAskPin(true);
   };
 
   const verifyPin = () => {
-    if(pinValue===ADMIN_PIN){
+    if (pinValue === ADMIN_PIN) {
       setAskPin(false);
       afterPinAction && afterPinAction();
       setAfterPinAction(null);
     } else alert("Incorrect PIN");
   };
 
-  if(!user){
+  /* -------- ADD LOAN -------- */
+  const addLoan = () => {
+    const { member, principal, startDate, manualBalance } = loanForm;
+    if (!member || !principal || !startDate) {
+      alert("Fill required fields");
+      return;
+    }
+
+    const start = new Date(startDate);
+    const months = Math.max(monthsDiff(start), 0);
+    const calculated = compound(Number(principal), months);
+
+    const loan = {
+      id: Date.now(),
+      principal: Number(principal),
+      startDate,
+      monthsElapsed: months,
+      interestRate: MONTHLY_INTEREST,
+      calculatedBalance: calculated,
+      currentBalance: manualBalance ? Number(manualBalance) : calculated,
+      manualOverride: !!manualBalance,
+      status: "ACTIVE"
+    };
+
+    const nd = { ...data };
+    nd[member].loans.push(loan);
+    save(nd);
+
+    alert("Loan recorded successfully");
+  };
+
+  if (!user) {
     return (
       <div className="p-8 max-w-md mx-auto">
         <h1 className="text-3xl font-bold text-dark mb-6 text-center">Elites SACCO</h1>
-        {MEMBERS.map(m=>(
+        {MEMBERS.map(m => (
           <button key={m}
-            className="w-full mb-3 bg-dark text-white p-3 rounded-lg hover:bg-gold transition"
-            onClick={()=>setUser({name:m,role:m==="Gerald"?"admin":"member"})}>
+            className="w-full mb-3 bg-dark text-white p-3 rounded-lg hover:bg-gold"
+            onClick={() => setUser({ name: m, role: m === "Gerald" ? "admin" : "member" })}>
             Login as {m}
           </button>
         ))}
@@ -108,119 +144,76 @@ function App() {
     );
   }
 
-  const lifetimeTotals = m =>
-    m.ledger.reduce((a,r)=>{a.paid+=r.paid;a.late+=r.lateFee;return a;},{paid:0,late:0});
+  const totalLoans = MEMBERS.reduce(
+    (sum, m) => sum + data[m].loans.reduce((a,l)=>a+l.currentBalance,0),
+    0
+  );
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <header className="bg-dark text-white p-4 rounded-xl mb-6 flex justify-between items-center">
+      <header className="bg-dark text-white p-4 rounded-xl mb-6 flex justify-between">
         <h1 className="text-2xl font-bold">Elites SACCO</h1>
-        <span className="text-sm text-gold">Logged in as {user.name}</span>
+        <span className="text-gold text-sm">{user.name}</span>
       </header>
 
-      {user.role==="admin" && (
+      {/* ===== LOAN ENTRY ===== */}
+      {user.role === "admin" && (
         <div className="bg-white border-l-4 border-gold p-4 rounded-xl mb-6">
-          <h2 className="font-semibold text-dark mb-3">Manual Contribution Entry</h2>
+          <h2 className="font-semibold mb-3">Historical / Current Loan Entry</h2>
 
           <select className="border p-2 w-full mb-2"
-            onChange={e=>setManual({...manual,member:e.target.value})}>
+            onChange={e=>setLoanForm({...loanForm,member:e.target.value})}>
             <option value="">Select Member</option>
             {MEMBERS.map(m=><option key={m}>{m}</option>)}
           </select>
 
-          <input type="month" className="border p-2 w-full mb-2"
-            onChange={e=>setManual({...manual,month:e.target.value})} />
-
-          <input type="number" placeholder="Amount paid"
+          <input type="number" placeholder="Principal amount"
             className="border p-2 w-full mb-2"
-            onChange={e=>setManual({...manual,paid:e.target.value})} />
+            onChange={e=>setLoanForm({...loanForm,principal:e.target.value})} />
 
           <input type="date" className="border p-2 w-full mb-2"
-            onChange={e=>setManual({...manual,date:e.target.value})} />
+            onChange={e=>setLoanForm({...loanForm,startDate:e.target.value})} />
+
+          <input type="number" placeholder="Manual outstanding balance (optional)"
+            className="border p-2 w-full mb-2"
+            onChange={e=>setLoanForm({...loanForm,manualBalance:e.target.value})} />
 
           <button className="bg-dark text-white p-2 w-full rounded-lg hover:bg-gold"
-            onClick={()=>requestPinThen(()=>{
-              const {member,month,paid,date}=manual;
-              if(data[member].ledger.some(r=>r.month===month)){
-                alert("Month already exists"); return;
-              }
-              const expected=getContributionForMonth(month);
-              const lateFee=calculateLateFee(month,date);
-              const nd={...data};
-              nd[member].ledger.push({
-                month,expected,paid:Number(paid),lateFee,
-                status:Number(paid)>=expected?"COMPLETE":"INCOMPLETE"
-              });
-              save(nd);
-              alert("Entry saved");
-            })}>
-            Save Entry
+            onClick={()=>requestPinThen(addLoan)}>
+            Save Loan
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {MEMBERS.map(m=>{
-          const t=lifetimeTotals(data[m]);
-          return (
-            <div key={m} className="bg-white p-4 rounded-xl shadow">
-              <h3 className="font-semibold text-dark">{m}</h3>
-              <p>Total Paid: <span className="font-semibold">{t.paid}</span></p>
-              <p>Late Fees: <span className="font-semibold text-red-600">{t.late}</span></p>
-              <button className="underline text-sm text-gold"
-                onClick={()=>{setLedgerView(m);setLedgerYear("ALL");}}>
-                View Ledger
-              </button>
-            </div>
-          );
-        })}
+      {/* ===== LOANS SUMMARY ===== */}
+      <div className="bg-white p-4 rounded-xl shadow mb-6">
+        <h2 className="font-semibold mb-2">Loans Overview</h2>
+        <p>Total Loans Outstanding: <b>{totalLoans}</b></p>
       </div>
 
-      {ledgerView && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
-          <div className="bg-white p-4 rounded-xl max-w-4xl w-full">
-            <h3 className="font-bold mb-2 text-dark">{ledgerView} Ledger</h3>
-
-            <select className="border p-2 mb-2"
-              onChange={e=>setLedgerYear(e.target.value)}>
-              <option value="ALL">All years</option>
-              {[...new Set(data[ledgerView].ledger.map(r=>r.month.slice(0,4)))]
-                .map(y=><option key={y}>{y}</option>)}
-            </select>
-
-            <table className="w-full text-sm border">
-              <thead className="bg-gold text-white">
-                <tr>
-                  <th className="border p-1">Month</th>
-                  <th className="border p-1">Expected</th>
-                  <th className="border p-1">Paid</th>
-                  <th className="border p-1">Late</th>
-                  <th className="border p-1">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data[ledgerView].ledger
-                  .filter(r=>ledgerYear==="ALL"||r.month.startsWith(ledgerYear))
-                  .map((r,i)=>(
-                  <tr key={i} className="text-center">
-                    <td className="border p-1">{r.month}</td>
-                    <td className="border p-1">{r.expected}</td>
-                    <td className="border p-1">{r.paid}</td>
-                    <td className="border p-1">{r.lateFee}</td>
-                    <td className={`border p-1 font-semibold ${r.status==="COMPLETE"?"text-green-600":"text-amber-600"}`}>
-                      {r.status}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <button className="mt-3 underline text-gold w-full"
-              onClick={()=>setLedgerView(null)}>Close</button>
+      {/* ===== MEMBER LOANS ===== */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {MEMBERS.map(m => (
+          <div key={m} className="bg-white p-4 rounded-xl shadow">
+            <h3 className="font-semibold">{m}</h3>
+            {data[m].loans.length === 0 ? (
+              <p className="text-sm text-gray-500">No loans</p>
+            ) : (
+              data[m].loans.map(l => (
+                <div key={l.id} className="border-t mt-2 pt-2 text-sm">
+                  <p>Principal: {l.principal}</p>
+                  <p>Balance: <b>{l.currentBalance}</b></p>
+                  <p className="text-xs text-gray-500">
+                    {l.manualOverride ? "Manual override" : "Auto-calculated"}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
+      {/* ===== PIN ===== */}
       {askPin && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
           <div className="bg-white p-4 rounded-xl max-w-xs w-full">
