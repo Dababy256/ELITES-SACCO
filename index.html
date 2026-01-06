@@ -24,7 +24,7 @@ const MAX_LATE_FEE = 15000;
 
 const CONTRIBUTION_RULES = [
   { from: "2024-02", to: "2024-07", amount: 80000 },
-  { from: "2024-08", to: "2025-08", amount: 100000 }
+  { from: "2024-08", to: "2025-12", amount: 100000 }
 ];
 
 /* ================= HELPERS ================= */
@@ -32,35 +32,42 @@ const getContributionForMonth = ym =>
   (CONTRIBUTION_RULES.find(r => ym >= r.from && ym <= r.to) || {}).amount || 0;
 
 const calculateLateFee = (ym, paidDate) => {
-  if (!paidDate) return 0;
   const due = new Date(ym + "-10");
   const paid = new Date(paidDate);
   if (paid <= due) return 0;
-  const weeksLate = Math.min(Math.ceil((paid - due) / (1000*60*60*24*7)), 3);
-  return Math.min(weeksLate * WEEKLY_LATE_FEE, MAX_LATE_FEE);
+  const weeks = Math.min(Math.ceil((paid - due) / (1000*60*60*24*7)), 3);
+  return Math.min(weeks * WEEKLY_LATE_FEE, MAX_LATE_FEE);
 };
 
-const downloadFile = (filename, content) => {
-  const blob = new Blob([content], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
+const monthsBetween = (start, end) => {
+  const res = [];
+  let d = new Date(start + "-01");
+  const e = new Date(end + "-01");
+  while (d <= e) {
+    res.push(d.toISOString().slice(0,7));
+    d.setMonth(d.getMonth() + 1);
+  }
+  return res;
 };
 
 /* ================= APP ================= */
 function App() {
   const [user, setUser] = React.useState(null);
   const [data, setData] = React.useState({});
-  const [activeForm, setActiveForm] = React.useState(null);
-  const [ledgerMember, setLedgerMember] = React.useState(null);
+  const [ledgerView, setLedgerView] = React.useState(null);
 
   const [askPin, setAskPin] = React.useState(false);
   const [pinValue, setPinValue] = React.useState("");
   const [afterPinAction, setAfterPinAction] = React.useState(null);
 
+  const [bulk, setBulk] = React.useState({
+    member: "",
+    start: "",
+    end: "",
+    paidLate: false
+  });
+
+  /* -------- INIT -------- */
   React.useEffect(() => {
     const raw = localStorage.getItem("elites_sacco");
     let parsed = raw ? JSON.parse(raw) : {};
@@ -74,12 +81,12 @@ function App() {
     localStorage.setItem("elites_sacco", JSON.stringify(parsed));
   }, []);
 
-  const save = newData => {
-    setData(newData);
-    localStorage.setItem("elites_sacco", JSON.stringify(newData));
+  const save = d => {
+    setData(d);
+    localStorage.setItem("elites_sacco", JSON.stringify(d));
   };
 
-  /* -------- PIN FLOW -------- */
+  /* -------- PIN -------- */
   const requestPinThen = action => {
     setAfterPinAction(() => action);
     setPinValue("");
@@ -91,30 +98,42 @@ function App() {
       setAskPin(false);
       if (afterPinAction) afterPinAction();
       setAfterPinAction(null);
-    } else {
-      alert("Incorrect PIN");
+    } else alert("Incorrect PIN");
+  };
+
+  /* -------- BULK ENTRY -------- */
+  const runBulkEntry = () => {
+    const { member, start, end, paidLate } = bulk;
+    if (!member || !start || !end) {
+      alert("Fill all fields");
+      return;
     }
-  };
 
-  /* -------- BACKUP & RESTORE -------- */
-  const backupData = () => {
-    const timestamp = new Date().toISOString().slice(0,19).replace(/:/g,"-");
-    downloadFile(`elites_sacco_backup_${timestamp}.json`, JSON.stringify(data, null, 2));
-  };
+    const months = monthsBetween(start, end);
+    const nd = { ...data };
+    let added = 0, skipped = 0;
 
-  const restoreData = (file) => {
-    if (!window.confirm("This will overwrite all current data. Continue?")) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const restored = JSON.parse(e.target.result);
-        save(restored);
-        alert("Data restored successfully");
-      } catch {
-        alert("Invalid backup file");
+    months.forEach(ym => {
+      if (nd[member].ledger.some(r => r.month === ym)) {
+        skipped++;
+        return;
       }
-    };
-    reader.readAsText(file);
+      const expected = getContributionForMonth(ym);
+      const datePaid = paidLate ? `${ym}-25` : `${ym}-10`;
+      const lateFee = paidLate ? calculateLateFee(ym, datePaid) : 0;
+
+      nd[member].ledger.push({
+        month: ym,
+        expected,
+        paid: expected,
+        lateFee,
+        datePaid
+      });
+      added++;
+    });
+
+    save(nd);
+    alert(`${added} month(s) added, ${skipped} skipped`);
   };
 
   /* -------- LOGIN -------- */
@@ -134,63 +153,110 @@ function App() {
   }
 
   /* -------- TOTALS -------- */
-  const totals = MEMBERS.reduce((acc, m) => {
-    data[m].ledger.forEach(r => {
-      acc.contributions += r.paid;
-      acc.lateFees += r.lateFee;
+  const totals = MEMBERS.reduce((a,m)=>{
+    data[m].ledger.forEach(r=>{
+      a.contributions += r.paid;
+      a.lateFees += r.lateFee;
     });
-    acc.loans += data[m].loan;
-    return acc;
-  }, { contributions: 0, lateFees: 0, loans: 0 });
+    a.loans += data[m].loan;
+    return a;
+  },{contributions:0,lateFees:0,loans:0});
 
-  const expenses = data.expenses.reduce((a,b)=>a+b.amount,0);
-  const netBalance = totals.contributions - totals.loans - expenses;
-
-  /* ================= UI ================= */
   return (
     <div className="p-4 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold">Elites SACCO</h1>
-      <p className="text-sm mb-4">Logged in as {user.name}</p>
+      <h1 className="text-3xl font-bold mb-2">Elites SACCO</h1>
+      <p className="mb-4 text-sm">Logged in as {user.name}</p>
 
-      {user.role === "admin" && (
-        <div className="bg-white p-3 rounded shadow mb-4">
-          <h2 className="font-semibold mb-2">Backup & Restore</h2>
-          <button className="bg-black text-white px-3 py-1 rounded mr-2"
-            onClick={backupData}>
-            Backup to File
-          </button>
+      {/* ===== HISTORICAL BULK ENTRY ===== */}
+      {user.role==="admin" && (
+        <div className="bg-white p-4 rounded shadow mb-6">
+          <h2 className="font-semibold mb-2">Historical Contribution Entry (Bulk)</h2>
 
-          <label className="underline cursor-pointer text-sm">
-            Restore Backup
-            <input type="file" accept=".json" hidden
-              onChange={e => requestPinThen(() => restoreData(e.target.files[0]))} />
+          <select className="border p-1 w-full mb-2"
+            onChange={e=>setBulk({...bulk,member:e.target.value})}>
+            <option value="">Select Member</option>
+            {MEMBERS.map(m=><option key={m}>{m}</option>)}
+          </select>
+
+          <div className="flex gap-2 mb-2">
+            <input type="month" className="border p-1 w-1/2"
+              onChange={e=>setBulk({...bulk,start:e.target.value})}/>
+            <input type="month" className="border p-1 w-1/2"
+              onChange={e=>setBulk({...bulk,end:e.target.value})}/>
+          </div>
+
+          <label className="text-sm block mb-2">
+            <input type="checkbox"
+              onChange={e=>setBulk({...bulk,paidLate:e.target.checked})}/> Paid late
           </label>
+
+          <button className="bg-black text-white p-2 w-full rounded"
+            onClick={()=>requestPinThen(runBulkEntry)}>
+            Apply Bulk Entry
+          </button>
         </div>
       )}
 
-      <div className="bg-white p-4 rounded shadow">
-        <p>Total Contributions: {totals.contributions}</p>
-        <p>Total Loans: {totals.loans}</p>
-        <p>Total Expenses: {expenses}</p>
-        <p className="font-bold">Net Balance: {netBalance}</p>
+      {/* ===== MEMBERS ===== */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {MEMBERS.map(m=>(
+          <div key={m} className="bg-white p-4 rounded shadow">
+            <h3 className="font-semibold">{m}</h3>
+            <p>Total Paid: {data[m].ledger.reduce((a,b)=>a+b.paid,0)}</p>
+            <p>Late Fees: {data[m].ledger.reduce((a,b)=>a+b.lateFee,0)}</p>
+            <button className="underline text-sm"
+              onClick={()=>setLedgerView(m)}>
+              View Ledger
+            </button>
+          </div>
+        ))}
       </div>
 
-      {askPin && (
+      {/* ===== LEDGER ===== */}
+      {ledgerView && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
-          <div className="bg-white p-4 rounded max-w-xs w-full">
-            <h3 className="font-bold mb-2">Enter Admin PIN</h3>
-            <input type="password"
-              className="border p-2 w-full mb-2"
-              value={pinValue}
-              onChange={e=>setPinValue(e.target.value)} />
-            <button className="bg-black text-white p-2 w-full rounded"
-              onClick={verifyPin}>
-              Verify
-            </button>
+          <div className="bg-white p-4 rounded max-w-3xl w-full">
+            <h3 className="font-bold mb-2">{ledgerView} Ledger</h3>
+            <table className="w-full text-sm border">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="border p-1">Month</th>
+                  <th className="border p-1">Expected</th>
+                  <th className="border p-1">Paid</th>
+                  <th className="border p-1">Late Fee</th>
+                  <th className="border p-1">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data[ledgerView].ledger.map((r,i)=>(
+                  <tr key={i}>
+                    <td className="border p-1">{r.month}</td>
+                    <td className="border p-1">{r.expected}</td>
+                    <td className="border p-1">{r.paid}</td>
+                    <td className="border p-1">{r.lateFee}</td>
+                    <td className="border p-1">{r.datePaid}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <button className="mt-2 underline w-full"
+              onClick={()=>setLedgerView(null)}>Close</button>
           </div>
         </div>
       )}
 
+      {/* ===== PIN ===== */}
+      {askPin && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
+          <div className="bg-white p-4 rounded max-w-xs w-full">
+            <h3 className="font-bold mb-2">Enter Admin PIN</h3>
+            <input type="password" className="border p-2 w-full mb-2"
+              value={pinValue} onChange={e=>setPinValue(e.target.value)} />
+            <button className="bg-black text-white p-2 w-full rounded"
+              onClick={verifyPin}>Verify</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
