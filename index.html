@@ -16,7 +16,9 @@
 
 <script type="text/babel">
 
+/* ------------------ CONFIG ------------------ */
 const MEMBERS = ["Gerald","Member 2","Member 3","Member 4","Member 5"];
+const DEFAULT_ADMIN_PIN = "1234";
 const WEEKLY_LATE_FEE = 5000;
 const MAX_LATE_FEE = 15000;
 const LOAN_INTEREST = 0.05;
@@ -26,6 +28,7 @@ const CONTRIBUTION_RULES = [
   { from: "2024-08", to: "2025-08", amount: 100000 }
 ];
 
+/* ------------------ HELPERS ------------------ */
 const getContributionForMonth = ym =>
   (CONTRIBUTION_RULES.find(r => ym >= r.from && ym <= r.to) || {}).amount || 0;
 
@@ -47,23 +50,46 @@ const calculateLoanBalance = (principal, startDate) => {
   return Math.round(b);
 };
 
+/* ------------------ APP ------------------ */
 function App() {
   const [user,setUser] = React.useState(null);
   const [data,setData] = React.useState({});
   const [form,setForm] = React.useState(null);
+  const [pinPrompt,setPinPrompt] = React.useState(null);
+  const [pinInput,setPinInput] = React.useState("");
 
   React.useEffect(()=>{
     const s = localStorage.getItem("elites_sacco");
+    const p = localStorage.getItem("admin_pin");
+    if(!p) localStorage.setItem("admin_pin", DEFAULT_ADMIN_PIN);
+
     if(s) setData(JSON.parse(s));
     else {
-      const d = {}; MEMBERS.forEach(m=>d[m]={contributions:0,lateFees:0,loan:0});
-      d.expenses=[]; save(d);
+      const d = {};
+      MEMBERS.forEach(m=>d[m]={contributions:0,lateFees:0,loan:0});
+      d.expenses=[];
+      save(d);
     }
   },[]);
 
   const save = d => {
     setData(d);
     localStorage.setItem("elites_sacco", JSON.stringify(d));
+  };
+
+  const requirePin = (action) => {
+    setPinPrompt({ action });
+    setPinInput("");
+  };
+
+  const verifyPin = () => {
+    const savedPin = localStorage.getItem("admin_pin");
+    if(pinInput === savedPin){
+      pinPrompt.action();
+      setPinPrompt(null);
+    } else {
+      alert("Incorrect PIN");
+    }
   };
 
   if(!user){
@@ -103,15 +129,15 @@ function App() {
             {user.role==="admin" && (
               <div className="mt-2 space-y-1">
                 <button className="w-full bg-green-600 text-white p-1 rounded"
-                  onClick={()=>setForm({type:"contribution",member:m})}>
+                  onClick={()=>requirePin(()=>setForm({type:"contribution",member:m}))}>
                   Add Contribution
                 </button>
                 <button className="w-full bg-blue-600 text-white p-1 rounded"
-                  onClick={()=>setForm({type:"loan",member:m})}>
+                  onClick={()=>requirePin(()=>setForm({type:"loan",member:m}))}>
                   Add Loan
                 </button>
                 <button className="w-full bg-gray-700 text-white p-1 rounded"
-                  onClick={()=>setForm({type:"repay",member:m})}>
+                  onClick={()=>requirePin(()=>setForm({type:"repay",member:m}))}>
                   Record Repayment
                 </button>
               </div>
@@ -127,6 +153,7 @@ function App() {
         <p className="font-bold">Net Balance: {totals.contrib - totals.loans - totals.expenses}</p>
       </div>
 
+      {/* FORMS */}
       {form && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
           <div className="bg-white p-4 rounded max-w-sm w-full">
@@ -177,6 +204,28 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* PIN MODAL */}
+      {pinPrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white p-4 rounded max-w-xs w-full">
+            <h3 className="font-bold mb-2">Enter Admin PIN</h3>
+            <input
+              type="password"
+              className="border p-2 w-full mb-2"
+              value={pinInput}
+              onChange={e=>setPinInput(e.target.value)}
+            />
+            <button className="bg-black text-white p-2 w-full rounded" onClick={verifyPin}>
+              Verify
+            </button>
+            <button className="mt-2 w-full underline" onClick={()=>setPinPrompt(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
