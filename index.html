@@ -68,10 +68,11 @@ function App() {
 
   if(!user){
     return (
-      <div class="p-6 max-w-md mx-auto">
-        <h1 class="text-2xl font-bold mb-4">Elites SACCO Login</h1>
+      <div className="p-6 max-w-md mx-auto">
+        <h1 className="text-2xl font-bold mb-4">Elites SACCO Login</h1>
         {MEMBERS.map(m=>(
-          <button key={m} class="w-full mb-2 bg-black text-white p-2 rounded"
+          <button key={m}
+            className="w-full mb-2 bg-black text-white p-2 rounded"
             onClick={()=>setUser({name:m,role:m==="Gerald"?"admin":"member"})}>
             Login as {m}
           </button>
@@ -87,29 +88,29 @@ function App() {
   };
 
   return (
-    <div class="p-4 max-w-4xl mx-auto">
-      <h1 class="text-3xl font-bold">Elites SACCO</h1>
-      <p class="text-sm mb-4">Logged in as {user.name}</p>
+    <div className="p-4 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold">Elites SACCO</h1>
+      <p className="text-sm mb-4">Logged in as {user.name}</p>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {MEMBERS.map(m=>(
-          <div key={m} class="bg-white p-4 rounded shadow">
-            <h2 class="font-semibold">{m}</h2>
+          <div key={m} className="bg-white p-4 rounded shadow">
+            <h2 className="font-semibold">{m}</h2>
             <p>Contributions: {data[m].contributions}</p>
             <p>Late Fees: {data[m].lateFees}</p>
             <p>Loan: {data[m].loan}</p>
 
             {user.role==="admin" && (
-              <div class="mt-2 space-y-1">
-                <button class="w-full bg-green-600 text-white p-1 rounded"
+              <div className="mt-2 space-y-1">
+                <button className="w-full bg-green-600 text-white p-1 rounded"
                   onClick={()=>setForm({type:"contribution",member:m})}>
                   Add Contribution
                 </button>
-                <button class="w-full bg-blue-600 text-white p-1 rounded"
+                <button className="w-full bg-blue-600 text-white p-1 rounded"
                   onClick={()=>setForm({type:"loan",member:m})}>
                   Add Loan
                 </button>
-                <button class="w-full bg-gray-700 text-white p-1 rounded"
+                <button className="w-full bg-gray-700 text-white p-1 rounded"
                   onClick={()=>setForm({type:"repay",member:m})}>
                   Record Repayment
                 </button>
@@ -119,18 +120,69 @@ function App() {
         ))}
       </div>
 
-      <div class="bg-white p-4 mt-6 rounded shadow">
+      <div className="bg-white p-4 mt-6 rounded shadow">
         <p>Total Contributions: {totals.contrib}</p>
         <p>Total Loans: {totals.loans}</p>
         <p>Total Expenses: {totals.expenses}</p>
-        <p class="font-bold">Net Balance: {totals.contrib - totals.loans - totals.expenses}</p>
+        <p className="font-bold">Net Balance: {totals.contrib - totals.loans - totals.expenses}</p>
       </div>
 
       {form && (
-        <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-          <div class="bg-white p-4 rounded max-w-sm w-full">
-            <h3 class="font-bold mb-2">{form.type.toUpperCase()} – {form.member}</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white p-4 rounded max-w-sm w-full">
+            <h3 className="font-bold mb-2">{form.type.toUpperCase()} – {form.member}</h3>
 
             {form.type==="contribution" && (
               <>
-                <input type="month" cl
+                <input type="month" id="ym" className="border p-1 w-full mb-2"/>
+                <input type="date" id="date" className="border p-1 w-full mb-2"/>
+                <button className="bg-green-600 text-white p-2 w-full rounded"
+                  onClick={()=>{
+                    const exp=getContributionForMonth(ym.value);
+                    const fee=calculateLateFee(ym.value,date.value);
+                    const nd={...data};
+                    nd[form.member].contributions+=exp;
+                    nd[form.member].lateFees+=fee;
+                    save(nd); setForm(null);
+                  }}>Save</button>
+              </>
+            )}
+
+            {form.type==="loan" && (
+              <>
+                <input type="number" id="amt" className="border p-1 w-full mb-2"/>
+                <input type="date" id="ld" className="border p-1 w-full mb-2"/>
+                <button className="bg-blue-600 text-white p-2 w-full rounded"
+                  onClick={()=>{
+                    const nd={...data};
+                    nd[form.member].loan+=calculateLoanBalance(+amt.value,ld.value);
+                    save(nd); setForm(null);
+                  }}>Save</button>
+              </>
+            )}
+
+            {form.type==="repay" && (
+              <>
+                <input type="number" id="rp" className="border p-1 w-full mb-2"/>
+                <button className="bg-gray-700 text-white p-2 w-full rounded"
+                  onClick={()=>{
+                    const nd={...data};
+                    nd[form.member].loan=Math.max(nd[form.member].loan-+rp.value,0);
+                    save(nd); setForm(null);
+                  }}>Save</button>
+              </>
+            )}
+
+            <button className="mt-2 w-full underline" onClick={()=>setForm(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+
+</script>
+</body>
+</html>
