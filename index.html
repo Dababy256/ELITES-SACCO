@@ -1,26 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Elites SACCO</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            gold: '#B08D57',
-            goldlight: '#F3E9D2',
-            dark: '#111111'
-          }
-        }
+<meta charset="UTF-8" />
+<title>Elites SACCO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        gold: "#B08D57",
+        goldlight: "#F3E9D2",
+        dark: "#111111"
       }
     }
-  </script>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  }
+}
+</script>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 
 <body class="bg-goldlight">
@@ -28,32 +30,55 @@
 
 <script type="text/babel">
 
+/* ================= CONFIG ================= */
 const MEMBERS = ["Gerald","Member 2","Member 3","Member 4","Member 5"];
 const ADMIN_PIN = "1234";
+const INTEREST = 0.05;
 
+/* ================= HELPERS ================= */
+const monthsBetween = (start) => {
+  const s = new Date(start);
+  const e = new Date();
+  return Math.max(
+    (e.getFullYear()-s.getFullYear())*12 + (e.getMonth()-s.getMonth()),
+    0
+  );
+};
+
+const compound = (p,m)=>Math.round(p*Math.pow(1+INTEREST,m));
+
+/* ================= APP ================= */
 function App(){
   const [user,setUser]=React.useState(null);
   const [data,setData]=React.useState({});
+  const [logo,setLogo]=React.useState(localStorage.getItem("sacco_logo"));
+  const [photos,setPhotos]=React.useState(JSON.parse(localStorage.getItem("member_photos")||"{}"));
   const [frozen,setFrozen]=React.useState(localStorage.getItem("sacco_frozen")==="true");
   const [askPin,setAskPin]=React.useState(false);
   const [pin,setPin]=React.useState("");
   const [afterPin,setAfterPin]=React.useState(null);
 
+  /* ===== INIT ===== */
   React.useEffect(()=>{
     const raw=localStorage.getItem("elites_sacco");
-    let parsed=raw?JSON.parse(raw):{};
+    let d=raw?JSON.parse(raw):{};
     MEMBERS.forEach(m=>{
-      if(!parsed[m]) parsed[m]={ledger:[],loans:[]};
+      if(!d[m]) d[m]={ledger:[],loans:[]};
+      d[m].loans.forEach(l=>{
+        if(!l.status) l.status=l.currentBalance>0?"ACTIVE":"CLEARED";
+      });
     });
-    if(!Array.isArray(parsed.expenses)) parsed.expenses=[];
-    setData(parsed);
+    if(!Array.isArray(d.expenses)) d.expenses=[];
+    setData(d);
+    localStorage.setItem("elites_sacco",JSON.stringify(d));
   },[]);
 
-  const save=(d)=>{
+  const save=d=>{
     setData(d);
     localStorage.setItem("elites_sacco",JSON.stringify(d));
   };
 
+  /* ===== PIN ===== */
   const requirePin=(action)=>{
     setAfterPin(()=>action);
     setPin("");
@@ -65,15 +90,25 @@ function App(){
       setAskPin(false);
       afterPin && afterPin();
       setAfterPin(null);
-    } else alert("Incorrect PIN");
+    } else alert("Wrong PIN");
   };
 
+  /* ===== IMAGE ===== */
+  const readImg=(file,cb)=>{
+    const r=new FileReader();
+    r.onload=e=>cb(e.target.result);
+    r.readAsDataURL(file);
+  };
+
+  /* ===== LOGIN ===== */
   if(!user){
     return (
       <div className="p-8 max-w-md mx-auto text-center">
+        {logo && <img src={logo} className="h-20 mx-auto mb-4 rounded" />}
         <h1 className="text-3xl font-bold mb-6">Elites SACCO</h1>
         {MEMBERS.map(m=>(
-          <button key={m} className="w-full mb-3 bg-dark text-white p-3 rounded"
+          <button key={m}
+            className="w-full mb-3 bg-dark text-white p-3 rounded"
             onClick={()=>setUser({name:m,role:m==="Gerald"?"admin":"member"})}>
             Login as {m}
           </button>
@@ -82,84 +117,103 @@ function App(){
     );
   }
 
+  const totals={
+    loans: MEMBERS.reduce((s,m)=>s+data[m].loans.reduce((a,l)=>a+l.currentBalance,0),0),
+    expenses: data.expenses.reduce((a,e)=>a+e.amount,0)
+  };
+
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <header className="bg-dark text-white p-4 rounded-xl mb-4 flex justify-between">
-        <div>
+
+      {/* HEADER */}
+      <header className="bg-dark text-white p-4 rounded-xl mb-4 flex items-center gap-4">
+        {logo && <img src={logo} className="h-12 rounded" />}
+        <div className="flex-1">
           <h1 className="text-2xl font-bold">Elites SACCO</h1>
-          <p className="text-gold text-sm">Logged in as {user.name}</p>
+          <p className="text-gold text-sm">{user.name}</p>
         </div>
         <span className={`px-2 py-1 rounded ${frozen?"bg-red-600":"bg-green-600"}`}>
-          {frozen?"SYSTEM FROZEN":"SYSTEM ACTIVE"}
+          {frozen?"FROZEN":"ACTIVE"}
         </span>
       </header>
 
+      {/* ADMIN CONTROL */}
       {user.role==="admin" && (
-        <div className="bg-white p-3 rounded mb-4">
+        <div className="bg-white p-3 rounded mb-4 space-y-2">
+          <input type="file" accept="image/*"
+            onChange={e=>readImg(e.target.files[0],img=>{
+              localStorage.setItem("sacco_logo",img);
+              setLogo(img);
+            })}/>
           {!frozen ? (
             <button className="bg-red-700 text-white p-2 w-full rounded"
-              onClick={()=>requirePin(()=>{localStorage.setItem("sacco_frozen","true");setFrozen(true);})}>
-              Freeze System
-            </button>
-          ) : (
+              onClick={()=>requirePin(()=>{
+                localStorage.setItem("sacco_frozen","true");
+                setFrozen(true);
+              })}>Freeze System</button>
+          ):(
             <button className="bg-green-700 text-white p-2 w-full rounded"
-              onClick={()=>requirePin(()=>{localStorage.setItem("sacco_frozen","false");setFrozen(false);})}>
-              Unfreeze System
-            </button>
+              onClick={()=>requirePin(()=>{
+                localStorage.setItem("sacco_frozen","false");
+                setFrozen(false);
+              })}>Unfreeze System</button>
           )}
         </div>
       )}
 
+      {/* DASHBOARD */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+        <div className="bg-white p-4 rounded">Loans: <b>{totals.loans}</b></div>
+        <div className="bg-white p-4 rounded">Expenses: <b>{totals.expenses}</b></div>
+        <div className="bg-white p-4 rounded">Net: <b>{-totals.loans-totals.expenses}</b></div>
+      </div>
+
+      {/* MEMBERS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {MEMBERS.map(m=>(
           <div key={m} className="bg-white p-4 rounded shadow">
-            <h3 className="font-semibold mb-2">{m}</h3>
+            <div className="flex gap-3 items-center mb-2">
+              {photos[m]?
+                <img src={photos[m]} className="h-12 w-12 rounded-full"/>:
+                <div className="h-12 w-12 rounded-full bg-gold flex items-center justify-center text-white">{m[0]}</div>
+              }
+              {user.role==="admin" &&
+                <input type="file" accept="image/*"
+                  onChange={e=>readImg(e.target.files[0],img=>{
+                    const p={...photos,[m]:img};
+                    setPhotos(p);
+                    localStorage.setItem("member_photos",JSON.stringify(p));
+                  })}/>
+              }
+              <h3 className="font-semibold">{m}</h3>
+            </div>
 
+            {/* LEDGER */}
             {data[m].ledger.map((r,i)=>(
-              <div key={i} className="border-b py-1 text-sm flex justify-between">
+              <div key={i} className="text-sm flex justify-between border-b py-1">
                 <span>{r.month} – {r.paid}</span>
                 {user.role==="admin" && !frozen && (
-                  <div className="space-x-2">
-                    <button className="text-blue-600"
-                      onClick={()=>requirePin(()=>{
-                        const nd={...data};
-                        const newPaid=Number(prompt("New amount",r.paid));
-                        nd[m].ledger[i].paid=newPaid;
-                        save(nd);
-                      })}>
-                      ✏️
-                    </button>
-                    <button className="text-red-600"
-                      onClick={()=>requirePin(()=>{
-                        if(confirm("Delete this entry?")){
-                          const nd={...data};
-                          nd[m].ledger.splice(i,1);
-                          save(nd);
-                        }
-                      })}>
-                      🗑️
-                    </button>
-                  </div>
+                  <button className="text-red-600"
+                    onClick={()=>requirePin(()=>{
+                      const d={...data};
+                      d[m].ledger.splice(i,1);
+                      save(d);
+                    })}>🗑️</button>
                 )}
               </div>
             ))}
 
+            {/* LOANS */}
             {data[m].loans.map((l,i)=>(
               <div key={i} className="text-sm mt-2">
-                Loan: {l.currentBalance}
+                Loan: <b>{l.currentBalance}</b> ({l.status})
                 {user.role==="admin" && !frozen && (
-                  <span className="ml-2">
-                    <button className="text-red-600"
-                      onClick={()=>requirePin(()=>{
-                        if(confirm("Delete loan?")){
-                          const nd={...data};
-                          nd[m].loans.splice(i,1);
-                          save(nd);
-                        }
-                      })}>
-                      🗑️
-                    </button>
-                  </span>
+                  <button className="text-red-600 ml-2"
+                    onClick={()=>requirePin(()=>{
+                      const d={...data};
+                      d[m].loans.splice(i,1);
+                      save(d);
+                    })}>🗑️</button>
                 )}
               </div>
             ))}
@@ -167,9 +221,10 @@ function App(){
         ))}
       </div>
 
+      {/* PIN */}
       {askPin && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
-          <div className="bg-white p-4 rounded max-w-xs w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <div className="bg-white p-4 rounded w-64">
             <h3 className="font-bold mb-2">Admin PIN</h3>
             <input type="password" className="border p-2 w-full mb-2"
               value={pin} onChange={e=>setPin(e.target.value)} />
@@ -178,6 +233,7 @@ function App(){
           </div>
         </div>
       )}
+
     </div>
   );
 }
