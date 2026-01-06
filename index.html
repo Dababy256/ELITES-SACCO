@@ -55,16 +55,17 @@ function App() {
   const [user, setUser] = React.useState(null);
   const [data, setData] = React.useState({});
   const [ledgerView, setLedgerView] = React.useState(null);
+  const [ledgerYear, setLedgerYear] = React.useState("ALL");
 
   const [askPin, setAskPin] = React.useState(false);
   const [pinValue, setPinValue] = React.useState("");
   const [afterPinAction, setAfterPinAction] = React.useState(null);
 
-  const [bulk, setBulk] = React.useState({
+  const [manual, setManual] = React.useState({
     member: "",
-    start: "",
-    end: "",
-    paidLate: false
+    month: "",
+    paid: "",
+    date: ""
   });
 
   /* -------- INIT -------- */
@@ -76,7 +77,6 @@ function App() {
       if (!Array.isArray(parsed[m].ledger)) parsed[m].ledger = [];
       if (typeof parsed[m].loan !== "number") parsed[m].loan = 0;
     });
-    if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
     setData(parsed);
     localStorage.setItem("elites_sacco", JSON.stringify(parsed));
   }, []);
@@ -101,39 +101,34 @@ function App() {
     } else alert("Incorrect PIN");
   };
 
-  /* -------- BULK ENTRY -------- */
-  const runBulkEntry = () => {
-    const { member, start, end, paidLate } = bulk;
-    if (!member || !start || !end) {
+  /* -------- MANUAL ENTRY -------- */
+  const runManualEntry = () => {
+    const { member, month, paid, date } = manual;
+    if (!member || !month || !paid || !date) {
       alert("Fill all fields");
       return;
     }
 
-    const months = monthsBetween(start, end);
+    if (data[member].ledger.some(r => r.month === month)) {
+      alert("This month already exists for this member");
+      return;
+    }
+
+    const expected = getContributionForMonth(month);
+    const lateFee = calculateLateFee(month, date);
+
     const nd = { ...data };
-    let added = 0, skipped = 0;
-
-    months.forEach(ym => {
-      if (nd[member].ledger.some(r => r.month === ym)) {
-        skipped++;
-        return;
-      }
-      const expected = getContributionForMonth(ym);
-      const datePaid = paidLate ? `${ym}-25` : `${ym}-10`;
-      const lateFee = paidLate ? calculateLateFee(ym, datePaid) : 0;
-
-      nd[member].ledger.push({
-        month: ym,
-        expected,
-        paid: expected,
-        lateFee,
-        datePaid
-      });
-      added++;
+    nd[member].ledger.push({
+      month,
+      expected,
+      paid: Number(paid),
+      lateFee,
+      datePaid: date,
+      status: Number(paid) >= expected ? "COMPLETE" : "INCOMPLETE"
     });
 
     save(nd);
-    alert(`${added} month(s) added, ${skipped} skipped`);
+    alert("Manual entry added");
   };
 
   /* -------- LOGIN -------- */
@@ -153,70 +148,77 @@ function App() {
   }
 
   /* -------- TOTALS -------- */
-  const totals = MEMBERS.reduce((a,m)=>{
-    data[m].ledger.forEach(r=>{
-      a.contributions += r.paid;
-      a.lateFees += r.lateFee;
-    });
-    a.loans += data[m].loan;
-    return a;
-  },{contributions:0,lateFees:0,loans:0});
+  const lifetimeTotals = m =>
+    m.ledger.reduce((a,r)=>{
+      a.expected += r.expected;
+      a.paid += r.paid;
+      a.late += r.lateFee;
+      return a;
+    },{expected:0,paid:0,late:0});
 
   return (
-    <div className="p-4 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">Elites SACCO</h1>
-      <p className="mb-4 text-sm">Logged in as {user.name}</p>
+    <div className="p-4 max-w-6xl mx-auto">
+      <h1 className="text-3xl font-bold mb-4">Elites SACCO</h1>
 
-      {/* ===== HISTORICAL BULK ENTRY ===== */}
+      {/* ===== MANUAL ENTRY ===== */}
       {user.role==="admin" && (
         <div className="bg-white p-4 rounded shadow mb-6">
-          <h2 className="font-semibold mb-2">Historical Contribution Entry (Bulk)</h2>
+          <h2 className="font-semibold mb-2">Manual Contribution Entry</h2>
 
           <select className="border p-1 w-full mb-2"
-            onChange={e=>setBulk({...bulk,member:e.target.value})}>
+            onChange={e=>setManual({...manual,member:e.target.value})}>
             <option value="">Select Member</option>
             {MEMBERS.map(m=><option key={m}>{m}</option>)}
           </select>
 
-          <div className="flex gap-2 mb-2">
-            <input type="month" className="border p-1 w-1/2"
-              onChange={e=>setBulk({...bulk,start:e.target.value})}/>
-            <input type="month" className="border p-1 w-1/2"
-              onChange={e=>setBulk({...bulk,end:e.target.value})}/>
-          </div>
+          <input type="month" className="border p-1 w-full mb-2"
+            onChange={e=>setManual({...manual,month:e.target.value})} />
 
-          <label className="text-sm block mb-2">
-            <input type="checkbox"
-              onChange={e=>setBulk({...bulk,paidLate:e.target.checked})}/> Paid late
-          </label>
+          <input type="number" placeholder="Amount paid"
+            className="border p-1 w-full mb-2"
+            onChange={e=>setManual({...manual,paid:e.target.value})} />
+
+          <input type="date" className="border p-1 w-full mb-2"
+            onChange={e=>setManual({...manual,date:e.target.value})} />
 
           <button className="bg-black text-white p-2 w-full rounded"
-            onClick={()=>requestPinThen(runBulkEntry)}>
-            Apply Bulk Entry
+            onClick={()=>requestPinThen(runManualEntry)}>
+            Save Manual Entry
           </button>
         </div>
       )}
 
       {/* ===== MEMBERS ===== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {MEMBERS.map(m=>(
-          <div key={m} className="bg-white p-4 rounded shadow">
-            <h3 className="font-semibold">{m}</h3>
-            <p>Total Paid: {data[m].ledger.reduce((a,b)=>a+b.paid,0)}</p>
-            <p>Late Fees: {data[m].ledger.reduce((a,b)=>a+b.lateFee,0)}</p>
-            <button className="underline text-sm"
-              onClick={()=>setLedgerView(m)}>
-              View Ledger
-            </button>
-          </div>
-        ))}
+        {MEMBERS.map(m=>{
+          const totals = lifetimeTotals(data[m]);
+          return (
+            <div key={m} className="bg-white p-4 rounded shadow">
+              <h3 className="font-semibold">{m}</h3>
+              <p>Total Paid: {totals.paid}</p>
+              <p>Total Late Fees: {totals.late}</p>
+              <button className="underline text-sm"
+                onClick={()=>{setLedgerView(m);setLedgerYear("ALL");}}>
+                View Ledger
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {/* ===== LEDGER ===== */}
       {ledgerView && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
-          <div className="bg-white p-4 rounded max-w-3xl w-full">
+          <div className="bg-white p-4 rounded max-w-4xl w-full">
             <h3 className="font-bold mb-2">{ledgerView} Ledger</h3>
+
+            <select className="border p-1 mb-2"
+              onChange={e=>setLedgerYear(e.target.value)}>
+              <option value="ALL">All years</option>
+              {[...new Set(data[ledgerView].ledger.map(r=>r.month.slice(0,4)))]
+                .map(y=><option key={y}>{y}</option>)}
+            </select>
+
             <table className="w-full text-sm border">
               <thead className="bg-gray-100">
                 <tr>
@@ -224,21 +226,24 @@ function App() {
                   <th className="border p-1">Expected</th>
                   <th className="border p-1">Paid</th>
                   <th className="border p-1">Late Fee</th>
-                  <th className="border p-1">Date</th>
+                  <th className="border p-1">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {data[ledgerView].ledger.map((r,i)=>(
+                {data[ledgerView].ledger
+                  .filter(r=>ledgerYear==="ALL" || r.month.startsWith(ledgerYear))
+                  .map((r,i)=>(
                   <tr key={i}>
                     <td className="border p-1">{r.month}</td>
                     <td className="border p-1">{r.expected}</td>
                     <td className="border p-1">{r.paid}</td>
                     <td className="border p-1">{r.lateFee}</td>
-                    <td className="border p-1">{r.datePaid}</td>
+                    <td className="border p-1">{r.status}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
             <button className="mt-2 underline w-full"
               onClick={()=>setLedgerView(null)}>Close</button>
           </div>
