@@ -35,13 +35,17 @@ const MEMBERS = ["Gerald","Member 2","Member 3","Member 4","Member 5"];
 const ADMIN_PIN = "1234";
 const MONTHLY_INTEREST = 0.05;
 
-/* ================= HELPERS ================= */
-const monthsDiff = (start, end = new Date()) =>
-  (end.getFullYear() - start.getFullYear()) * 12 +
-  (end.getMonth() - start.getMonth());
-
-const compound = (principal, months) =>
-  Math.round(principal * Math.pow(1 + MONTHLY_INTEREST, months));
+/* ================= EXPORT HELPERS ================= */
+const downloadCSV = (filename, rows) => {
+  const processRow = row =>
+    row.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",");
+  const csv = rows.map(processRow).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+};
 
 /* ================= APP ================= */
 function App() {
@@ -50,18 +54,6 @@ function App() {
   const [askPin, setAskPin] = React.useState(false);
   const [pinValue, setPinValue] = React.useState("");
   const [afterPinAction, setAfterPinAction] = React.useState(null);
-
-  const [loanForm, setLoanForm] = React.useState({
-    member: "", principal: "", startDate: "", manualBalance: ""
-  });
-
-  const [repaymentForm, setRepaymentForm] = React.useState({
-    member: "", loanId: "", amount: "", date: ""
-  });
-
-  const [expenseForm, setExpenseForm] = React.useState({
-    amount: "", date: "", description: "", category: ""
-  });
 
   /* -------- INIT -------- */
   React.useEffect(() => {
@@ -74,13 +66,7 @@ function App() {
     });
     if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
     setData(parsed);
-    localStorage.setItem("elites_sacco", JSON.stringify(parsed));
   }, []);
-
-  const save = d => {
-    setData(d);
-    localStorage.setItem("elites_sacco", JSON.stringify(d));
-  };
 
   /* -------- PIN -------- */
   const requestPinThen = action => {
@@ -97,69 +83,51 @@ function App() {
     } else alert("Incorrect PIN");
   };
 
-  /* -------- ADD LOAN -------- */
-  const addLoan = () => {
-    const { member, principal, startDate, manualBalance } = loanForm;
-    if (!member || !principal || !startDate) {
-      alert("Fill required fields"); return;
-    }
-    const months = Math.max(monthsDiff(new Date(startDate)), 0);
-    const calculated = compound(Number(principal), months);
+  /* ================= EXPORT FUNCTIONS ================= */
 
-    const loan = {
-      id: Date.now(),
-      principal: Number(principal),
-      startDate,
-      monthsElapsed: months,
-      interestRate: MONTHLY_INTEREST,
-      calculatedBalance: calculated,
-      currentBalance: manualBalance ? Number(manualBalance) : calculated,
-      manualOverride: !!manualBalance,
-      status: "ACTIVE",
-      repayments: []
-    };
-
-    const nd = { ...data };
-    nd[member].loans.push(loan);
-    save(nd);
-    alert("Loan recorded");
-  };
-
-  /* -------- REPAYMENT -------- */
-  const addRepayment = () => {
-    const { member, loanId, amount, date } = repaymentForm;
-    if (!member || !loanId || !amount || !date) {
-      alert("Fill all fields"); return;
-    }
-
-    const nd = { ...data };
-    const loan = nd[member].loans.find(l => l.id === Number(loanId));
-    loan.repayments.push({ amount: Number(amount), date });
-    loan.currentBalance = Math.max(loan.currentBalance - Number(amount), 0);
-    if (loan.currentBalance === 0) loan.status = "CLEARED";
-
-    save(nd);
-    alert("Repayment recorded");
-  };
-
-  /* -------- EXPENSE -------- */
-  const addExpense = () => {
-    const { amount, date, description, category } = expenseForm;
-    if (!amount || !date || !description) {
-      alert("Fill required fields"); return;
-    }
-    const nd = { ...data };
-    nd.expenses.push({
-      id: Date.now(),
-      amount: Number(amount),
-      date,
-      description,
-      category
+  const exportContributions = () => {
+    const rows = [
+      ["Member","Month","Expected","Paid","Late Fee","Status"]
+    ];
+    MEMBERS.forEach(m=>{
+      data[m].ledger.forEach(r=>{
+        rows.push([
+          m, r.month, r.expected, r.paid, r.lateFee, r.status
+        ]);
+      });
     });
-    save(nd);
-    alert("Expense recorded");
+    downloadCSV("elites_contributions.csv", rows);
   };
 
+  const exportLoans = () => {
+    const rows = [
+      ["Member","Loan ID","Principal","Start Date","Current Balance","Manual Override","Repayment Date","Repayment Amount"]
+    ];
+    MEMBERS.forEach(m=>{
+      data[m].loans.forEach(l=>{
+        if(l.repayments.length===0){
+          rows.push([m,l.id,l.principal,l.startDate,l.currentBalance,l.manualOverride,"",""]);
+        } else {
+          l.repayments.forEach(r=>{
+            rows.push([m,l.id,l.principal,l.startDate,l.currentBalance,l.manualOverride,r.date,r.amount]);
+          });
+        }
+      });
+    });
+    downloadCSV("elites_loans.csv", rows);
+  };
+
+  const exportExpenses = () => {
+    const rows = [
+      ["Date","Description","Category","Amount"]
+    ];
+    data.expenses.forEach(e=>{
+      rows.push([e.date,e.description,e.category||"",e.amount]);
+    });
+    downloadCSV("elites_expenses.csv", rows);
+  };
+
+  /* -------- LOGIN -------- */
   if (!user) {
     return (
       <div className="p-8 max-w-md mx-auto">
@@ -175,79 +143,34 @@ function App() {
     );
   }
 
-  const totalLoans = MEMBERS.reduce(
-    (sum, m) => sum + data[m].loans.reduce((a,l)=>a+l.currentBalance,0), 0
-  );
-  const totalExpenses = data.expenses.reduce((a,e)=>a+e.amount,0);
-
   return (
-    <div className="p-4 max-w-6xl mx-auto">
-      <header className="bg-dark text-white p-4 rounded-xl mb-6">
+    <div className="p-4 max-w-5xl mx-auto">
+      <header className="bg-dark text-white p-4 rounded-xl mb-6 flex justify-between">
         <h1 className="text-2xl font-bold">Elites SACCO</h1>
-        <p className="text-gold text-sm">{user.name}</p>
+        <span className="text-gold text-sm">{user.name}</span>
       </header>
 
-      {/* ===== DASHBOARD ===== */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-xl shadow">Loans: <b>{totalLoans}</b></div>
-        <div className="bg-white p-4 rounded-xl shadow">Expenses: <b>{totalExpenses}</b></div>
-        <div className="bg-white p-4 rounded-xl shadow">Net Balance: <b>{- totalLoans - totalExpenses}</b></div>
-      </div>
-
-      {/* ===== ADMIN FORMS ===== */}
       {user.role==="admin" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-xl">
-            <h3 className="font-semibold mb-2">Add Loan</h3>
-            <select className="border p-2 w-full mb-2"
-              onChange={e=>setLoanForm({...loanForm,member:e.target.value})}>
-              <option value="">Member</option>
-              {MEMBERS.map(m=><option key={m}>{m}</option>)}
-            </select>
-            <input className="border p-2 w-full mb-2" placeholder="Principal"
-              onChange={e=>setLoanForm({...loanForm,principal:e.target.value})}/>
-            <input type="date" className="border p-2 w-full mb-2"
-              onChange={e=>setLoanForm({...loanForm,startDate:e.target.value})}/>
-            <input className="border p-2 w-full mb-2" placeholder="Manual balance (optional)"
-              onChange={e=>setLoanForm({...loanForm,manualBalance:e.target.value})}/>
-            <button className="bg-dark text-white p-2 w-full rounded"
-              onClick={()=>requestPinThen(addLoan)}>Save Loan</button>
-          </div>
+        <div className="bg-white p-4 rounded-xl shadow">
+          <h2 className="font-semibold mb-4">Export Data</h2>
 
-          <div className="bg-white p-4 rounded-xl">
-            <h3 className="font-semibold mb-2">Record Repayment</h3>
-            <select className="border p-2 w-full mb-2"
-              onChange={e=>setRepaymentForm({...repaymentForm,member:e.target.value})}>
-              <option value="">Member</option>
-              {MEMBERS.map(m=><option key={m}>{m}</option>)}
-            </select>
-            <input className="border p-2 w-full mb-2" placeholder="Loan ID"
-              onChange={e=>setRepaymentForm({...repaymentForm,loanId:e.target.value})}/>
-            <input className="border p-2 w-full mb-2" placeholder="Amount"
-              onChange={e=>setRepaymentForm({...repaymentForm,amount:e.target.value})}/>
-            <input type="date" className="border p-2 w-full mb-2"
-              onChange={e=>setRepaymentForm({...repaymentForm,date:e.target.value})}/>
-            <button className="bg-dark text-white p-2 w-full rounded"
-              onClick={()=>requestPinThen(addRepayment)}>Save Repayment</button>
-          </div>
+          <button className="bg-dark text-white p-2 w-full rounded mb-2"
+            onClick={()=>requestPinThen(exportContributions)}>
+            Export Contributions
+          </button>
 
-          <div className="bg-white p-4 rounded-xl">
-            <h3 className="font-semibold mb-2">Add Expense</h3>
-            <input className="border p-2 w-full mb-2" placeholder="Amount"
-              onChange={e=>setExpenseForm({...expenseForm,amount:e.target.value})}/>
-            <input type="date" className="border p-2 w-full mb-2"
-              onChange={e=>setExpenseForm({...expenseForm,date:e.target.value})}/>
-            <input className="border p-2 w-full mb-2" placeholder="Description"
-              onChange={e=>setExpenseForm({...expenseForm,description:e.target.value})}/>
-            <input className="border p-2 w-full mb-2" placeholder="Category"
-              onChange={e=>setExpenseForm({...expenseForm,category:e.target.value})}/>
-            <button className="bg-dark text-white p-2 w-full rounded"
-              onClick={()=>requestPinThen(addExpense)}>Save Expense</button>
-          </div>
+          <button className="bg-dark text-white p-2 w-full rounded mb-2"
+            onClick={()=>requestPinThen(exportLoans)}>
+            Export Loans & Repayments
+          </button>
+
+          <button className="bg-dark text-white p-2 w-full rounded"
+            onClick={()=>requestPinThen(exportExpenses)}>
+            Export Expenses
+          </button>
         </div>
       )}
 
-      {/* ===== PIN ===== */}
       {askPin && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
           <div className="bg-white p-4 rounded-xl max-w-xs w-full">
