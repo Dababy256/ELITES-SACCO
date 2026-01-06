@@ -5,23 +5,18 @@
   <title>Elites SACCO</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- React -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-
-  <!-- Babel -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-gray-100">
 
+<body class="bg-gray-100">
 <div id="root"></div>
 
 <script type="text/babel">
 
-const MEMBERS = ["Gerald", "Member 2", "Member 3", "Member 4", "Member 5"];
+const MEMBERS = ["Gerald","Member 2","Member 3","Member 4","Member 5"];
 const WEEKLY_LATE_FEE = 5000;
 const MAX_LATE_FEE = 15000;
 const LOAN_INTEREST = 0.05;
@@ -31,67 +26,53 @@ const CONTRIBUTION_RULES = [
   { from: "2024-08", to: "2025-08", amount: 100000 }
 ];
 
-function getContributionForMonth(ym) {
-  const rule = CONTRIBUTION_RULES.find(r => ym >= r.from && ym <= r.to);
-  return rule ? rule.amount : 0;
-}
+const getContributionForMonth = ym =>
+  (CONTRIBUTION_RULES.find(r => ym >= r.from && ym <= r.to) || {}).amount || 0;
 
-function calculateLateFee(ym, paidDate) {
+const calculateLateFee = (ym, paidDate) => {
   if (!paidDate) return 0;
   const due = new Date(ym + "-10");
   const paid = new Date(paidDate);
   if (paid <= due) return 0;
-  const daysLate = Math.floor((paid - due) / (1000 * 60 * 60 * 24));
-  const weeks = Math.min(Math.ceil(daysLate / 7), 3);
+  const weeks = Math.min(Math.ceil((paid - due) / (1000*60*60*24*7)), 3);
   return Math.min(weeks * WEEKLY_LATE_FEE, MAX_LATE_FEE);
-}
+};
 
-function calculateLoanBalance(principal, startDate) {
-  const start = new Date(startDate);
-  const now = new Date();
-  let months =
-    (now.getFullYear() - start.getFullYear()) * 12 +
-    (now.getMonth() - start.getMonth());
-  months = Math.max(months, 0);
-  let balance = principal;
-  for (let i = 0; i < months; i++) {
-    balance *= (1 + LOAN_INTEREST);
-  }
-  return Math.round(balance);
-}
+const calculateLoanBalance = (principal, startDate) => {
+  const s = new Date(startDate), n = new Date();
+  let m = (n.getFullYear()-s.getFullYear())*12 + (n.getMonth()-s.getMonth());
+  m = Math.max(m,0);
+  let b = principal;
+  for(let i=0;i<m;i++) b *= 1+LOAN_INTEREST;
+  return Math.round(b);
+};
 
 function App() {
-  const [user, setUser] = React.useState(null);
-  const [data, setData] = React.useState({});
+  const [user,setUser] = React.useState(null);
+  const [data,setData] = React.useState({});
+  const [form,setForm] = React.useState(null);
 
-  React.useEffect(() => {
-    const saved = localStorage.getItem("elites_sacco");
-    if (saved) {
-      setData(JSON.parse(saved));
-    } else {
-      const init = {};
-      MEMBERS.forEach(m => {
-        init[m] = { contributions: 0, loan: 0, lateFees: 0 };
-      });
-      init.expenses = [];
-      setData(init);
-      localStorage.setItem("elites_sacco", JSON.stringify(init));
+  React.useEffect(()=>{
+    const s = localStorage.getItem("elites_sacco");
+    if(s) setData(JSON.parse(s));
+    else {
+      const d = {}; MEMBERS.forEach(m=>d[m]={contributions:0,lateFees:0,loan:0});
+      d.expenses=[]; save(d);
     }
-  }, []);
+  },[]);
 
-  function save(newData) {
-    setData(newData);
-    localStorage.setItem("elites_sacco", JSON.stringify(newData));
-  }
+  const save = d => {
+    setData(d);
+    localStorage.setItem("elites_sacco", JSON.stringify(d));
+  };
 
-  if (!user) {
+  if(!user){
     return (
-      <div className="p-6 max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Elites SACCO Login</h1>
-        {MEMBERS.map(m => (
-          <button key={m}
-            onClick={() => setUser({ name: m, role: m === "Gerald" ? "admin" : "member" })}
-            className="w-full mb-2 bg-black text-white p-2 rounded">
+      <div class="p-6 max-w-md mx-auto">
+        <h1 class="text-2xl font-bold mb-4">Elites SACCO Login</h1>
+        {MEMBERS.map(m=>(
+          <button key={m} class="w-full mb-2 bg-black text-white p-2 rounded"
+            onClick={()=>setUser({name:m,role:m==="Gerald"?"admin":"member"})}>
             Login as {m}
           </button>
         ))}
@@ -100,70 +81,36 @@ function App() {
   }
 
   const totals = {
-    contributions: Object.values(data).filter(v => v.contributions)
-      .reduce((a,b)=>a+b.contributions,0),
-    loans: Object.values(data).filter(v => v.loan)
-      .reduce((a,b)=>a+b.loan,0),
-    expenses: (data.expenses || []).reduce((a,b)=>a+b.amount,0)
+    contrib:Object.values(data).reduce((a,b)=>a+(b.contributions||0),0),
+    loans:Object.values(data).reduce((a,b)=>a+(b.loan||0),0),
+    expenses:(data.expenses||[]).reduce((a,b)=>a+b.amount,0)
   };
 
-  const net = totals.contributions - totals.loans - totals.expenses;
-
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-extrabold">Elites SACCO</h1>
-      <p className="text-sm text-gray-600 mb-4">Logged in as {user.name}</p>
+    <div class="p-4 max-w-4xl mx-auto">
+      <h1 class="text-3xl font-bold">Elites SACCO</h1>
+      <p class="text-sm mb-4">Logged in as {user.name}</p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {MEMBERS.map(m => (
-          <div key={m} className="bg-white p-4 rounded-xl shadow">
-            <h2 className="font-bold mb-2">{m}</h2>
-            <p>Contributions: {data[m]?.contributions || 0}</p>
-            <p>Late Fees: {data[m]?.lateFees || 0}</p>
-            <p>Loan Balance: {data[m]?.loan || 0}</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {MEMBERS.map(m=>(
+          <div key={m} class="bg-white p-4 rounded shadow">
+            <h2 class="font-semibold">{m}</h2>
+            <p>Contributions: {data[m].contributions}</p>
+            <p>Late Fees: {data[m].lateFees}</p>
+            <p>Loan: {data[m].loan}</p>
 
-            <button
-              className="text-sm underline mt-2"
-              onClick={() => alert(
-                `Member: ${m}\nContributions: ${data[m]?.contributions}\nLate Fees: ${data[m]?.lateFees}\nLoan: ${data[m]?.loan}`
-              )}>
-              View Ledger
-            </button>
-
-            {user.role === "admin" && (
-              <div className="mt-3 space-y-2">
-                <button className="w-full bg-green-600 text-white p-1 rounded"
-                  onClick={() => {
-                    const ym = prompt("Month (YYYY-MM)");
-                    const paid = prompt("Payment date (YYYY-MM-DD)");
-                    const expected = getContributionForMonth(ym);
-                    const fee = calculateLateFee(ym, paid);
-                    const newData = {...data};
-                    newData[m].contributions += expected;
-                    newData[m].lateFees += fee;
-                    save(newData);
-                  }}>
+            {user.role==="admin" && (
+              <div class="mt-2 space-y-1">
+                <button class="w-full bg-green-600 text-white p-1 rounded"
+                  onClick={()=>setForm({type:"contribution",member:m})}>
                   Add Contribution
                 </button>
-
-                <button className="w-full bg-blue-600 text-white p-1 rounded"
-                  onClick={() => {
-                    const amt = Number(prompt("Loan amount"));
-                    const date = prompt("Loan start date (YYYY-MM-DD)");
-                    const newData = {...data};
-                    newData[m].loan += calculateLoanBalance(amt, date);
-                    save(newData);
-                  }}>
+                <button class="w-full bg-blue-600 text-white p-1 rounded"
+                  onClick={()=>setForm({type:"loan",member:m})}>
                   Add Loan
                 </button>
-
-                <button className="w-full bg-gray-700 text-white p-1 rounded"
-                  onClick={() => {
-                    const amt = Number(prompt("Repayment amount"));
-                    const newData = {...data};
-                    newData[m].loan = Math.max(newData[m].loan - amt, 0);
-                    save(newData);
-                  }}>
+                <button class="w-full bg-gray-700 text-white p-1 rounded"
+                  onClick={()=>setForm({type:"repay",member:m})}>
                   Record Repayment
                 </button>
               </div>
@@ -172,32 +119,18 @@ function App() {
         ))}
       </div>
 
-      <div className="bg-white p-4 rounded-xl shadow mt-6">
-        <h2 className="font-bold mb-2">Group Summary</h2>
-        <p>Total Contributions: {totals.contributions}</p>
+      <div class="bg-white p-4 mt-6 rounded shadow">
+        <p>Total Contributions: {totals.contrib}</p>
         <p>Total Loans: {totals.loans}</p>
         <p>Total Expenses: {totals.expenses}</p>
-        <p className="font-semibold mt-2">Net Balance: {net}</p>
-
-        {user.role === "admin" && (
-          <button className="mt-3 bg-black text-white p-2 rounded"
-            onClick={() => {
-              const amt = Number(prompt("Expense amount"));
-              const desc = prompt("Description");
-              const newData = {...data};
-              newData.expenses.push({ amount: amt, description: desc });
-              save(newData);
-            }}>
-            Add Expense
-          </button>
-        )}
+        <p class="font-bold">Net Balance: {totals.contrib - totals.loans - totals.expenses}</p>
       </div>
-    </div>
-  );
-}
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+      {form && (
+        <div class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+          <div class="bg-white p-4 rounded max-w-sm w-full">
+            <h3 class="font-bold mb-2">{form.type.toUpperCase()} – {form.member}</h3>
 
-</script>
-</body>
-</html>
+            {form.type==="contribution" && (
+              <>
+                <input type="month" cl
