@@ -16,19 +16,18 @@
 
 <script type="text/babel">
 
-/* ========== CONFIG ========== */
+/* ================= CONFIG ================= */
 const MEMBERS = ["Gerald","Member 2","Member 3","Member 4","Member 5"];
-const DEFAULT_ADMIN_PIN = "1234";
+const ADMIN_PIN = "1234";
 const WEEKLY_LATE_FEE = 5000;
 const MAX_LATE_FEE = 15000;
-const LOAN_INTEREST = 0.05;
 
 const CONTRIBUTION_RULES = [
   { from: "2024-02", to: "2024-07", amount: 80000 },
   { from: "2024-08", to: "2025-08", amount: 100000 }
 ];
 
-/* ========== HELPERS ========== */
+/* ================= HELPERS ================= */
 const getContributionForMonth = ym =>
   (CONTRIBUTION_RULES.find(r => ym >= r.from && ym <= r.to) || {}).amount || 0;
 
@@ -37,73 +36,76 @@ const calculateLateFee = (ym, paidDate) => {
   const due = new Date(ym + "-10");
   const paid = new Date(paidDate);
   if (paid <= due) return 0;
-  const weeks = Math.min(Math.ceil((paid - due) / (1000*60*60*24*7)), 3);
-  return Math.min(weeks * WEEKLY_LATE_FEE, MAX_LATE_FEE);
+  const weeksLate = Math.min(Math.ceil((paid - due) / (1000*60*60*24*7)), 3);
+  return Math.min(weeksLate * WEEKLY_LATE_FEE, MAX_LATE_FEE);
 };
 
-/* ========== APP ========== */
+/* ================= APP ================= */
 function App() {
-  const [user,setUser] = React.useState(null);
-  const [data,setData] = React.useState({});
-  const [form,setForm] = React.useState(null);
-  const [ledgerView,setLedgerView] = React.useState(null);
-  const [pinPrompt,setPinPrompt] = React.useState(null);
-  const [pinInput,setPinInput] = React.useState("");
+  const [user, setUser] = React.useState(null);
+  const [data, setData] = React.useState({});
+  const [activeForm, setActiveForm] = React.useState(null);
+  const [ledgerMember, setLedgerMember] = React.useState(null);
 
-  React.useEffect(()=>{
+  const [askPin, setAskPin] = React.useState(false);
+  const [pinValue, setPinValue] = React.useState("");
+  const [afterPinAction, setAfterPinAction] = React.useState(null);
+
+  /* -------- INIT & MIGRATION -------- */
+  React.useEffect(() => {
     const raw = localStorage.getItem("elites_sacco");
-    if(!localStorage.getItem("admin_pin")){
-      localStorage.setItem("admin_pin", DEFAULT_ADMIN_PIN);
-    }
+    let parsed;
 
-    if(raw){
-      const parsed = JSON.parse(raw);
-
-      // 🔑 MIGRATION FIX
-      MEMBERS.forEach(m=>{
-        if(!parsed[m]) parsed[m] = {};
-        if(!Array.isArray(parsed[m].ledger)) parsed[m].ledger = [];
-        if(typeof parsed[m].loan !== "number") parsed[m].loan = 0;
-      });
-
-      if(!Array.isArray(parsed.expenses)) parsed.expenses = [];
-
-      setData(parsed);
-      localStorage.setItem("elites_sacco", JSON.stringify(parsed));
+    if (raw) {
+      parsed = JSON.parse(raw);
     } else {
-      const init = {};
-      MEMBERS.forEach(m=>init[m]={ledger:[],loan:0});
-      init.expenses=[];
-      setData(init);
-      localStorage.setItem("elites_sacco", JSON.stringify(init));
+      parsed = {};
     }
-  },[]);
 
-  const save = d => {
-    setData(d);
-    localStorage.setItem("elites_sacco", JSON.stringify(d));
+    MEMBERS.forEach(m => {
+      if (!parsed[m]) parsed[m] = {};
+      if (!Array.isArray(parsed[m].ledger)) parsed[m].ledger = [];
+      if (typeof parsed[m].loan !== "number") parsed[m].loan = 0;
+    });
+
+    if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
+
+    setData(parsed);
+    localStorage.setItem("elites_sacco", JSON.stringify(parsed));
+  }, []);
+
+  const save = newData => {
+    setData(newData);
+    localStorage.setItem("elites_sacco", JSON.stringify(newData));
   };
 
-  const requirePin = action => {
-    setPinInput("");
-    setPinPrompt({ action });
+  /* -------- PIN FLOW (FIXED) -------- */
+  const requestPinThen = action => {
+    setAfterPinAction(() => action);
+    setPinValue("");
+    setAskPin(true);
   };
 
   const verifyPin = () => {
-    if(pinInput === localStorage.getItem("admin_pin")){
-      pinPrompt.action();
-      setPinPrompt(null);
-    } else alert("Incorrect PIN");
+    if (pinValue === ADMIN_PIN) {
+      setAskPin(false);
+      if (afterPinAction) afterPinAction();
+      setAfterPinAction(null);
+    } else {
+      alert("Incorrect PIN");
+    }
   };
 
-  if(!user){
+  /* -------- LOGIN -------- */
+  if (!user) {
     return (
       <div className="p-6 max-w-md mx-auto">
         <h1 className="text-2xl font-bold mb-4">Elites SACCO Login</h1>
-        {MEMBERS.map(m=>(
+        {MEMBERS.map(m => (
           <button key={m}
             className="w-full mb-2 bg-black text-white p-2 rounded"
-            onClick={()=>setUser({name:m,role:m==="Gerald"?"admin":"member"})}>
+            onClick={() => setUser({ name: m, role: m === "Gerald" ? "admin" : "member" })}
+          >
             Login as {m}
           </button>
         ))}
@@ -111,25 +113,27 @@ function App() {
     );
   }
 
-  const totals = MEMBERS.reduce((acc,m)=>{
-    data[m].ledger.forEach(r=>{
+  /* -------- TOTALS -------- */
+  const totals = MEMBERS.reduce((acc, m) => {
+    data[m].ledger.forEach(r => {
       acc.contributions += r.paid;
       acc.lateFees += r.lateFee;
     });
     acc.loans += data[m].loan;
     return acc;
-  },{contributions:0,lateFees:0,loans:0});
+  }, { contributions: 0, lateFees: 0, loans: 0 });
 
-  const expenses = data.expenses.reduce((a,b)=>a+b.amount,0);
-  const net = totals.contributions - totals.loans - expenses;
+  const expenses = data.expenses.reduce((a,b) => a + b.amount, 0);
+  const netBalance = totals.contributions - totals.loans - expenses;
 
+  /* ================= UI ================= */
   return (
     <div className="p-4 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold">Elites SACCO</h1>
       <p className="text-sm mb-4">Logged in as {user.name}</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {MEMBERS.map(m=>(
+        {MEMBERS.map(m => (
           <div key={m} className="bg-white p-4 rounded shadow">
             <h2 className="font-semibold">{m}</h2>
             <p>Total Paid: {data[m].ledger.reduce((a,b)=>a+b.paid,0)}</p>
@@ -137,13 +141,13 @@ function App() {
             <p>Loan Balance: {data[m].loan}</p>
 
             <button className="underline text-sm"
-              onClick={()=>setLedgerView(m)}>
+              onClick={() => setLedgerMember(m)}>
               View Ledger
             </button>
 
-            {user.role==="admin" && (
+            {user.role === "admin" && (
               <button className="mt-2 w-full bg-green-600 text-white p-1 rounded"
-                onClick={()=>requirePin(()=>setForm({member:m}))}>
+                onClick={() => requestPinThen(() => setActiveForm(m))}>
                 Add Contribution
               </button>
             )}
@@ -155,13 +159,14 @@ function App() {
         <p>Total Contributions: {totals.contributions}</p>
         <p>Total Loans: {totals.loans}</p>
         <p>Total Expenses: {expenses}</p>
-        <p className="font-bold">Net Balance: {net}</p>
+        <p className="font-bold">Net Balance: {netBalance}</p>
       </div>
 
-      {ledgerView && (
+      {/* ===== LEDGER ===== */}
+      {ledgerMember && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
           <div className="bg-white p-4 rounded max-w-3xl w-full">
-            <h3 className="font-bold mb-2">{ledgerView} Ledger</h3>
+            <h3 className="font-bold mb-2">{ledgerMember} Ledger</h3>
             <table className="w-full text-sm border">
               <thead className="bg-gray-100">
                 <tr>
@@ -173,7 +178,7 @@ function App() {
                 </tr>
               </thead>
               <tbody>
-                {data[ledgerView].ledger.map((r,i)=>(
+                {data[ledgerMember].ledger.map((r,i)=>(
                   <tr key={i}>
                     <td className="border p-1">{r.month}</td>
                     <td className="border p-1">{r.expected}</td>
@@ -185,22 +190,61 @@ function App() {
               </tbody>
             </table>
             <button className="mt-2 underline w-full"
-              onClick={()=>setLedgerView(null)}>Close</button>
+              onClick={()=>setLedgerMember(null)}>Close</button>
           </div>
         </div>
       )}
 
-      {pinPrompt && (
+      {/* ===== CONTRIBUTION FORM ===== */}
+      {activeForm && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
-          <div className="bg-white p-4 rounded max-w-xs w-full">
-            <h3 className="font-bold mb-2">Admin PIN</h3>
-            <input type="password" className="border p-2 w-full mb-2"
-              value={pinInput} onChange={e=>setPinInput(e.target.value)} />
-            <button className="bg-black text-white p-2 w-full rounded"
-              onClick={verifyPin}>Verify</button>
+          <div className="bg-white p-4 rounded max-w-sm w-full">
+            <h3 className="font-bold mb-2">Add Contribution – {activeForm}</h3>
+            <input type="month" id="ym" className="border p-1 w-full mb-2"/>
+            <input type="date" id="date" className="border p-1 w-full mb-2"/>
+
+            <button className="bg-green-600 text-white p-2 w-full rounded"
+              onClick={()=>{
+                const expected = getContributionForMonth(ym.value);
+                const lateFee = calculateLateFee(ym.value, date.value);
+                const nd = {...data};
+                nd[activeForm].ledger.push({
+                  month: ym.value,
+                  expected,
+                  paid: expected,
+                  lateFee,
+                  datePaid: date.value
+                });
+                save(nd);
+                setActiveForm(null);
+              }}>
+              Save
+            </button>
+
+            <button className="mt-2 underline w-full"
+              onClick={()=>setActiveForm(null)}>Cancel</button>
           </div>
         </div>
       )}
+
+      {/* ===== PIN MODAL ===== */}
+      {askPin && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
+          <div className="bg-white p-4 rounded max-w-xs w-full">
+            <h3 className="font-bold mb-2">Enter Admin PIN</h3>
+            <input type="password"
+              className="border p-2 w-full mb-2"
+              value={pinValue}
+              onChange={e=>setPinValue(e.target.value)}
+            />
+            <button className="bg-black text-white p-2 w-full rounded"
+              onClick={verifyPin}>
+              Verify
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
