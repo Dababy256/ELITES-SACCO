@@ -40,36 +40,36 @@ const calculateLateFee = (ym, paidDate) => {
   return Math.min(weeksLate * WEEKLY_LATE_FEE, MAX_LATE_FEE);
 };
 
+const downloadCSV = (filename, rows) => {
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 /* ================= APP ================= */
 function App() {
   const [user, setUser] = React.useState(null);
   const [data, setData] = React.useState({});
   const [activeForm, setActiveForm] = React.useState(null);
   const [ledgerMember, setLedgerMember] = React.useState(null);
-
   const [askPin, setAskPin] = React.useState(false);
   const [pinValue, setPinValue] = React.useState("");
   const [afterPinAction, setAfterPinAction] = React.useState(null);
 
-  /* -------- INIT & MIGRATION -------- */
   React.useEffect(() => {
     const raw = localStorage.getItem("elites_sacco");
-    let parsed;
-
-    if (raw) {
-      parsed = JSON.parse(raw);
-    } else {
-      parsed = {};
-    }
-
+    let parsed = raw ? JSON.parse(raw) : {};
     MEMBERS.forEach(m => {
       if (!parsed[m]) parsed[m] = {};
       if (!Array.isArray(parsed[m].ledger)) parsed[m].ledger = [];
       if (typeof parsed[m].loan !== "number") parsed[m].loan = 0;
     });
-
     if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
-
     setData(parsed);
     localStorage.setItem("elites_sacco", JSON.stringify(parsed));
   }, []);
@@ -79,7 +79,6 @@ function App() {
     localStorage.setItem("elites_sacco", JSON.stringify(newData));
   };
 
-  /* -------- PIN FLOW (FIXED) -------- */
   const requestPinThen = action => {
     setAfterPinAction(() => action);
     setPinValue("");
@@ -91,12 +90,9 @@ function App() {
       setAskPin(false);
       if (afterPinAction) afterPinAction();
       setAfterPinAction(null);
-    } else {
-      alert("Incorrect PIN");
-    }
+    } else alert("Incorrect PIN");
   };
 
-  /* -------- LOGIN -------- */
   if (!user) {
     return (
       <div className="p-6 max-w-md mx-auto">
@@ -104,8 +100,7 @@ function App() {
         {MEMBERS.map(m => (
           <button key={m}
             className="w-full mb-2 bg-black text-white p-2 rounded"
-            onClick={() => setUser({ name: m, role: m === "Gerald" ? "admin" : "member" })}
-          >
+            onClick={() => setUser({ name: m, role: m === "Gerald" ? "admin" : "member" })}>
             Login as {m}
           </button>
         ))}
@@ -113,7 +108,6 @@ function App() {
     );
   }
 
-  /* -------- TOTALS -------- */
   const totals = MEMBERS.reduce((acc, m) => {
     data[m].ledger.forEach(r => {
       acc.contributions += r.paid;
@@ -123,14 +117,45 @@ function App() {
     return acc;
   }, { contributions: 0, lateFees: 0, loans: 0 });
 
-  const expenses = data.expenses.reduce((a,b) => a + b.amount, 0);
+  const expenses = data.expenses.reduce((a,b)=>a+b.amount,0);
   const netBalance = totals.contributions - totals.loans - expenses;
 
-  /* ================= UI ================= */
+  const exportSummary = () => {
+    const rows = [
+      ["Member","Total Paid","Late Fees","Loan Balance"]
+    ];
+    MEMBERS.forEach(m => {
+      rows.push([
+        m,
+        data[m].ledger.reduce((a,b)=>a+b.paid,0),
+        data[m].ledger.reduce((a,b)=>a+b.lateFee,0),
+        data[m].loan
+      ]);
+    });
+    downloadCSV("elites_sacco_summary.csv", rows);
+  };
+
+  const exportLedger = (member) => {
+    const rows = [
+      ["Month","Expected","Paid","Late Fee","Date Paid"]
+    ];
+    data[member].ledger.forEach(r => {
+      rows.push([r.month, r.expected, r.paid, r.lateFee, r.datePaid]);
+    });
+    downloadCSV(`${member}_ledger.csv`, rows);
+  };
+
   return (
     <div className="p-4 max-w-5xl mx-auto">
       <h1 className="text-3xl font-bold">Elites SACCO</h1>
       <p className="text-sm mb-4">Logged in as {user.name}</p>
+
+      <div className="mb-4">
+        <button className="bg-black text-white px-3 py-1 rounded"
+          onClick={exportSummary}>
+          Export SACCO Summary (Excel)
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {MEMBERS.map(m => (
@@ -141,16 +166,9 @@ function App() {
             <p>Loan Balance: {data[m].loan}</p>
 
             <button className="underline text-sm"
-              onClick={() => setLedgerMember(m)}>
-              View Ledger
+              onClick={() => exportLedger(m)}>
+              Export Member Ledger (Excel)
             </button>
-
-            {user.role === "admin" && (
-              <button className="mt-2 w-full bg-green-600 text-white p-1 rounded"
-                onClick={() => requestPinThen(() => setActiveForm(m))}>
-                Add Contribution
-              </button>
-            )}
           </div>
         ))}
       </div>
@@ -162,72 +180,6 @@ function App() {
         <p className="font-bold">Net Balance: {netBalance}</p>
       </div>
 
-      {/* ===== LEDGER ===== */}
-      {ledgerMember && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
-          <div className="bg-white p-4 rounded max-w-3xl w-full">
-            <h3 className="font-bold mb-2">{ledgerMember} Ledger</h3>
-            <table className="w-full text-sm border">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="border p-1">Month</th>
-                  <th className="border p-1">Expected</th>
-                  <th className="border p-1">Paid</th>
-                  <th className="border p-1">Late Fee</th>
-                  <th className="border p-1">Date Paid</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data[ledgerMember].ledger.map((r,i)=>(
-                  <tr key={i}>
-                    <td className="border p-1">{r.month}</td>
-                    <td className="border p-1">{r.expected}</td>
-                    <td className="border p-1">{r.paid}</td>
-                    <td className="border p-1">{r.lateFee}</td>
-                    <td className="border p-1">{r.datePaid}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <button className="mt-2 underline w-full"
-              onClick={()=>setLedgerMember(null)}>Close</button>
-          </div>
-        </div>
-      )}
-
-      {/* ===== CONTRIBUTION FORM ===== */}
-      {activeForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
-          <div className="bg-white p-4 rounded max-w-sm w-full">
-            <h3 className="font-bold mb-2">Add Contribution – {activeForm}</h3>
-            <input type="month" id="ym" className="border p-1 w-full mb-2"/>
-            <input type="date" id="date" className="border p-1 w-full mb-2"/>
-
-            <button className="bg-green-600 text-white p-2 w-full rounded"
-              onClick={()=>{
-                const expected = getContributionForMonth(ym.value);
-                const lateFee = calculateLateFee(ym.value, date.value);
-                const nd = {...data};
-                nd[activeForm].ledger.push({
-                  month: ym.value,
-                  expected,
-                  paid: expected,
-                  lateFee,
-                  datePaid: date.value
-                });
-                save(nd);
-                setActiveForm(null);
-              }}>
-              Save
-            </button>
-
-            <button className="mt-2 underline w-full"
-              onClick={()=>setActiveForm(null)}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {/* ===== PIN MODAL ===== */}
       {askPin && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center">
           <div className="bg-white p-4 rounded max-w-xs w-full">
@@ -235,8 +187,7 @@ function App() {
             <input type="password"
               className="border p-2 w-full mb-2"
               value={pinValue}
-              onChange={e=>setPinValue(e.target.value)}
-            />
+              onChange={e=>setPinValue(e.target.value)} />
             <button className="bg-black text-white p-2 w-full rounded"
               onClick={verifyPin}>
               Verify
