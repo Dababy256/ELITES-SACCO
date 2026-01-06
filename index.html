@@ -35,11 +35,6 @@ const MEMBERS = ["Gerald","Member 2","Member 3","Member 4","Member 5"];
 const ADMIN_PIN = "1234";
 const MONTHLY_INTEREST = 0.05;
 
-const CONTRIBUTION_RULES = [
-  { from: "2024-02", to: "2024-07", amount: 80000 },
-  { from: "2024-08", to: "2025-12", amount: 100000 }
-];
-
 /* ================= HELPERS ================= */
 const monthsDiff = (start, end = new Date()) =>
   (end.getFullYear() - start.getFullYear()) * 12 +
@@ -57,23 +52,27 @@ function App() {
   const [afterPinAction, setAfterPinAction] = React.useState(null);
 
   const [loanForm, setLoanForm] = React.useState({
-    member: "",
-    principal: "",
-    startDate: "",
-    manualBalance: ""
+    member: "", principal: "", startDate: "", manualBalance: ""
+  });
+
+  const [repaymentForm, setRepaymentForm] = React.useState({
+    member: "", loanId: "", amount: "", date: ""
+  });
+
+  const [expenseForm, setExpenseForm] = React.useState({
+    amount: "", date: "", description: "", category: ""
   });
 
   /* -------- INIT -------- */
   React.useEffect(() => {
     const raw = localStorage.getItem("elites_sacco");
     let parsed = raw ? JSON.parse(raw) : {};
-
     MEMBERS.forEach(m => {
       if (!parsed[m]) parsed[m] = {};
       if (!Array.isArray(parsed[m].ledger)) parsed[m].ledger = [];
       if (!Array.isArray(parsed[m].loans)) parsed[m].loans = [];
     });
-
+    if (!Array.isArray(parsed.expenses)) parsed.expenses = [];
     setData(parsed);
     localStorage.setItem("elites_sacco", JSON.stringify(parsed));
   }, []);
@@ -102,12 +101,9 @@ function App() {
   const addLoan = () => {
     const { member, principal, startDate, manualBalance } = loanForm;
     if (!member || !principal || !startDate) {
-      alert("Fill required fields");
-      return;
+      alert("Fill required fields"); return;
     }
-
-    const start = new Date(startDate);
-    const months = Math.max(monthsDiff(start), 0);
+    const months = Math.max(monthsDiff(new Date(startDate)), 0);
     const calculated = compound(Number(principal), months);
 
     const loan = {
@@ -119,14 +115,49 @@ function App() {
       calculatedBalance: calculated,
       currentBalance: manualBalance ? Number(manualBalance) : calculated,
       manualOverride: !!manualBalance,
-      status: "ACTIVE"
+      status: "ACTIVE",
+      repayments: []
     };
 
     const nd = { ...data };
     nd[member].loans.push(loan);
     save(nd);
+    alert("Loan recorded");
+  };
 
-    alert("Loan recorded successfully");
+  /* -------- REPAYMENT -------- */
+  const addRepayment = () => {
+    const { member, loanId, amount, date } = repaymentForm;
+    if (!member || !loanId || !amount || !date) {
+      alert("Fill all fields"); return;
+    }
+
+    const nd = { ...data };
+    const loan = nd[member].loans.find(l => l.id === Number(loanId));
+    loan.repayments.push({ amount: Number(amount), date });
+    loan.currentBalance = Math.max(loan.currentBalance - Number(amount), 0);
+    if (loan.currentBalance === 0) loan.status = "CLEARED";
+
+    save(nd);
+    alert("Repayment recorded");
+  };
+
+  /* -------- EXPENSE -------- */
+  const addExpense = () => {
+    const { amount, date, description, category } = expenseForm;
+    if (!amount || !date || !description) {
+      alert("Fill required fields"); return;
+    }
+    const nd = { ...data };
+    nd.expenses.push({
+      id: Date.now(),
+      amount: Number(amount),
+      date,
+      description,
+      category
+    });
+    save(nd);
+    alert("Expense recorded");
   };
 
   if (!user) {
@@ -145,73 +176,76 @@ function App() {
   }
 
   const totalLoans = MEMBERS.reduce(
-    (sum, m) => sum + data[m].loans.reduce((a,l)=>a+l.currentBalance,0),
-    0
+    (sum, m) => sum + data[m].loans.reduce((a,l)=>a+l.currentBalance,0), 0
   );
+  const totalExpenses = data.expenses.reduce((a,e)=>a+e.amount,0);
 
   return (
     <div className="p-4 max-w-6xl mx-auto">
-      <header className="bg-dark text-white p-4 rounded-xl mb-6 flex justify-between">
+      <header className="bg-dark text-white p-4 rounded-xl mb-6">
         <h1 className="text-2xl font-bold">Elites SACCO</h1>
-        <span className="text-gold text-sm">{user.name}</span>
+        <p className="text-gold text-sm">{user.name}</p>
       </header>
 
-      {/* ===== LOAN ENTRY ===== */}
-      {user.role === "admin" && (
-        <div className="bg-white border-l-4 border-gold p-4 rounded-xl mb-6">
-          <h2 className="font-semibold mb-3">Historical / Current Loan Entry</h2>
+      {/* ===== DASHBOARD ===== */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-xl shadow">Loans: <b>{totalLoans}</b></div>
+        <div className="bg-white p-4 rounded-xl shadow">Expenses: <b>{totalExpenses}</b></div>
+        <div className="bg-white p-4 rounded-xl shadow">Net Balance: <b>{- totalLoans - totalExpenses}</b></div>
+      </div>
 
-          <select className="border p-2 w-full mb-2"
-            onChange={e=>setLoanForm({...loanForm,member:e.target.value})}>
-            <option value="">Select Member</option>
-            {MEMBERS.map(m=><option key={m}>{m}</option>)}
-          </select>
+      {/* ===== ADMIN FORMS ===== */}
+      {user.role==="admin" && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white p-4 rounded-xl">
+            <h3 className="font-semibold mb-2">Add Loan</h3>
+            <select className="border p-2 w-full mb-2"
+              onChange={e=>setLoanForm({...loanForm,member:e.target.value})}>
+              <option value="">Member</option>
+              {MEMBERS.map(m=><option key={m}>{m}</option>)}
+            </select>
+            <input className="border p-2 w-full mb-2" placeholder="Principal"
+              onChange={e=>setLoanForm({...loanForm,principal:e.target.value})}/>
+            <input type="date" className="border p-2 w-full mb-2"
+              onChange={e=>setLoanForm({...loanForm,startDate:e.target.value})}/>
+            <input className="border p-2 w-full mb-2" placeholder="Manual balance (optional)"
+              onChange={e=>setLoanForm({...loanForm,manualBalance:e.target.value})}/>
+            <button className="bg-dark text-white p-2 w-full rounded"
+              onClick={()=>requestPinThen(addLoan)}>Save Loan</button>
+          </div>
 
-          <input type="number" placeholder="Principal amount"
-            className="border p-2 w-full mb-2"
-            onChange={e=>setLoanForm({...loanForm,principal:e.target.value})} />
+          <div className="bg-white p-4 rounded-xl">
+            <h3 className="font-semibold mb-2">Record Repayment</h3>
+            <select className="border p-2 w-full mb-2"
+              onChange={e=>setRepaymentForm({...repaymentForm,member:e.target.value})}>
+              <option value="">Member</option>
+              {MEMBERS.map(m=><option key={m}>{m}</option>)}
+            </select>
+            <input className="border p-2 w-full mb-2" placeholder="Loan ID"
+              onChange={e=>setRepaymentForm({...repaymentForm,loanId:e.target.value})}/>
+            <input className="border p-2 w-full mb-2" placeholder="Amount"
+              onChange={e=>setRepaymentForm({...repaymentForm,amount:e.target.value})}/>
+            <input type="date" className="border p-2 w-full mb-2"
+              onChange={e=>setRepaymentForm({...repaymentForm,date:e.target.value})}/>
+            <button className="bg-dark text-white p-2 w-full rounded"
+              onClick={()=>requestPinThen(addRepayment)}>Save Repayment</button>
+          </div>
 
-          <input type="date" className="border p-2 w-full mb-2"
-            onChange={e=>setLoanForm({...loanForm,startDate:e.target.value})} />
-
-          <input type="number" placeholder="Manual outstanding balance (optional)"
-            className="border p-2 w-full mb-2"
-            onChange={e=>setLoanForm({...loanForm,manualBalance:e.target.value})} />
-
-          <button className="bg-dark text-white p-2 w-full rounded-lg hover:bg-gold"
-            onClick={()=>requestPinThen(addLoan)}>
-            Save Loan
-          </button>
+          <div className="bg-white p-4 rounded-xl">
+            <h3 className="font-semibold mb-2">Add Expense</h3>
+            <input className="border p-2 w-full mb-2" placeholder="Amount"
+              onChange={e=>setExpenseForm({...expenseForm,amount:e.target.value})}/>
+            <input type="date" className="border p-2 w-full mb-2"
+              onChange={e=>setExpenseForm({...expenseForm,date:e.target.value})}/>
+            <input className="border p-2 w-full mb-2" placeholder="Description"
+              onChange={e=>setExpenseForm({...expenseForm,description:e.target.value})}/>
+            <input className="border p-2 w-full mb-2" placeholder="Category"
+              onChange={e=>setExpenseForm({...expenseForm,category:e.target.value})}/>
+            <button className="bg-dark text-white p-2 w-full rounded"
+              onClick={()=>requestPinThen(addExpense)}>Save Expense</button>
+          </div>
         </div>
       )}
-
-      {/* ===== LOANS SUMMARY ===== */}
-      <div className="bg-white p-4 rounded-xl shadow mb-6">
-        <h2 className="font-semibold mb-2">Loans Overview</h2>
-        <p>Total Loans Outstanding: <b>{totalLoans}</b></p>
-      </div>
-
-      {/* ===== MEMBER LOANS ===== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {MEMBERS.map(m => (
-          <div key={m} className="bg-white p-4 rounded-xl shadow">
-            <h3 className="font-semibold">{m}</h3>
-            {data[m].loans.length === 0 ? (
-              <p className="text-sm text-gray-500">No loans</p>
-            ) : (
-              data[m].loans.map(l => (
-                <div key={l.id} className="border-t mt-2 pt-2 text-sm">
-                  <p>Principal: {l.principal}</p>
-                  <p>Balance: <b>{l.currentBalance}</b></p>
-                  <p className="text-xs text-gray-500">
-                    {l.manualOverride ? "Manual override" : "Auto-calculated"}
-                  </p>
-                </div>
-              ))
-            )}
-          </div>
-        ))}
-      </div>
 
       {/* ===== PIN ===== */}
       {askPin && (
@@ -220,7 +254,7 @@ function App() {
             <h3 className="font-bold mb-2">Admin PIN</h3>
             <input type="password" className="border p-2 w-full mb-2"
               value={pinValue} onChange={e=>setPinValue(e.target.value)} />
-            <button className="bg-dark text-white p-2 w-full rounded-lg"
+            <button className="bg-dark text-white p-2 w-full rounded"
               onClick={verifyPin}>Verify</button>
           </div>
         </div>
