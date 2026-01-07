@@ -176,13 +176,20 @@ function render(){
 
 /* ========= ACTIONS ========= */
 function addContribution(){
-  const m=mSel.value;
+  const m = mSel.value;
+  const lateFee = calculateLateFee(cMonth.value, cPaidDate.value);
+
   data[m].contributions.push({
-    month:cMonth.value,
-    paid:Number(cPaid.value)
+    month: cMonth.value,
+    paid: Number(cPaid.value),
+    paidDate: cPaidDate.value,
+    lateFee: lateFee
   });
-  save();render();
+
+  save();
+  render();
 }
+
 function addLoan(){
   const m=mSel.value;
   const bal=compound(Number(lAmt.value),monthsBetween(lDate.value));
@@ -228,5 +235,6 @@ render();
 </script>
 </body>
 </html>
+
 
 
