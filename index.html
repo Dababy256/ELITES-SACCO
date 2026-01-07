@@ -58,6 +58,20 @@ MEMBERS.forEach(m=>{
 if(!data.expenses) data.expenses=[];
 
 /* ========= HELPERS ========= */
+  function calculateLateFee(month, paymentDate) {
+  if (!paymentDate) return 0;
+
+  const dueDate = new Date(month + "-10");
+  const paidDate = new Date(paymentDate);
+
+  if (paidDate <= dueDate) return 0;
+
+  const diffDays = Math.floor((paidDate - dueDate) / (1000 * 60 * 60 * 24));
+  const weeksLate = Math.ceil(diffDays / 7);
+
+  return Math.min(weeksLate * 5000, 15000);
+}
+
 function save(){localStorage.setItem("sacco",JSON.stringify(data))}
 function pinCheck(cb){
   const p=prompt("Enter Admin PIN");
@@ -212,3 +226,4 @@ render();
 </script>
 </body>
 </html>
+
