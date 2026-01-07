@@ -1,298 +1,214 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8">
 <title>Elites SACCO</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        gold: "#B08D57",
-        goldlight: "#F3E9D2",
-        dark: "#111111"
-      }
-    }
-  }
-}
-</script>
-
-<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#F3E9D2;margin:0}
+header{background:#111;color:#fff;padding:12px;display:flex;align-items:center;gap:12px}
+header img{height:45px;border-radius:6px}
+.container{padding:16px;max-width:1200px;margin:auto}
+.card{background:#fff;padding:12px;border-radius:8px;margin-bottom:16px}
+h2{margin-top:0}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{border:1px solid #ccc;padding:6px;text-align:left}
+th{background:#B08D57;color:#000}
+button{padding:8px 12px;border:none;border-radius:6px;background:#111;color:#fff;cursor:pointer}
+button.gold{background:#B08D57;color:#000}
+button:disabled{opacity:0.5}
+input,select{padding:6px;width:100%;margin-bottom:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.status{padding:4px 8px;border-radius:6px;color:#fff}
+.green{background:green}
+.red{background:red}
+</style>
 </head>
 
-<body class="bg-goldlight">
-<div id="root"></div>
+<body>
 
-<script type="text/babel">
+<header>
+  <img id="logoImg" style="display:none">
+  <div>
+    <strong>Elites SACCO</strong><br>
+    <span id="userLabel"></span>
+  </div>
+  <span id="freezeStatus" class="status green">ACTIVE</span>
+</header>
 
-/* ================= CONFIG ================= */
-const MEMBERS = ["Gerald","Member 2","Member 3","Member 4","Member 5"];
-const ADMIN_PIN = "1234";
-const INTEREST = 0.05;
+<div class="container" id="app"></div>
 
-/* ================= HELPERS ================= */
-const monthsBetween = (start) => {
-  const s = new Date(start);
-  const e = new Date();
-  return Math.max(
-    (e.getFullYear()-s.getFullYear())*12 + (e.getMonth()-s.getMonth()),
-    0
-  );
-};
-const compound = (p,m)=>Math.round(p*Math.pow(1+INTEREST,m));
+<script>
+/* ========= CONFIG ========= */
+const MEMBERS=["Gerald","Member 2","Member 3","Member 4","Member 5"];
+const ADMIN_PIN="1234";
+const INTEREST=0.05;
 
-/* ================= APP ================= */
-function App(){
-  const [user,setUser]=React.useState(null);
-  const [data,setData]=React.useState({});
-  const [logo,setLogo]=React.useState(localStorage.getItem("sacco_logo"));
-  const [frozen,setFrozen]=React.useState(localStorage.getItem("sacco_frozen")==="true");
-  const [askPin,setAskPin]=React.useState(false);
-  const [pin,setPin]=React.useState("");
-  const [afterPin,setAfterPin]=React.useState(null);
+/* ========= STATE ========= */
+let user=null;
+let frozen=localStorage.getItem("frozen")==="true";
+let data=JSON.parse(localStorage.getItem("sacco")||"{}");
+let logo=localStorage.getItem("logo");
 
-  const [form,setForm]=React.useState({
-    member:"",
-    month:"",
-    expected:"",
-    paid:"",
-    loanAmount:"",
-    loanDate:"",
-    expenseDesc:"",
-    expenseAmount:""
-  });
+/* ========= INIT ========= */
+MEMBERS.forEach(m=>{
+  if(!data[m]) data[m]={contributions:[],loans:[]};
+});
+if(!data.expenses) data.expenses=[];
 
-  /* ===== INIT ===== */
-  React.useEffect(()=>{
-    const raw=localStorage.getItem("elites_sacco");
-    let d=raw?JSON.parse(raw):{};
-    MEMBERS.forEach(m=>{
-      if(!d[m]) d[m]={ledger:[],loans:[]};
-    });
-    if(!Array.isArray(d.expenses)) d.expenses=[];
-    setData(d);
-    localStorage.setItem("elites_sacco",JSON.stringify(d));
-  },[]);
+/* ========= HELPERS ========= */
+function save(){localStorage.setItem("sacco",JSON.stringify(data))}
+function pinCheck(cb){
+  const p=prompt("Enter Admin PIN");
+  if(p===ADMIN_PIN) cb(); else alert("Wrong PIN");
+}
+function monthsBetween(d){
+  const s=new Date(d),e=new Date();
+  return Math.max((e.getFullYear()-s.getFullYear())*12+(e.getMonth()-s.getMonth()),0);
+}
+function compound(p,m){return Math.round(p*Math.pow(1+INTEREST,m))}
 
-  const save=d=>{
-    setData(d);
-    localStorage.setItem("elites_sacco",JSON.stringify(d));
-  };
-
-  const requirePin=(action)=>{
-    setAfterPin(()=>action);
-    setPin("");
-    setAskPin(true);
-  };
-
-  const verifyPin=()=>{
-    if(pin===ADMIN_PIN){
-      setAskPin(false);
-      afterPin && afterPin();
-      setAfterPin(null);
-    } else alert("Wrong PIN");
-  };
-
-  /* ===== ADD FUNCTIONS ===== */
-  const addContribution=()=>{
-    const d={...data};
-    d[form.member].ledger.push({
-      month:form.month,
-      expected:Number(form.expected),
-      paid:Number(form.paid),
-      status:Number(form.paid)>=Number(form.expected)?"COMPLETE":"INCOMPLETE"
-    });
-    save(d);
-  };
-
-  const addLoan=()=>{
-    const months=monthsBetween(form.loanDate);
-    const bal=compound(Number(form.loanAmount),months);
-    const d={...data};
-    d[form.member].loans.push({
-      principal:Number(form.loanAmount),
-      startDate:form.loanDate,
-      balance:bal,
-      status:"ACTIVE"
-    });
-    save(d);
-  };
-
-  const addExpense=()=>{
-    const d={...data};
-    d.expenses.push({
-      date:new Date().toISOString().slice(0,10),
-      description:form.expenseDesc,
-      amount:Number(form.expenseAmount)
-    });
-    save(d);
-  };
-
-  /* ===== TOTALS ===== */
-  const totals={
-    contributions: MEMBERS.reduce((s,m)=>s+data[m].ledger.reduce((a,r)=>a+r.paid,0),0),
-    loans: MEMBERS.reduce((s,m)=>s+data[m].loans.reduce((a,l)=>a+l.balance,0),0),
-    expenses: data.expenses.reduce((a,e)=>a+e.amount,0)
-  };
-
-  /* ===== LOGIN ===== */
-  if(!user){
-    return (
-      <div className="p-8 max-w-md mx-auto text-center">
-        {logo && <img src={logo} className="h-20 mx-auto mb-4 rounded" />}
-        <h1 className="text-3xl font-bold mb-6">Elites SACCO</h1>
-        {MEMBERS.map(m=>(
-          <button key={m}
-            className="w-full mb-3 bg-dark text-white p-3 rounded"
-            onClick={()=>setUser({name:m,role:m==="Gerald"?"admin":"member"})}>
-            Login as {m}
-          </button>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-4 max-w-7xl mx-auto">
-
-      {/* HEADER */}
-      <header className="bg-dark text-white p-4 rounded-xl mb-4 flex items-center gap-4">
-        {logo && <img src={logo} className="h-12 rounded" />}
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">Elites SACCO</h1>
-          <p className="text-gold text-sm">{user.name}</p>
-        </div>
-        <span className={`px-3 py-1 rounded ${frozen?"bg-red-600":"bg-green-600"}`}>
-          {frozen?"FROZEN":"ACTIVE"}
-        </span>
-      </header>
-
-      {/* DASHBOARD */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded">Contributions<br/><b>{totals.contributions}</b></div>
-        <div className="bg-white p-4 rounded">Loans<br/><b>{totals.loans}</b></div>
-        <div className="bg-white p-4 rounded">Expenses<br/><b>{totals.expenses}</b></div>
-        <div className="bg-white p-4 rounded">Net<br/><b>{totals.contributions-totals.loans-totals.expenses}</b></div>
-      </div>
-
-      {/* ADMIN ENTRY */}
-      {user.role==="admin" && !frozen && (
-        <div className="bg-white p-4 rounded-xl mb-6 space-y-3">
-          <h2 className="font-bold text-lg">Admin Entry</h2>
-
-          <select className="border p-2 w-full"
-            onChange={e=>setForm({...form,member:e.target.value})}>
-            <option value="">Select Member</option>
-            {MEMBERS.map(m=><option key={m}>{m}</option>)}
-          </select>
-
-          <h3 className="font-semibold">Add Contribution</h3>
-          <input className="border p-2 w-full" placeholder="Month (YYYY-MM)"
-            onChange={e=>setForm({...form,month:e.target.value})}/>
-          <input className="border p-2 w-full" placeholder="Expected Amount"
-            onChange={e=>setForm({...form,expected:e.target.value})}/>
-          <input className="border p-2 w-full" placeholder="Paid Amount"
-            onChange={e=>setForm({...form,paid:e.target.value})}/>
-          <button className="bg-gold p-2 w-full"
-            onClick={()=>requirePin(addContribution)}>Add Contribution</button>
-
-          <h3 className="font-semibold mt-4">Add Loan</h3>
-          <input className="border p-2 w-full" placeholder="Loan Amount"
-            onChange={e=>setForm({...form,loanAmount:e.target.value})}/>
-          <input type="date" className="border p-2 w-full"
-            onChange={e=>setForm({...form,loanDate:e.target.value})}/>
-          <button className="bg-gold p-2 w-full"
-            onClick={()=>requirePin(addLoan)}>Add Loan</button>
-
-          <h3 className="font-semibold mt-4">Add Expense</h3>
-          <input className="border p-2 w-full" placeholder="Description"
-            onChange={e=>setForm({...form,expenseDesc:e.target.value})}/>
-          <input className="border p-2 w-full" placeholder="Amount"
-            onChange={e=>setForm({...form,expenseAmount:e.target.value})}/>
-          <button className="bg-gold p-2 w-full"
-            onClick={()=>requirePin(addExpense)}>Add Expense</button>
-        </div>
-      )}
-
-      {/* LEDGERS */}
-      <div className="bg-white p-4 rounded-xl mb-6">
-        <h2 className="font-bold text-lg mb-2">Contribution Ledger</h2>
-        <table className="w-full text-sm border">
-          <thead>
-            <tr className="bg-goldlight">
-              <th>Member</th><th>Month</th><th>Expected</th><th>Paid</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {MEMBERS.map(m=>data[m].ledger.map((r,i)=>(
-              <tr key={m+i}>
-                <td>{m}</td><td>{r.month}</td><td>{r.expected}</td><td>{r.paid}</td><td>{r.status}</td>
-              </tr>
-            )))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="bg-white p-4 rounded-xl mb-6">
-        <h2 className="font-bold text-lg mb-2">Loan Ledger</h2>
-        <table className="w-full text-sm border">
-          <thead>
-            <tr className="bg-goldlight">
-              <th>Member</th><th>Principal</th><th>Start Date</th><th>Balance</th><th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {MEMBERS.map(m=>data[m].loans.map((l,i)=>(
-              <tr key={m+i}>
-                <td>{m}</td><td>{l.principal}</td><td>{l.startDate}</td><td>{l.balance}</td><td>{l.status}</td>
-              </tr>
-            )))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="bg-white p-4 rounded-xl mb-6">
-        <h2 className="font-bold text-lg mb-2">Expenses</h2>
-        <table className="w-full text-sm border">
-          <thead>
-            <tr className="bg-goldlight">
-              <th>Date</th><th>Description</th><th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.expenses.map((e,i)=>(
-              <tr key={i}>
-                <td>{e.date}</td><td>{e.description}</td><td>{e.amount}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* PIN MODAL */}
-      {askPin && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-          <div className="bg-white p-4 rounded w-64">
-            <h3 className="font-bold mb-2">Admin PIN</h3>
-            <input type="password" className="border p-2 w-full mb-2"
-              value={pin} onChange={e=>setPin(e.target.value)} />
-            <button className="bg-dark text-white p-2 w-full rounded"
-              onClick={verifyPin}>Confirm</button>
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
+/* ========= LOGIN ========= */
+function login(name){
+  user={name,role:name==="Gerald"?"admin":"member"};
+  render();
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+/* ========= RENDER ========= */
+function render(){
+  document.getElementById("userLabel").textContent=user?user.name:"";
+  document.getElementById("freezeStatus").textContent=frozen?"FROZEN":"ACTIVE";
+  document.getElementById("freezeStatus").className="status "+(frozen?"red":"green");
+  if(logo){
+    const img=document.getElementById("logoImg");
+    img.src=logo;img.style.display="block";
+  }
+  const app=document.getElementById("app");
+  app.innerHTML="";
 
+  if(!user){
+    const c=document.createElement("div");c.className="card";
+    MEMBERS.forEach(m=>{
+      const b=document.createElement("button");
+      b.textContent="Login as "+m;
+      b.onclick=()=>login(m);
+      c.appendChild(b);c.appendChild(document.createElement("br"));
+    });
+    app.appendChild(c);
+    return;
+  }
+
+  /* DASHBOARD */
+  let totalC=0,totalL=0,totalE=0;
+  MEMBERS.forEach(m=>{
+    data[m].contributions.forEach(r=>totalC+=r.paid);
+    data[m].loans.forEach(l=>totalL+=l.balance);
+  });
+  data.expenses.forEach(e=>totalE+=e.amount);
+
+  app.innerHTML+=`
+  <div class="grid">
+    <div class="card">Contributions<br><b>${totalC}</b></div>
+    <div class="card">Loans<br><b>${totalL}</b></div>
+    <div class="card">Expenses<br><b>${totalE}</b></div>
+    <div class="card">Net<br><b>${totalC-totalL-totalE}</b></div>
+  </div>`;
+
+  /* ADMIN CONTROLS */
+  if(user.role==="admin"){
+    const a=document.createElement("div");a.className="card";
+    a.innerHTML=`
+      <h2>Admin Controls</h2>
+      <input type="file" id="logoUp"><br>
+      <button onclick="pinCheck(()=>{frozen=!frozen;localStorage.setItem('frozen',frozen);render()})">
+        ${frozen?"Unfreeze":"Freeze"} System
+      </button>`;
+    app.appendChild(a);
+    document.getElementById("logoUp").onchange=e=>{
+      const r=new FileReader();
+      r.onload=x=>{logo=x.target.result;localStorage.setItem("logo",logo);render()};
+      r.readAsDataURL(e.target.files[0]);
+    }
+  }
+
+  /* FORMS */
+  if(user.role==="admin" && !frozen){
+    const f=document.createElement("div");f.className="card";
+    f.innerHTML=`
+    <h2>Add Records</h2>
+    <select id="mSel">${MEMBERS.map(m=>`<option>${m}</option>`)}</select>
+    <input id="cMonth" placeholder="Month YYYY-MM">
+    <input id="cPaid" placeholder="Paid Amount">
+    <button class="gold" onclick="pinCheck(addContribution)">Add Contribution</button>
+    <hr>
+    <input id="lAmt" placeholder="Loan Amount">
+    <input id="lDate" type="date">
+    <button class="gold" onclick="pinCheck(addLoan)">Add Loan</button>
+    <hr>
+    <input id="eDesc" placeholder="Expense Description">
+    <input id="eAmt" placeholder="Expense Amount">
+    <button class="gold" onclick="pinCheck(addExpense)">Add Expense</button>`;
+    app.appendChild(f);
+  }
+
+  /* LEDGERS */
+  renderContributionLedger(app);
+  renderLoanLedger(app);
+  renderExpenses(app);
+}
+
+/* ========= ACTIONS ========= */
+function addContribution(){
+  const m=mSel.value;
+  data[m].contributions.push({
+    month:cMonth.value,
+    paid:Number(cPaid.value)
+  });
+  save();render();
+}
+function addLoan(){
+  const m=mSel.value;
+  const bal=compound(Number(lAmt.value),monthsBetween(lDate.value));
+  data[m].loans.push({principal:Number(lAmt.value),start:lDate.value,balance:bal});
+  save();render();
+}
+function addExpense(){
+  data.expenses.push({desc:eDesc.value,amount:Number(eAmt.value)});
+  save();render();
+}
+
+/* ========= LEDGERS ========= */
+function renderContributionLedger(app){
+  let html=`<div class="card"><h2>Contribution Ledger</h2><table>
+  <tr><th>Member</th><th>Month</th><th>Paid</th></tr>`;
+  MEMBERS.forEach(m=>data[m].contributions.forEach(r=>{
+    html+=`<tr><td>${m}</td><td>${r.month}</td><td>${r.paid}</td></tr>`;
+  }));
+  html+=`</table></div>`;
+  app.innerHTML+=html;
+}
+function renderLoanLedger(app){
+  let html=`<div class="card"><h2>Loan Ledger</h2><table>
+  <tr><th>Member</th><th>Principal</th><th>Balance</th></tr>`;
+  MEMBERS.forEach(m=>data[m].loans.forEach(l=>{
+    html+=`<tr><td>${m}</td><td>${l.principal}</td><td>${l.balance}</td></tr>`;
+  }));
+  html+=`</table></div>`;
+  app.innerHTML+=html;
+}
+function renderExpenses(app){
+  let html=`<div class="card"><h2>Expenses</h2><table>
+  <tr><th>Description</th><th>Amount</th></tr>`;
+  data.expenses.forEach(e=>{
+    html+=`<tr><td>${e.desc}</td><td>${e.amount}</td></tr>`;
+  });
+  html+=`</table></div>`;
+  app.innerHTML+=html;
+}
+
+/* ========= START ========= */
+render();
 </script>
 </body>
 </html>
