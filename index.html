@@ -46,21 +46,11 @@ const monthsBetween = (start) => {
 };
 const compound = (p,m)=>Math.round(p*Math.pow(1+INTEREST,m));
 
-const downloadCSV = (filename, rows) => {
-  const csv = rows.map(r =>
-    r.map(v => `"${String(v ?? "").replace(/"/g,'""')}"`).join(",")
-  ).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
-};
-
 /* ================= APP ================= */
 function App(){
   const [user,setUser]=React.useState(null);
   const [data,setData]=React.useState({});
+  const [logo,setLogo]=React.useState(localStorage.getItem("sacco_logo"));
   const [frozen,setFrozen]=React.useState(localStorage.getItem("sacco_frozen")==="true");
   const [askPin,setAskPin]=React.useState(false);
   const [pin,setPin]=React.useState("");
@@ -69,21 +59,20 @@ function App(){
   const [form,setForm]=React.useState({
     member:"",
     month:"",
-    amount:"",
+    expected:"",
+    paid:"",
     loanAmount:"",
     loanDate:"",
-    expenseAmount:"",
-    expenseDesc:""
+    expenseDesc:"",
+    expenseAmount:""
   });
 
+  /* ===== INIT ===== */
   React.useEffect(()=>{
     const raw=localStorage.getItem("elites_sacco");
     let d=raw?JSON.parse(raw):{};
     MEMBERS.forEach(m=>{
       if(!d[m]) d[m]={ledger:[],loans:[]};
-      d[m].loans.forEach(l=>{
-        if(!l.status) l.status=l.currentBalance>0?"ACTIVE":"CLEARED";
-      });
     });
     if(!Array.isArray(d.expenses)) d.expenses=[];
     setData(d);
@@ -109,12 +98,14 @@ function App(){
     } else alert("Wrong PIN");
   };
 
-  /* ===== ADD DATA ===== */
+  /* ===== ADD FUNCTIONS ===== */
   const addContribution=()=>{
     const d={...data};
     d[form.member].ledger.push({
-      month: form.month,
-      paid: Number(form.amount)
+      month:form.month,
+      expected:Number(form.expected),
+      paid:Number(form.paid),
+      status:Number(form.paid)>=Number(form.expected)?"COMPLETE":"INCOMPLETE"
     });
     save(d);
   };
@@ -126,7 +117,7 @@ function App(){
     d[form.member].loans.push({
       principal:Number(form.loanAmount),
       startDate:form.loanDate,
-      currentBalance:bal,
+      balance:bal,
       status:"ACTIVE"
     });
     save(d);
@@ -142,39 +133,18 @@ function App(){
     save(d);
   };
 
-  /* ===== EXPORTS ===== */
-  const exportContributions=()=>{
-    const rows=[["Member","Month","Amount"]];
-    MEMBERS.forEach(m=>{
-      data[m].ledger.forEach(r=>{
-        rows.push([m,r.month,r.paid]);
-      });
-    });
-    downloadCSV("elites_contributions.csv",rows);
-  };
-
-  const exportLoans=()=>{
-    const rows=[["Member","Principal","Start Date","Balance","Status"]];
-    MEMBERS.forEach(m=>{
-      data[m].loans.forEach(l=>{
-        rows.push([m,l.principal,l.startDate,l.currentBalance,l.status]);
-      });
-    });
-    downloadCSV("elites_loans.csv",rows);
-  };
-
-  const exportExpenses=()=>{
-    const rows=[["Date","Description","Amount"]];
-    data.expenses.forEach(e=>{
-      rows.push([e.date,e.description,e.amount]);
-    });
-    downloadCSV("elites_expenses.csv",rows);
+  /* ===== TOTALS ===== */
+  const totals={
+    contributions: MEMBERS.reduce((s,m)=>s+data[m].ledger.reduce((a,r)=>a+r.paid,0),0),
+    loans: MEMBERS.reduce((s,m)=>s+data[m].loans.reduce((a,l)=>a+l.balance,0),0),
+    expenses: data.expenses.reduce((a,e)=>a+e.amount,0)
   };
 
   /* ===== LOGIN ===== */
   if(!user){
     return (
       <div className="p-8 max-w-md mx-auto text-center">
+        {logo && <img src={logo} className="h-20 mx-auto mb-4 rounded" />}
         <h1 className="text-3xl font-bold mb-6">Elites SACCO</h1>
         {MEMBERS.map(m=>(
           <button key={m}
@@ -188,19 +158,32 @@ function App(){
   }
 
   return (
-    <div className="p-4 max-w-6xl mx-auto">
+    <div className="p-4 max-w-7xl mx-auto">
 
-      <header className="bg-dark text-white p-4 rounded-xl mb-4 flex justify-between">
-        <h1 className="text-2xl font-bold">Elites SACCO</h1>
-        <span className={`px-2 py-1 rounded ${frozen?"bg-red-600":"bg-green-600"}`}>
+      {/* HEADER */}
+      <header className="bg-dark text-white p-4 rounded-xl mb-4 flex items-center gap-4">
+        {logo && <img src={logo} className="h-12 rounded" />}
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">Elites SACCO</h1>
+          <p className="text-gold text-sm">{user.name}</p>
+        </div>
+        <span className={`px-3 py-1 rounded ${frozen?"bg-red-600":"bg-green-600"}`}>
           {frozen?"FROZEN":"ACTIVE"}
         </span>
       </header>
 
-      {/* ===== ADMIN ENTRY ===== */}
+      {/* DASHBOARD */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-4 rounded">Contributions<br/><b>{totals.contributions}</b></div>
+        <div className="bg-white p-4 rounded">Loans<br/><b>{totals.loans}</b></div>
+        <div className="bg-white p-4 rounded">Expenses<br/><b>{totals.expenses}</b></div>
+        <div className="bg-white p-4 rounded">Net<br/><b>{totals.contributions-totals.loans-totals.expenses}</b></div>
+      </div>
+
+      {/* ADMIN ENTRY */}
       {user.role==="admin" && !frozen && (
-        <div className="bg-white p-4 rounded-xl mb-4 space-y-2">
-          <h2 className="font-bold">Admin Entry</h2>
+        <div className="bg-white p-4 rounded-xl mb-6 space-y-3">
+          <h2 className="font-bold text-lg">Admin Entry</h2>
 
           <select className="border p-2 w-full"
             onChange={e=>setForm({...form,member:e.target.value})}>
@@ -208,13 +191,17 @@ function App(){
             {MEMBERS.map(m=><option key={m}>{m}</option>)}
           </select>
 
-          <input className="border p-2 w-full" placeholder="Contribution Month (YYYY-MM)"
+          <h3 className="font-semibold">Add Contribution</h3>
+          <input className="border p-2 w-full" placeholder="Month (YYYY-MM)"
             onChange={e=>setForm({...form,month:e.target.value})}/>
-          <input className="border p-2 w-full" placeholder="Contribution Amount"
-            onChange={e=>setForm({...form,amount:e.target.value})}/>
+          <input className="border p-2 w-full" placeholder="Expected Amount"
+            onChange={e=>setForm({...form,expected:e.target.value})}/>
+          <input className="border p-2 w-full" placeholder="Paid Amount"
+            onChange={e=>setForm({...form,paid:e.target.value})}/>
           <button className="bg-gold p-2 w-full"
             onClick={()=>requirePin(addContribution)}>Add Contribution</button>
 
+          <h3 className="font-semibold mt-4">Add Loan</h3>
           <input className="border p-2 w-full" placeholder="Loan Amount"
             onChange={e=>setForm({...form,loanAmount:e.target.value})}/>
           <input type="date" className="border p-2 w-full"
@@ -222,40 +209,72 @@ function App(){
           <button className="bg-gold p-2 w-full"
             onClick={()=>requirePin(addLoan)}>Add Loan</button>
 
-          <input className="border p-2 w-full" placeholder="Expense Description"
+          <h3 className="font-semibold mt-4">Add Expense</h3>
+          <input className="border p-2 w-full" placeholder="Description"
             onChange={e=>setForm({...form,expenseDesc:e.target.value})}/>
-          <input className="border p-2 w-full" placeholder="Expense Amount"
+          <input className="border p-2 w-full" placeholder="Amount"
             onChange={e=>setForm({...form,expenseAmount:e.target.value})}/>
           <button className="bg-gold p-2 w-full"
             onClick={()=>requirePin(addExpense)}>Add Expense</button>
         </div>
       )}
 
-      {/* ===== EXPORT ===== */}
-      {user.role==="admin" && (
-        <div className="bg-white p-4 rounded-xl mb-4 space-y-2">
-          <h2 className="font-bold">Export to Excel</h2>
-          <button className="bg-dark text-white p-2 w-full"
-            onClick={()=>requirePin(exportContributions)}>Export Contributions</button>
-          <button className="bg-dark text-white p-2 w-full"
-            onClick={()=>requirePin(exportLoans)}>Export Loans</button>
-          <button className="bg-dark text-white p-2 w-full"
-            onClick={()=>requirePin(exportExpenses)}>Export Expenses</button>
-        </div>
-      )}
-
-      {/* ===== MEMBERS ===== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {MEMBERS.map(m=>(
-          <div key={m} className="bg-white p-4 rounded shadow">
-            <h3 className="font-semibold">{m}</h3>
-            <p className="text-sm">Contributions: {data[m].ledger.length}</p>
-            <p className="text-sm">Loans: {data[m].loans.length}</p>
-          </div>
-        ))}
+      {/* LEDGERS */}
+      <div className="bg-white p-4 rounded-xl mb-6">
+        <h2 className="font-bold text-lg mb-2">Contribution Ledger</h2>
+        <table className="w-full text-sm border">
+          <thead>
+            <tr className="bg-goldlight">
+              <th>Member</th><th>Month</th><th>Expected</th><th>Paid</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {MEMBERS.map(m=>data[m].ledger.map((r,i)=>(
+              <tr key={m+i}>
+                <td>{m}</td><td>{r.month}</td><td>{r.expected}</td><td>{r.paid}</td><td>{r.status}</td>
+              </tr>
+            )))}
+          </tbody>
+        </table>
       </div>
 
-      {/* PIN */}
+      <div className="bg-white p-4 rounded-xl mb-6">
+        <h2 className="font-bold text-lg mb-2">Loan Ledger</h2>
+        <table className="w-full text-sm border">
+          <thead>
+            <tr className="bg-goldlight">
+              <th>Member</th><th>Principal</th><th>Start Date</th><th>Balance</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {MEMBERS.map(m=>data[m].loans.map((l,i)=>(
+              <tr key={m+i}>
+                <td>{m}</td><td>{l.principal}</td><td>{l.startDate}</td><td>{l.balance}</td><td>{l.status}</td>
+              </tr>
+            )))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="bg-white p-4 rounded-xl mb-6">
+        <h2 className="font-bold text-lg mb-2">Expenses</h2>
+        <table className="w-full text-sm border">
+          <thead>
+            <tr className="bg-goldlight">
+              <th>Date</th><th>Description</th><th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.expenses.map((e,i)=>(
+              <tr key={i}>
+                <td>{e.date}</td><td>{e.description}</td><td>{e.amount}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* PIN MODAL */}
       {askPin && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
           <div className="bg-white p-4 rounded w-64">
