@@ -58,6 +58,18 @@ MEMBERS.forEach(m=>{
 if(!data.expenses) data.expenses=[];
 
 /* ========= HELPERS ========= */
+  function downloadCSV(filename, rows) {
+  const csv = rows.map(r =>
+    r.map(v => `"${String(v ?? "").replace(/"/g,'""')}"`).join(",")
+  ).join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
   function calculateLateFee(month, paymentDate) {
   if (!paymentDate) return 0;
 
@@ -253,6 +265,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
