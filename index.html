@@ -46,6 +46,17 @@ const monthsBetween = (start) => {
 };
 const compound = (p,m)=>Math.round(p*Math.pow(1+INTEREST,m));
 
+const downloadCSV = (filename, rows) => {
+  const csv = rows.map(r =>
+    r.map(v => `"${String(v ?? "").replace(/"/g,'""')}"`).join(",")
+  ).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+};
+
 /* ================= APP ================= */
 function App(){
   const [user,setUser]=React.useState(null);
@@ -61,7 +72,6 @@ function App(){
     amount:"",
     loanAmount:"",
     loanDate:"",
-    repayAmount:"",
     expenseAmount:"",
     expenseDesc:""
   });
@@ -99,7 +109,7 @@ function App(){
     } else alert("Wrong PIN");
   };
 
-  /* ===== ADD FUNCTIONS ===== */
+  /* ===== ADD DATA ===== */
   const addContribution=()=>{
     const d={...data};
     d[form.member].ledger.push({
@@ -132,6 +142,35 @@ function App(){
     save(d);
   };
 
+  /* ===== EXPORTS ===== */
+  const exportContributions=()=>{
+    const rows=[["Member","Month","Amount"]];
+    MEMBERS.forEach(m=>{
+      data[m].ledger.forEach(r=>{
+        rows.push([m,r.month,r.paid]);
+      });
+    });
+    downloadCSV("elites_contributions.csv",rows);
+  };
+
+  const exportLoans=()=>{
+    const rows=[["Member","Principal","Start Date","Balance","Status"]];
+    MEMBERS.forEach(m=>{
+      data[m].loans.forEach(l=>{
+        rows.push([m,l.principal,l.startDate,l.currentBalance,l.status]);
+      });
+    });
+    downloadCSV("elites_loans.csv",rows);
+  };
+
+  const exportExpenses=()=>{
+    const rows=[["Date","Description","Amount"]];
+    data.expenses.forEach(e=>{
+      rows.push([e.date,e.description,e.amount]);
+    });
+    downloadCSV("elites_expenses.csv",rows);
+  };
+
   /* ===== LOGIN ===== */
   if(!user){
     return (
@@ -158,9 +197,9 @@ function App(){
         </span>
       </header>
 
-      {/* ===== ADMIN FORMS ===== */}
+      {/* ===== ADMIN ENTRY ===== */}
       {user.role==="admin" && !frozen && (
-        <div className="bg-white p-4 rounded-xl mb-4 space-y-3">
+        <div className="bg-white p-4 rounded-xl mb-4 space-y-2">
           <h2 className="font-bold">Admin Entry</h2>
 
           <select className="border p-2 w-full"
@@ -170,38 +209,42 @@ function App(){
           </select>
 
           <input className="border p-2 w-full" placeholder="Contribution Month (YYYY-MM)"
-            onChange={e=>setForm({...form,month:e.target.value})} />
+            onChange={e=>setForm({...form,month:e.target.value})}/>
           <input className="border p-2 w-full" placeholder="Contribution Amount"
-            onChange={e=>setForm({...form,amount:e.target.value})} />
-
+            onChange={e=>setForm({...form,amount:e.target.value})}/>
           <button className="bg-gold p-2 w-full"
-            onClick={()=>requirePin(addContribution)}>
-            Add Contribution
-          </button>
+            onClick={()=>requirePin(addContribution)}>Add Contribution</button>
 
           <input className="border p-2 w-full" placeholder="Loan Amount"
-            onChange={e=>setForm({...form,loanAmount:e.target.value})} />
+            onChange={e=>setForm({...form,loanAmount:e.target.value})}/>
           <input type="date" className="border p-2 w-full"
-            onChange={e=>setForm({...form,loanDate:e.target.value})} />
-
+            onChange={e=>setForm({...form,loanDate:e.target.value})}/>
           <button className="bg-gold p-2 w-full"
-            onClick={()=>requirePin(addLoan)}>
-            Add Loan
-          </button>
+            onClick={()=>requirePin(addLoan)}>Add Loan</button>
 
           <input className="border p-2 w-full" placeholder="Expense Description"
-            onChange={e=>setForm({...form,expenseDesc:e.target.value})} />
+            onChange={e=>setForm({...form,expenseDesc:e.target.value})}/>
           <input className="border p-2 w-full" placeholder="Expense Amount"
-            onChange={e=>setForm({...form,expenseAmount:e.target.value})} />
-
+            onChange={e=>setForm({...form,expenseAmount:e.target.value})}/>
           <button className="bg-gold p-2 w-full"
-            onClick={()=>requirePin(addExpense)}>
-            Add Expense
-          </button>
+            onClick={()=>requirePin(addExpense)}>Add Expense</button>
         </div>
       )}
 
-      {/* ===== MEMBERS VIEW ===== */}
+      {/* ===== EXPORT ===== */}
+      {user.role==="admin" && (
+        <div className="bg-white p-4 rounded-xl mb-4 space-y-2">
+          <h2 className="font-bold">Export to Excel</h2>
+          <button className="bg-dark text-white p-2 w-full"
+            onClick={()=>requirePin(exportContributions)}>Export Contributions</button>
+          <button className="bg-dark text-white p-2 w-full"
+            onClick={()=>requirePin(exportLoans)}>Export Loans</button>
+          <button className="bg-dark text-white p-2 w-full"
+            onClick={()=>requirePin(exportExpenses)}>Export Expenses</button>
+        </div>
+      )}
+
+      {/* ===== MEMBERS ===== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {MEMBERS.map(m=>(
           <div key={m} className="bg-white p-4 rounded shadow">
@@ -224,6 +267,7 @@ function App(){
           </div>
         </div>
       )}
+
     </div>
   );
 }
