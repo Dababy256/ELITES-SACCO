@@ -44,21 +44,28 @@ const monthsBetween = (start) => {
     0
   );
 };
-
 const compound = (p,m)=>Math.round(p*Math.pow(1+INTEREST,m));
 
 /* ================= APP ================= */
 function App(){
   const [user,setUser]=React.useState(null);
   const [data,setData]=React.useState({});
-  const [logo,setLogo]=React.useState(localStorage.getItem("sacco_logo"));
-  const [photos,setPhotos]=React.useState(JSON.parse(localStorage.getItem("member_photos")||"{}"));
   const [frozen,setFrozen]=React.useState(localStorage.getItem("sacco_frozen")==="true");
   const [askPin,setAskPin]=React.useState(false);
   const [pin,setPin]=React.useState("");
   const [afterPin,setAfterPin]=React.useState(null);
 
-  /* ===== INIT ===== */
+  const [form,setForm]=React.useState({
+    member:"",
+    month:"",
+    amount:"",
+    loanAmount:"",
+    loanDate:"",
+    repayAmount:"",
+    expenseAmount:"",
+    expenseDesc:""
+  });
+
   React.useEffect(()=>{
     const raw=localStorage.getItem("elites_sacco");
     let d=raw?JSON.parse(raw):{};
@@ -78,7 +85,6 @@ function App(){
     localStorage.setItem("elites_sacco",JSON.stringify(d));
   };
 
-  /* ===== PIN ===== */
   const requirePin=(action)=>{
     setAfterPin(()=>action);
     setPin("");
@@ -93,18 +99,43 @@ function App(){
     } else alert("Wrong PIN");
   };
 
-  /* ===== IMAGE ===== */
-  const readImg=(file,cb)=>{
-    const r=new FileReader();
-    r.onload=e=>cb(e.target.result);
-    r.readAsDataURL(file);
+  /* ===== ADD FUNCTIONS ===== */
+  const addContribution=()=>{
+    const d={...data};
+    d[form.member].ledger.push({
+      month: form.month,
+      paid: Number(form.amount)
+    });
+    save(d);
+  };
+
+  const addLoan=()=>{
+    const months=monthsBetween(form.loanDate);
+    const bal=compound(Number(form.loanAmount),months);
+    const d={...data};
+    d[form.member].loans.push({
+      principal:Number(form.loanAmount),
+      startDate:form.loanDate,
+      currentBalance:bal,
+      status:"ACTIVE"
+    });
+    save(d);
+  };
+
+  const addExpense=()=>{
+    const d={...data};
+    d.expenses.push({
+      date:new Date().toISOString().slice(0,10),
+      description:form.expenseDesc,
+      amount:Number(form.expenseAmount)
+    });
+    save(d);
   };
 
   /* ===== LOGIN ===== */
   if(!user){
     return (
       <div className="p-8 max-w-md mx-auto text-center">
-        {logo && <img src={logo} className="h-20 mx-auto mb-4 rounded" />}
         <h1 className="text-3xl font-bold mb-6">Elites SACCO</h1>
         {MEMBERS.map(m=>(
           <button key={m}
@@ -117,106 +148,66 @@ function App(){
     );
   }
 
-  const totals={
-    loans: MEMBERS.reduce((s,m)=>s+data[m].loans.reduce((a,l)=>a+l.currentBalance,0),0),
-    expenses: data.expenses.reduce((a,e)=>a+e.amount,0)
-  };
-
   return (
     <div className="p-4 max-w-6xl mx-auto">
 
-      {/* HEADER */}
-      <header className="bg-dark text-white p-4 rounded-xl mb-4 flex items-center gap-4">
-        {logo && <img src={logo} className="h-12 rounded" />}
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">Elites SACCO</h1>
-          <p className="text-gold text-sm">{user.name}</p>
-        </div>
+      <header className="bg-dark text-white p-4 rounded-xl mb-4 flex justify-between">
+        <h1 className="text-2xl font-bold">Elites SACCO</h1>
         <span className={`px-2 py-1 rounded ${frozen?"bg-red-600":"bg-green-600"}`}>
           {frozen?"FROZEN":"ACTIVE"}
         </span>
       </header>
 
-      {/* ADMIN CONTROL */}
-      {user.role==="admin" && (
-        <div className="bg-white p-3 rounded mb-4 space-y-2">
-          <input type="file" accept="image/*"
-            onChange={e=>readImg(e.target.files[0],img=>{
-              localStorage.setItem("sacco_logo",img);
-              setLogo(img);
-            })}/>
-          {!frozen ? (
-            <button className="bg-red-700 text-white p-2 w-full rounded"
-              onClick={()=>requirePin(()=>{
-                localStorage.setItem("sacco_frozen","true");
-                setFrozen(true);
-              })}>Freeze System</button>
-          ):(
-            <button className="bg-green-700 text-white p-2 w-full rounded"
-              onClick={()=>requirePin(()=>{
-                localStorage.setItem("sacco_frozen","false");
-                setFrozen(false);
-              })}>Unfreeze System</button>
-          )}
+      {/* ===== ADMIN FORMS ===== */}
+      {user.role==="admin" && !frozen && (
+        <div className="bg-white p-4 rounded-xl mb-4 space-y-3">
+          <h2 className="font-bold">Admin Entry</h2>
+
+          <select className="border p-2 w-full"
+            onChange={e=>setForm({...form,member:e.target.value})}>
+            <option value="">Select Member</option>
+            {MEMBERS.map(m=><option key={m}>{m}</option>)}
+          </select>
+
+          <input className="border p-2 w-full" placeholder="Contribution Month (YYYY-MM)"
+            onChange={e=>setForm({...form,month:e.target.value})} />
+          <input className="border p-2 w-full" placeholder="Contribution Amount"
+            onChange={e=>setForm({...form,amount:e.target.value})} />
+
+          <button className="bg-gold p-2 w-full"
+            onClick={()=>requirePin(addContribution)}>
+            Add Contribution
+          </button>
+
+          <input className="border p-2 w-full" placeholder="Loan Amount"
+            onChange={e=>setForm({...form,loanAmount:e.target.value})} />
+          <input type="date" className="border p-2 w-full"
+            onChange={e=>setForm({...form,loanDate:e.target.value})} />
+
+          <button className="bg-gold p-2 w-full"
+            onClick={()=>requirePin(addLoan)}>
+            Add Loan
+          </button>
+
+          <input className="border p-2 w-full" placeholder="Expense Description"
+            onChange={e=>setForm({...form,expenseDesc:e.target.value})} />
+          <input className="border p-2 w-full" placeholder="Expense Amount"
+            onChange={e=>setForm({...form,expenseAmount:e.target.value})} />
+
+          <button className="bg-gold p-2 w-full"
+            onClick={()=>requirePin(addExpense)}>
+            Add Expense
+          </button>
         </div>
       )}
 
-      {/* DASHBOARD */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-        <div className="bg-white p-4 rounded">Loans: <b>{totals.loans}</b></div>
-        <div className="bg-white p-4 rounded">Expenses: <b>{totals.expenses}</b></div>
-        <div className="bg-white p-4 rounded">Net: <b>{-totals.loans-totals.expenses}</b></div>
-      </div>
-
-      {/* MEMBERS */}
+      {/* ===== MEMBERS VIEW ===== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {MEMBERS.map(m=>(
           <div key={m} className="bg-white p-4 rounded shadow">
-            <div className="flex gap-3 items-center mb-2">
-              {photos[m]?
-                <img src={photos[m]} className="h-12 w-12 rounded-full"/>:
-                <div className="h-12 w-12 rounded-full bg-gold flex items-center justify-center text-white">{m[0]}</div>
-              }
-              {user.role==="admin" &&
-                <input type="file" accept="image/*"
-                  onChange={e=>readImg(e.target.files[0],img=>{
-                    const p={...photos,[m]:img};
-                    setPhotos(p);
-                    localStorage.setItem("member_photos",JSON.stringify(p));
-                  })}/>
-              }
-              <h3 className="font-semibold">{m}</h3>
-            </div>
-
-            {/* LEDGER */}
-            {data[m].ledger.map((r,i)=>(
-              <div key={i} className="text-sm flex justify-between border-b py-1">
-                <span>{r.month} – {r.paid}</span>
-                {user.role==="admin" && !frozen && (
-                  <button className="text-red-600"
-                    onClick={()=>requirePin(()=>{
-                      const d={...data};
-                      d[m].ledger.splice(i,1);
-                      save(d);
-                    })}>🗑️</button>
-                )}
-              </div>
-            ))}
-
-            {/* LOANS */}
-            {data[m].loans.map((l,i)=>(
-              <div key={i} className="text-sm mt-2">
-                Loan: <b>{l.currentBalance}</b> ({l.status})
-                {user.role==="admin" && !frozen && (
-                  <button className="text-red-600 ml-2"
-                    onClick={()=>requirePin(()=>{
-                      const d={...data};
-                      d[m].loans.splice(i,1);
-                      save(d);
-                    })}>🗑️</button>
-                )}
-              </div>
-            ))}
+            <h3 className="font-semibold">{m}</h3>
+            <p className="text-sm">Contributions: {data[m].ledger.length}</p>
+            <p className="text-sm">Loans: {data[m].loans.length}</p>
           </div>
         ))}
       </div>
@@ -233,7 +224,6 @@ function App(){
           </div>
         </div>
       )}
-
     </div>
   );
 }
