@@ -153,7 +153,9 @@ function render(){
     <h2>Add Records</h2>
     <select id="mSel">${MEMBERS.map(m=>`<option>${m}</option>`)}</select>
     <input id="cMonth" placeholder="Month YYYY-MM">
-    <input id="cPaid" placeholder="Paid Amount">
+<input id="cPaidDate" type="date">
+<input id="cPaid" placeholder="Paid Amount">
+
     <button class="gold" onclick="pinCheck(addContribution)">Add Contribution</button>
     <hr>
     <input id="lAmt" placeholder="Loan Amount">
@@ -226,4 +228,5 @@ render();
 </script>
 </body>
 </html>
+
 
