@@ -143,19 +143,25 @@ function render(){
 
   /* ADMIN CONTROLS */
   if(user.role==="admin"){
-    const a=document.createElement("div");a.className="card";
-    a.innerHTML=`
-      <h2>Admin Controls</h2>
-      <input type="file" id="logoUp"><br>
-      <button onclick="pinCheck(()=>{frozen=!frozen;localStorage.setItem('frozen',frozen);render()})">
-        ${frozen?"Unfreeze":"Freeze"} System
-      </button>`;
-    <br><br>
-<button class="gold" onclick="exportContributionsCSV()">
-  Export Contributions (CSV)
-</button>
+    const a = document.createElement("div");
+a.className = "card";
+a.innerHTML = `
+  <h2>Admin Controls</h2>
 
-    app.appendChild(a);
+  <input type="file" id="logoUp"><br><br>
+
+  <button onclick="pinCheck(()=>{frozen=!frozen;localStorage.setItem('frozen',frozen);render()})">
+    ${frozen ? "Unfreeze" : "Freeze"} System
+  </button>
+
+  <br><br>
+
+  <button class="gold" onclick="exportContributionsCSV()">
+    Export Contributions (CSV)
+  </button>
+`;
+app.appendChild(a);
+
     document.getElementById("logoUp").onchange=e=>{
       const r=new FileReader();
       r.onload=x=>{logo=x.target.result;localStorage.setItem("logo",logo);render()};
@@ -289,6 +295,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
