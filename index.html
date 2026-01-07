@@ -209,6 +209,25 @@ function addLoan(){
   save();render();
 }
 function addExpense(){
+  function exportContributionsCSV() {
+  const rows = [
+    ["Member", "Month", "Paid Amount", "Late Fee"]
+  ];
+
+  MEMBERS.forEach(member => {
+    data[member].contributions.forEach(r => {
+      rows.push([
+        member,
+        r.month,
+        r.paid,
+        r.lateFee || 0
+      ]);
+    });
+  });
+
+  downloadCSV("elites_contributions.csv", rows);
+}
+
   data.expenses.push({desc:eDesc.value,amount:Number(eAmt.value)});
   save();render();
 }
@@ -265,6 +284,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
