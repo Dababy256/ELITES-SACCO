@@ -150,6 +150,11 @@ function render(){
       <button onclick="pinCheck(()=>{frozen=!frozen;localStorage.setItem('frozen',frozen);render()})">
         ${frozen?"Unfreeze":"Freeze"} System
       </button>`;
+    <br><br>
+<button class="gold" onclick="exportContributionsCSV()">
+  Export Contributions (CSV)
+</button>
+
     app.appendChild(a);
     document.getElementById("logoUp").onchange=e=>{
       const r=new FileReader();
@@ -284,6 +289,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
