@@ -203,20 +203,30 @@ function addExpense(){
 
 /* ========= LEDGERS ========= */
 function renderContributionLedger(app){
-  let html=`<div class="card"><h2>Contribution Ledger</h2><table>
- <tr>
-  <th>Member</th>
-  <th>Month</th>
-  <th>Paid</th>
-  <th>Late Fee</th>
-</tr>
+ let html = `<div class="card">
+  <h2>Contribution Ledger</h2>
+  <table>
+    <tr>
+      <th>Member</th>
+      <th>Month</th>
+      <th>Paid</th>
+      <th>Late Fee</th>
+    </tr>`;
 
-  MEMBERS.forEach(m=>data[m].contributions.forEach(r=>{
-    html+=`<tr><td>${m}</td><td>${r.month}</td><td>${r.paid}</td>
-<td>${r.lateFee || 0}</td>
-</tr>`;
-  }));
-  html+=`</table></div>`;
+MEMBERS.forEach(m => {
+  data[m].contributions.forEach(r => {
+    html += `<tr>
+      <td>${m}</td>
+      <td>${r.month}</td>
+      <td>${r.paid}</td>
+      <td>${r.lateFee || 0}</td>
+    </tr>`;
+  });
+});
+
+html += `</table></div>`;
+app.innerHTML += html;
+
   app.innerHTML+=html;
 }
 function renderLoanLedger(app){
@@ -243,6 +253,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
