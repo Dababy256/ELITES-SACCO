@@ -239,6 +239,7 @@ function addExpense(){
 
   downloadCSV("elites_contributions.csv", rows);
 }
+  window.exportContributionsCSV = exportContributionsCSV;
 
   data.expenses.push({desc:eDesc.value,amount:Number(eAmt.value)});
   save();render();
@@ -296,6 +297,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
