@@ -158,6 +158,18 @@ a.innerHTML = `
   
 `;
 app.appendChild(a);
+    // Safe Export Contributions button
+if (user.role === "admin") {
+  const exportBtn = document.createElement("button");
+  exportBtn.textContent = "Export Contributions (CSV)";
+  exportBtn.className = "gold";
+  exportBtn.style.marginTop = "10px";
+
+  exportBtn.addEventListener("click", exportContributionsCSV);
+
+  a.appendChild(document.createElement("br"));
+  a.appendChild(exportBtn);
+}
 
     document.getElementById("logoUp").onchange=e=>{
       const r=new FileReader();
@@ -294,6 +306,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
