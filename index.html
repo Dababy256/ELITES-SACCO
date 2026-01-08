@@ -156,11 +156,15 @@ a.innerHTML = `
 
   <br><br>
 
-  <button class="gold" onclick="exportContributionsCSV()">
-    Export Contributions (CSV)
-  </button>
+  <button class="gold" id="exportContributionsBtn">
+  Export Contributions (CSV)
+</button>
 `;
 app.appendChild(a);
+    const exportBtn = document.getElementById("exportContributionsBtn");
+if (exportBtn) {
+  exportBtn.addEventListener("click", exportContributionsCSV);
+}
 
     document.getElementById("logoUp").onchange=e=>{
       const r=new FileReader();
@@ -297,6 +301,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
