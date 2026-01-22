@@ -5,13 +5,13 @@
 <title>Elites SACCO Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-    body{font-family:'Segoe UI', Arial, sans-serif; background:#F3E9D2; margin:0; color:#111}
+    body{font-family:'Segoe UI', sans-serif; background:#F3E9D2; margin:0; color:#111}
     header{background:#111; color:#fff; padding:15px; display:flex; align-items:center; gap:12px; border-bottom:4px solid #B08D57}
-    #logoSlot img{height:55px; width:55px; border-radius:50%; border:2px solid #B08D57; background:#fff; object-fit: cover}
+    #logoSlot img{height:55px; width:55px; border-radius:50%; border:2px solid #B08D57; background:#fff; object-fit:cover}
     .container{padding:16px; max-width:1100px; margin:auto}
     .card{background:#fff; padding:20px; border-radius:12px; margin-bottom:16px; box-shadow:0 4px 10px rgba(0,0,0,0.1)}
     h2{margin-top:0; color:#111; border-bottom:2px solid #B08D57; padding-bottom:8px}
-    table{width:100%; border-collapse:collapse; font-size:13px; margin-top:10px}
+    table{width:100%; border-collapse:collapse; font-size:13px}
     th,td{border:1px solid #eee; padding:10px; text-align:left}
     th{background:#B08D57; color:#000}
     button{padding:10px 18px; border:none; border-radius:6px; background:#111; color:#fff; cursor:pointer; font-weight:bold}
@@ -21,7 +21,7 @@
     .status{padding:5px 12px; border-radius:20px; font-size:12px; font-weight:bold}
     .green{background:#27ae60; color:white}
     .red{background:#c0392b; color:white}
-    .debt-card{background:#FFFDE7; border-left:10px solid #FBC02D}
+    .warning{color:#c0392b; font-weight:bold; font-size: 0.9em}
 </style>
 </head>
 <body>
@@ -30,7 +30,7 @@
     <div id="logoSlot"></div>
     <div style="flex-grow:1">
         <strong>ELITES SACCO</strong><br>
-        <small id="userLabel">Synchronizing...</small>
+        <small id="userLabel">Syncing...</small>
     </div>
     <span id="syncStatus" class="status red">OFFLINE</span>
 </header>
@@ -38,42 +38,20 @@
 <div class="container" id="app"></div>
 
 <script>
-/* ========= CLOUD KEYS ========= */
 const BIN_ID = "6971f3eb43b1c97be94154dc"; 
 const MASTER_KEY = "$2a$10$83AEiP9GsrLhSQIC8.nuW.6QtHG5XVzJElaL67zasDR0h8BYGLsQu";
-
-/* ========= SYSTEM STATE ========= */
+const MONTHLY_TARGET = 50000; // Adjust this to your actual monthly contribution amount
 const ADMIN_NAME = "Apule Gerald Humble";
-const CURRENT_MEMBERS = [
-    "Apule Gerald Humble",
-    "Ocen James Willy",
-    "Ameny Ronald",
-    "Okullo David Laurence",
-    "Odong Geoffrey"
-];
 
 let user = null;
 let data = {};
 
 async function loadData() {
     try {
-        const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-            headers: { 'X-Master-Key': MASTER_KEY }
-        });
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {headers:{'X-Master-Key':MASTER_KEY}});
         const json = await res.json();
         data = json.record;
-        
-        // Ensure all new names exist in the data structure
-        CURRENT_MEMBERS.forEach(m => {
-            if(!data[m]) data[m] = {contributions:[], loans:[], pin: "1234"};
-            // Force 1234 PIN if it's missing or broken
-            if(!data[m].pin) data[m].pin = "1234";
-        });
-        data.members = CURRENT_MEMBERS;
-
-        if(data.logo) {
-            document.getElementById("logoSlot").innerHTML = `<img src="${data.logo}">`;
-        }
+        if(data.logo) document.getElementById("logoSlot").innerHTML = `<img src="${data.logo}">`;
         document.getElementById("syncStatus").textContent = "CLOUD LIVE";
         document.getElementById("syncStatus").className = "status green";
         render();
@@ -83,128 +61,138 @@ async function loadData() {
 async function saveData() {
     document.getElementById("syncStatus").textContent = "SAVING...";
     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Master-Key': MASTER_KEY },
+        method:'PUT', headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},
         body: JSON.stringify(data)
     });
     document.getElementById("syncStatus").textContent = "CLOUD LIVE";
     render();
 }
 
-function handleLogo(e) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = 150; canvas.height = 150; 
-            ctx.drawImage(img, 0, 0, 150, 150);
-            data.logo = canvas.toDataURL('image/jpeg', 0.8);
-            saveData();
-        };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
-}
-
-function calculateInterest(loan) {
-    if(loan.type !== 'LOAN') return 0;
-    const startDate = new Date(loan.date);
-    const today = new Date(); // Current date Jan 22, 2026
-    const months = (today.getFullYear() - startDate.getFullYear()) * 12 + (today.getMonth() - startDate.getMonth());
-    return months > 0 ? Math.round(loan.amt * 0.05 * months) : 0;
+function getMissingMonths(memberName) {
+    const paidMonths = data[memberName].contributions.map(c => c.month);
+    const missing = [];
+    const now = new Date();
+    // Check last 12 months (can be adjusted)
+    for(let i=0; i<12; i++) {
+        let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        let mString = d.toISOString().slice(0,7);
+        if(!paidMonths.includes(mString)) missing.push(mString);
+    }
+    return missing;
 }
 
 function render() {
     const app = document.getElementById("app");
-    document.getElementById("userLabel").textContent = user ? `Logged in: ${user.name}` : "Portal Secure";
+    document.getElementById("userLabel").textContent = user ? `Member: ${user.name}` : "Access Portal";
     app.innerHTML = "";
 
     if(!user) {
         let h = `<div class="card" style="text-align:center"><h2>Member Login</h2><div class="grid">`;
-        CURRENT_MEMBERS.forEach(m => h += `<button style="padding:15px" onclick="checkLogin('${m}')">${m}</button>`);
+        data.members.forEach(m => h += `<button style="padding:15px" onclick="checkLogin('${m}')">${m}</button>`);
         app.innerHTML = h + `</div></div>`;
         return;
     }
 
-    // Individual Balances
-    let mySavings = 0, myLoanPrin = 0, myInterest = 0;
-    data[user.name].contributions.forEach(c => mySavings += Number(c.amt));
-    data[user.name].loans.forEach(l => {
-        myLoanPrin += Number(l.bal);
-        myInterest += calculateInterest(l);
-    });
+    // Member Personal Summary
+    const missing = getMissingMonths(user.name);
+    let loanPrin = 0;
+    data[user.name].loans.forEach(l => loanPrin += Number(l.bal));
 
     app.innerHTML += `
-        <div class="card debt-card">
-            <h3>Account: ${user.name}</h3>
+        <div class="card" style="background:#FFF9C4; border-left:10px solid #FBC02D">
+            <h3>My Status: ${user.name}</h3>
             <div class="grid">
-                <div>Total Saved:<br><strong>UGX ${mySavings.toLocaleString()}</strong></div>
-                <div>Outstanding Loan:<br><strong>UGX ${myLoanPrin.toLocaleString()}</strong></div>
-                <div>Interest (5%):<br><strong style="color:red">UGX ${myInterest.toLocaleString()}</strong></div>
+                <div>Outstanding Loan:<br><strong>UGX ${loanPrin.toLocaleString()}</strong></div>
+                <div>Unpaid Months:<br><span class="warning">${missing.length} Months (${missing.join(', ')})</span></div>
+                <div>Unpaid Amount:<br><span class="warning">UGX ${(missing.length * MONTHLY_TARGET).toLocaleString()}</span></div>
             </div>
+            <button onclick="changePIN()" style="margin-top:10px; background:#444; font-size:11px">Change My PIN</button>
         </div>`;
 
     if(user.role === 'admin') {
-        const adm = document.createElement("div");
-        adm.className = "card";
-        adm.style.border = "2px solid #B08D57";
-        adm.innerHTML = `
-            <h2>Admin Management Hub</h2>
-            <div class="grid">
-                <div>
-                    <h3>+ Record Savings</h3>
-                    <select id="mC">${CURRENT_MEMBERS.map(m=>`<option>${m}</option>`)}</select>
-                    <input type="date" id="dC" value="${new Date().toISOString().split('T')[0]}">
-                    <input type="number" id="aC" placeholder="Amount">
-                    <button class="gold" onclick="addEntry('C')">Post Contribution</button>
-                    <hr>
-                    <label>Upload Logo:</label><input type="file" onchange="handleLogo(event)">
+        app.innerHTML += `
+            <div class="card" style="border:2px solid #B08D57">
+                <h2>Admin Hub</h2>
+                <div class="grid">
+                    <div>
+                        <h3>+ Savings</h3>
+                        <select id="mC">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                        <input type="month" id="moC" value="${new Date().toISOString().slice(0,7)}">
+                        <input type="date" id="dC" value="${new Date().toISOString().split('T')[0]}">
+                        <input type="number" id="aC" placeholder="Amount">
+                        <button class="gold" onclick="addEntry('C')">Save Contribution</button>
+                    </div>
+                    <div>
+                        <h3>+ Loan/Repay</h3>
+                        <select id="mL">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                        <input type="date" id="dL" value="${new Date().toISOString().split('T')[0]}">
+                        <input type="number" id="aL" placeholder="Amount">
+                        <button class="gold" onclick="addEntry('L')">Disburse Loan</button>
+                        <button class="gold" style="background:green" onclick="addEntry('R')">Repayment</button>
+                    </div>
+                    <div>
+                        <h3>Settings</h3>
+                        <label>Update Logo:</label><input type="file" onchange="handleLogo(event)">
+                        <button onclick="user=null; render()" style="background:#666; width:100%; margin-top:10px">Logout</button>
+                    </div>
                 </div>
-                <div>
-                    <h3>+ Loan & Repay</h3>
-                    <select id="mL">${CURRENT_MEMBERS.map(m=>`<option>${m}</option>`)}</select>
-                    <input type="date" id="dL" value="${new Date().toISOString().split('T')[0]}">
-                    <input type="number" id="aL" placeholder="Amount">
-                    <button class="gold" onclick="addEntry('L')">Give Loan</button>
-                    <button class="gold" style="background:green" onclick="addEntry('R')">Record Repayment</button>
-                </div>
-            </div>
-            <button onclick="user=null; render()" style="background:#666; margin-top:15px">Logout</button>
-        `;
-        app.appendChild(adm);
+            </div>`;
+    } else {
+        app.innerHTML += `<button onclick="user=null; render()" style="background:#666; margin-bottom:15px">Logout</button>`;
     }
 
-    let table = `<div class="card"><h2>Global History</h2><table><tr><th>Member</th><th>Action</th><th>Amount</th><th>Date</th></tr>`;
-    CURRENT_MEMBERS.forEach(m => {
-        data[m].contributions.forEach(c => table += `<tr><td>${m}</td><td>Savings</td><td>${c.amt.toLocaleString()}</td><td>${c.date}</td></tr>`);
+    let table = `<div class="card"><h2>Global Ledger</h2><table><tr><th>Member</th><th>Action</th><th>Amount</th><th>Date</th></tr>`;
+    data.members.forEach(m => {
+        data[m].contributions.forEach(c => table += `<tr><td>${m}</td><td>Savings (${c.month})</td><td>${c.amt.toLocaleString()}</td><td>${c.date}</td></tr>`);
         data[m].loans.forEach(l => table += `<tr style="color:${l.bal < 0 ? 'green':'red'}"><td>${m}</td><td>${l.type}</td><td>${l.amt.toLocaleString()}</td><td>${l.date}</td></tr>`);
     });
     app.innerHTML += table + `</table></div>`;
 }
 
 function checkLogin(name) {
-    const pinInput = prompt(`Enter PIN for ${name}:`);
-    if(pinInput === data[name].pin) {
+    const pin = prompt(`Enter PIN for ${name}:`);
+    if(pin === data[name].pin) {
         user = { name: name, role: name === ADMIN_NAME ? "admin" : "member" };
         render();
-    } else { alert("Incorrect PIN. All PINs are currently reset to 1234."); }
+    } else { alert("Wrong PIN."); }
+}
+
+function changePIN() {
+    const newPin = prompt("Enter new 4-digit PIN:");
+    if(newPin && newPin.length === 4) {
+        data[user.name].pin = newPin;
+        saveData();
+        alert("PIN updated successfully!");
+    }
 }
 
 function addEntry(type) {
     if(type==='C'){
         const m = document.getElementById("mC").value;
-        data[m].contributions.push({amt: Number(document.getElementById("aC").value), date: document.getElementById("dC").value});
+        data[m].contributions.push({amt: Number(document.getElementById("aC").value), date: document.getElementById("dC").value, month: document.getElementById("moC").value});
     } else {
         const m = document.getElementById("mL").value;
         const amt = Number(document.getElementById("aL").value);
-        const date = document.getElementById("dL").value;
-        const t = type === 'L' ? 'LOAN' : 'REPAYMENT';
-        data[m].loans.push({amt, date, bal: type==='L'?amt:-amt, type: t});
+        data[m].loans.push({amt, date: document.getElementById("dL").value, bal: type==='L'?amt:-amt, type: type==='L'?'LOAN':'REPAYMENT'});
     }
     saveData();
+}
+
+function handleLogo(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 120; canvas.height = 120;
+            canvas.getContext('2d').drawImage(img,0,0,120,120);
+            data.logo = canvas.toDataURL('image/jpeg', 0.7);
+            saveData();
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
 loadData();
