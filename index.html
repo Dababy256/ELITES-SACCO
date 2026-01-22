@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Elites SACCO Pro</title>
+<title>Elites SACCO Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     body{font-family:'Segoe UI', sans-serif; background:#F3E9D2; margin:0; color:#111}
@@ -28,7 +28,7 @@
 
 <header>
     <div id="logoSlot"></div>
-    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Loading Financial Data...</small></div>
+    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Synchronizing System...</small></div>
 </header>
 
 <div class="container" id="app"></div>
@@ -61,97 +61,96 @@ async function saveData() {
 
 function getExpectedAmount(monthStr) {
     const date = new Date(monthStr + "-01");
-    const switchDate = new Date("2024-08-01");
-    return date < switchDate ? 80000 : 100000;
+    return date < new Date("2024-08-01") ? 80000 : 100000;
 }
 
 function calculateLateFee(monthStr, paidDateStr) {
     const dueDate = new Date(monthStr + "-10");
     const paidDate = new Date(paidDateStr);
     if (paidDate <= dueDate) return 0;
-    const diffTime = Math.abs(paidDate - dueDate);
-    const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+    const diffWeeks = Math.ceil(Math.abs(paidDate - dueDate) / (1000 * 60 * 60 * 24 * 7));
     return Math.min(diffWeeks * 5000, 15000);
 }
 
-function generateReport() {
-    const month = document.getElementById("repMonth").value;
-    if(!month) return alert("Select a month first");
-    let report = `*** ELITES SACCO REPORT: ${month} ***\n\n`;
-    let totalColl = 0;
-    let totalPenalty = 0;
-
-    data.members.forEach(m => {
-        const record = data[m].contributions.find(c => c.month === month);
-        const expected = getExpectedAmount(month);
-        if(record) {
-            const fee = calculateLateFee(month, record.date);
-            report += `${m}: PAID UGX ${record.amt.toLocaleString()} (Penalty: ${fee})\n`;
-            totalColl += record.amt;
-            totalPenalty += fee;
-        } else {
-            report += `${m}: PENDING (Expected: ${expected.toLocaleString()})\n`;
-        }
-    });
-    report += `\n--------------------------\nTotal Collected: UGX ${totalColl.toLocaleString()}\nTotal Penalties: UGX ${totalPenalty.toLocaleString()}`;
-    const area = document.getElementById("reportOutput");
-    area.textContent = report;
-    area.style.display = "block";
+function calculateLoanInterest(loan) {
+    if(loan.type !== 'LOAN') return 0;
+    const start = new Date(loan.date);
+    const now = new Date();
+    const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    return months > 0 ? Math.round(loan.amt * 0.05 * months) : 0;
 }
 
 function render() {
     const app = document.getElementById("app");
-    document.getElementById("userLabel").textContent = user ? `Member: ${user.name}` : "Security Access";
+    document.getElementById("userLabel").textContent = user ? `Member: ${user.name}` : "Portal Locked";
     app.innerHTML = "";
 
     if(!user) {
-        let h = `<div class="card" style="text-align:center"><h2>Login</h2><div class="grid">`;
+        let h = `<div class="card" style="text-align:center"><h2>Member Login</h2><div class="grid">`;
         data.members.forEach(m => h += `<button onclick="checkLogin('${m}')">${m}</button>`);
         app.innerHTML = h + `</div></div>`;
         return;
     }
 
-    // Portal View
-    const mStatus = data[user.name].membershipPaid ? "PAID" : "PENDING";
+    // Individual Member Balance Card
+    let mySavings = 0, myLoanPrin = 0, myInt = 0;
+    data[user.name].contributions.forEach(c => mySavings += Number(c.amt));
+    data[user.name].loans.forEach(l => {
+        myLoanPrin += Number(l.bal);
+        myInt += calculateLoanInterest(l);
+    });
+    const mPaid = data[user.name].membershipPaid ? "PAID" : "PENDING";
+
     app.innerHTML += `
-        <div class="card">
-            <h3>Dashboard: ${user.name}</h3>
-            <div class="status ${mStatus === 'PAID' ? 'paid' : 'pending'}" style="display:inline-block">Membership Fee: ${mStatus}</div>
-            <div style="margin-top:15px">
-                <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
-                <button onclick="user=null; render()" style="background:#666; font-size:11px">Logout</button>
+        <div class="card" style="background:#FFFDE7; border-left:10px solid #B08D57">
+            <h3>My Balances: ${user.name}</h3>
+            <div class="grid">
+                <div>Saved: <strong>UGX ${mySavings.toLocaleString()}</strong></div>
+                <div>Loan Principal: <strong>UGX ${myLoanPrin.toLocaleString()}</strong></div>
+                <div>Loan Interest (5%): <strong style="color:red">UGX ${myInt.toLocaleString()}</strong></div>
             </div>
+            <div class="status ${mPaid==='PAID'?'paid':'pending'}" style="margin-top:10px; display:inline-block">Membership Fee: ${mPaid}</div>
+            <hr>
+            <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
+            <button onclick="user=null; render()" style="background:#666; font-size:11px">Logout</button>
         </div>`;
 
     if(user.role === 'admin') {
         app.innerHTML += `
             <div class="card" style="border:2px solid #B08D57">
-                <h2>Admin Tools</h2>
+                <h2>Admin Hub</h2>
                 <div class="grid">
                     <div>
-                        <h3>Generate Monthly Report</h3>
-                        <input type="month" id="repMonth">
-                        <button class="gold" style="width:100%" onclick="generateReport()">Generate Text Report</button>
-                        <div id="reportOutput" class="report-area"></div>
-                    </div>
-                    <div>
-                        <h3>Record Entry</h3>
+                        <h3>+ Entry</h3>
                         <select id="mC">${data.members.map(m=>`<option>${m}</option>`)}</select>
                         <input type="month" id="moC" value="${new Date().toISOString().slice(0,7)}">
                         <input type="date" id="dC" value="${new Date().toISOString().split('T')[0]}">
                         <input type="number" id="aC" placeholder="Amount">
-                        <button class="gold" onclick="addEntry('C')">Save Contribution</button>
+                        <button class="gold" onclick="addEntry('C')">Save Savings</button>
+                    </div>
+                    <div>
+                        <h3>+ Loans</h3>
+                        <select id="mL">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                        <input type="date" id="dL" value="${new Date().toISOString().split('T')[0]}">
+                        <input type="number" id="aL" placeholder="Amount">
+                        <button class="gold" onclick="addEntry('L')">Give Loan</button>
+                        <button class="gold" style="background:green" onclick="addEntry('R')">Repayment</button>
+                    </div>
+                    <div>
+                        <h3>Reports & Logo</h3>
+                        <input type="month" id="repMonth">
+                        <button class="gold" onclick="generateReport()">Monthly Report</button>
+                        <input type="file" onchange="handleLogo(event)" style="margin-top:5px">
+                        <select id="mM">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                        <button class="gold" onclick="toggleMembership()">Toggle Membership</button>
                     </div>
                 </div>
-                <div style="margin-top:15px">
-                    <select id="mM">${data.members.map(m=>`<option>${m}</option>`)}</select>
-                    <button class="gold" onclick="toggleMembership()">Toggle Membership Paid</button>
-                </div>
+                <div id="reportOutput" class="report-area"></div>
             </div>`;
     }
 
-    // ARREARS SECTION
-    let arrearsHtml = `<div class="card"><h2>Unpaid Arrears Tracking</h2><table>
+    // ARREARS TABLE
+    let arrearsHtml = `<div class="card"><h2>Unpaid Arrears (Since Feb 2024)</h2><table>
         <tr><th>Member</th><th>Month</th><th>Expected</th><th>Status</th></tr>`;
     const start = new Date("2024-02-01");
     const end = new Date();
@@ -167,13 +166,16 @@ function render() {
     });
     app.innerHTML += arrearsHtml + `</table></div>`;
 
-    // LEDGER
-    let table = `<div class="card"><h2>Global History</h2><table>
-        <tr><th>Member</th><th>Type</th><th>Amount</th><th>Late Fee</th><th>Date Paid</th></tr>`;
+    // GLOBAL HISTORY
+    let table = `<div class="card"><h2>Global Transaction Ledger</h2><table>
+        <tr><th>Member</th><th>Type</th><th>Amount</th><th>Late Fee</th><th>Date</th></tr>`;
     data.members.forEach(m => {
         data[m].contributions.forEach(c => {
             const fee = calculateLateFee(c.month, c.date);
             table += `<tr><td>${m}</td><td>Savings (${c.month})</td><td>${c.amt.toLocaleString()}</td><td>${fee > 0 ? 'UGX '+fee.toLocaleString() : '-'}</td><td>${c.date}</td></tr>`;
+        });
+        data[m].loans.forEach(l => {
+            table += `<tr style="color:${l.bal < 0 ? 'green':'red'}"><td>${m}</td><td>${l.type}</td><td>${l.amt.toLocaleString()}</td><td>-</td><td>${l.date}</td></tr>`;
         });
     });
     app.innerHTML += table + `</table></div>`;
@@ -185,24 +187,57 @@ function checkLogin(n) {
     else alert("Wrong PIN.");
 }
 
+function addEntry(type) {
+    if(type === 'C') {
+        const m = document.getElementById("mC").value;
+        data[m].contributions.push({amt: Number(document.getElementById("aC").value), date: document.getElementById("dC").value, month: document.getElementById("moC").value});
+    } else {
+        const m = document.getElementById("mL").value;
+        const amt = Number(document.getElementById("aL").value);
+        const date = document.getElementById("dL").value;
+        data[m].loans.push({amt, date, bal: type==='L'?amt:-amt, type: type==='L'?'LOAN':'REPAYMENT'});
+    }
+    saveData();
+}
+
+function generateReport() {
+    const month = document.getElementById("repMonth").value;
+    if(!month) return alert("Select month");
+    let report = `ELITES SACCO REPORT: ${month}\n\n`;
+    data.members.forEach(m => {
+        const record = data[m].contributions.find(c => c.month === month);
+        report += `${m}: ${record ? 'PAID UGX '+record.amt.toLocaleString() : 'PENDING'}\n`;
+    });
+    const area = document.getElementById("reportOutput");
+    area.textContent = report; area.style.display = "block";
+}
+
 function toggleMembership() {
     const m = document.getElementById("mM").value;
     data[m].membershipPaid = !data[m].membershipPaid;
     saveData();
 }
 
-function addEntry(type) {
-    const m = document.getElementById("mC").value;
-    const amt = Number(document.getElementById("aC").value);
-    const date = document.getElementById("dC").value;
-    const month = document.getElementById("moC").value;
-    data[m].contributions.push({amt, date, month});
-    saveData();
-}
-
 function changePIN() {
     const p = prompt("New 4-digit PIN:");
-    if(p && p.length === 4) { data[user.name].pin = p; saveData(); alert("PIN Updated!"); }
+    if(p && p.length === 4) { data[user.name].pin = p; saveData(); alert("Success!"); }
+}
+
+function handleLogo(e) {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 120; canvas.height = 120;
+            canvas.getContext('2d').drawImage(img,0,0,120,120);
+            data.logo = canvas.toDataURL('image/jpeg', 0.7);
+            saveData();
+        };
+        img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
 loadData();
