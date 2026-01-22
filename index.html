@@ -7,7 +7,7 @@
 <style>
     body{font-family:'Segoe UI', Arial, sans-serif; background:#F3E9D2; margin:0; color:#111}
     header{background:#111; color:#fff; padding:15px; display:flex; align-items:center; gap:12px; border-bottom:4px solid #B08D57}
-    header img{height:55px; width:55px; border-radius:50%; border:2px solid #B08D57; background:#fff; object-fit: cover}
+    #logoContainer img{height:55px; width:55px; border-radius:50%; border:2px solid #B08D57; background:#fff; object-fit: cover}
     .container{padding:16px; max-width:1100px; margin:auto}
     .card{background:#fff; padding:20px; border-radius:12px; margin-bottom:16px; box-shadow:0 4px 10px rgba(0,0,0,0.1)}
     h2{margin-top:0; color:#111; border-bottom:2px solid #B08D57; padding-bottom:8px}
@@ -21,16 +21,15 @@
     .status{padding:5px 12px; border-radius:20px; font-size:12px; font-weight:bold}
     .green{background:#27ae60; color:white}
     .red{background:#c0392b; color:white}
-    .debt-card{background:#FFF9C4; border-left:8px solid #FBC02D; color:#444}
 </style>
 </head>
 <body>
 
 <header>
-    <img id="logoImg" style="display:none">
+    <div id="logoContainer"></div>
     <div style="flex-grow:1">
         <strong>ELITES SACCO</strong><br>
-        <small id="userLabel">Verifying Identity...</small>
+        <small id="userLabel">Syncing Cloud...</small>
     </div>
     <span id="syncStatus" class="status red">OFFLINE</span>
 </header>
@@ -38,7 +37,6 @@
 <div class="container" id="app"></div>
 
 <script>
-/* ========= FIXED KEYS ========= */
 const BIN_ID = "6971f3eb43b1c97be94154dc"; 
 const MASTER_KEY = "$2a$10$83AEiP9GsrLhSQIC8.nuW.6QtHG5XVzJElaL67zasDR0h8BYGLsQu";
 
@@ -53,17 +51,14 @@ async function loadData() {
         const json = await res.json();
         data = json.record;
         
-        // REPAIR LOGIC: If a member doesn't have a PIN, set default 1234
+        // Safety check for members
         if(!data.members) data.members = ["Gerald", "Member 2", "Member 3", "Member 4", "Member 5"];
         data.members.forEach(m => {
-            if(!data[m]) data[m] = {contributions:[], loans:[]};
-            if(!data[m].pin) data[m].pin = "1234"; // Forces 1234 as default for everyone initially
+            if(!data[m]) data[m] = {contributions:[], loans:[], pin: "1234"};
         });
 
         if(data.logo) {
-            const img = document.getElementById("logoImg");
-            img.src = data.logo;
-            img.style.display = "block";
+            document.getElementById("logoContainer").innerHTML = `<img src="${data.logo}">`;
         }
         document.getElementById("syncStatus").textContent = "CLOUD LIVE";
         document.getElementById("syncStatus").className = "status green";
@@ -90,8 +85,8 @@ function handleLogo(e) {
         img.onload = function() {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 150; canvas.height = 150; 
-            ctx.drawImage(img, 0, 0, 150, 150);
+            canvas.width = 120; canvas.height = 120; 
+            ctx.drawImage(img, 0, 0, 120, 120);
             data.logo = canvas.toDataURL('image/jpeg', 0.8);
             saveData();
         };
@@ -100,40 +95,41 @@ function handleLogo(e) {
     reader.readAsDataURL(file);
 }
 
-function updateName(oldName) {
-    const newName = prompt(`Enter real name for ${oldName}:`, oldName);
-    if(newName && newName !== oldName) {
-        data[newName] = data[oldName];
-        delete data[oldName];
-        data.members = data.members.map(m => m === oldName ? newName : m);
-        if(user && user.name === oldName) user.name = newName;
-        saveData();
-    }
+function calculateInterest(loan) {
+    if(loan.type !== 'LOAN') return 0;
+    const startDate = new Date(loan.date);
+    const today = new Date();
+    const months = (today.getFullYear() - startDate.getFullYear()) * 12 + (today.getMonth() - startDate.getMonth());
+    return months > 0 ? Math.round(loan.amt * 0.05 * months) : 0;
 }
 
 function render() {
     const app = document.getElementById("app");
-    document.getElementById("userLabel").textContent = user ? `Member: ${user.name}` : "Portal Secured";
+    document.getElementById("userLabel").textContent = user ? `Member: ${user.name}` : "Security Portal";
     app.innerHTML = "";
 
     if(!user) {
         let h = `<div class="card" style="text-align:center"><h2>Member Login</h2><div class="grid">`;
-        data.members.forEach(m => h += `<button style="padding:20px" onclick="checkLogin('${m}')">${m}</button>`);
+        data.members.forEach(m => h += `<button style="padding:15px" onclick="checkLogin('${m}')">${m}</button>`);
         app.innerHTML = h + `</div></div>`;
         return;
     }
 
-    // Individual Member Status (Debts & Savings)
-    let mySavings = 0, myLoans = 0;
+    // Member View: Interest Dashboard
+    let mySavings = 0, myLoanPrin = 0, myInterest = 0;
     data[user.name].contributions.forEach(c => mySavings += Number(c.amt));
-    data[user.name].loans.forEach(l => myLoans += Number(l.bal));
+    data[user.name].loans.forEach(l => {
+        myLoanPrin += Number(l.bal);
+        myInterest += calculateInterest(l);
+    });
 
     app.innerHTML += `
-        <div class="card debt-card">
-            <h3>Account Summary: ${user.name}</h3>
+        <div class="card" style="background:#FFFDE7; border-left:10px solid #FBC02D">
+            <h3>My Balances</h3>
             <div class="grid">
-                <div>Total Saved: <br><strong>UGX ${mySavings.toLocaleString()}</strong></div>
-                <div>Loan Balance: <br><strong>UGX ${myLoans.toLocaleString()}</strong></div>
+                <div>Total Savings:<br><strong>UGX ${mySavings.toLocaleString()}</strong></div>
+                <div>Principal Loan:<br><strong>UGX ${myLoanPrin.toLocaleString()}</strong></div>
+                <div>Accrued Interest (5%):<br><strong style="color:red">UGX ${myInterest.toLocaleString()}</strong></div>
             </div>
         </div>`;
 
@@ -142,32 +138,23 @@ function render() {
         adm.className = "card";
         adm.style.border = "2px solid #B08D57";
         adm.innerHTML = `
-            <h2>Admin Hub</h2>
+            <h2>Admin Management</h2>
             <div class="grid">
                 <div>
-                    <h3>+ Record Contribution</h3>
+                    <h3>+ New Record</h3>
                     <select id="mC">${data.members.map(m=>`<option>${m}</option>`)}</select>
-                    <input type="month" id="moC" value="${new Date().toISOString().slice(0,7)}">
-                    <input type="date" id="dC" value="${new Date().toISOString().slice(0,10)}">
+                    <input type="date" id="dC" value="${new Date().toISOString().split('T')[0]}">
                     <input type="number" id="aC" placeholder="Amount">
-                    <button class="gold" onclick="addEntry('C')">Post Record</button>
+                    <button class="gold" onclick="addEntry('C')">Add Savings</button>
+                    <hr>
+                    <label>Upload Logo:</label><input type="file" accept="image/*" onchange="handleLogo(event)">
                 </div>
                 <div>
-                    <h3>Member Directory</h3>
-                    <div style="max-height:150px; overflow-y:auto; border:1px solid #ddd; padding:5px">
-                        ${data.members.map(m => `<div style="display:flex; justify-content:space-between; margin-bottom:5px">
-                            <span>${m}</span> 
-                            <button style="font-size:10px; padding:4px" onclick="updateName('${m}')">Rename</button>
-                        </div>`).join('')}
-                    </div>
-                    <label style="display:block; margin-top:10px">Set Logo:</label>
-                    <input type="file" accept="image/*" onchange="handleLogo(event)">
-                </div>
-                <div>
-                    <h3>Loans & Repayments</h3>
+                    <h3>+ Loan & Repay</h3>
                     <select id="mL">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                    <input type="date" id="dL" value="${new Date().toISOString().split('T')[0]}">
                     <input type="number" id="aL" placeholder="Amount">
-                    <button class="gold" onclick="addEntry('L')">Disburse Loan</button>
+                    <button class="gold" onclick="addEntry('L')">Give Loan</button>
                     <button class="gold" style="background:green" onclick="addEntry('R')">Record Payback</button>
                 </div>
             </div>
@@ -176,8 +163,7 @@ function render() {
         app.appendChild(adm);
     }
 
-    // Ledger
-    let table = `<div class="card"><h2>Recent Activity</h2><table><tr><th>Member</th><th>Action</th><th>Amount</th><th>Date</th></tr>`;
+    let table = `<div class="card"><h2>Global History</h2><table><tr><th>Member</th><th>Action</th><th>Amount</th><th>Date</th></tr>`;
     data.members.forEach(m => {
         data[m].contributions.forEach(c => table += `<tr><td>${m}</td><td>Savings</td><td>${c.amt.toLocaleString()}</td><td>${c.date}</td></tr>`);
         data[m].loans.forEach(l => table += `<tr style="color:${l.bal < 0 ? 'green':'red'}"><td>${m}</td><td>${l.type}</td><td>${l.amt.toLocaleString()}</td><td>${l.date}</td></tr>`);
@@ -190,18 +176,19 @@ function checkLogin(name) {
     if(pin === data[name].pin) {
         user = { name: name, role: name === "Gerald" ? "admin" : "member" };
         render();
-    } else { alert("Incorrect PIN. Please try 1234."); }
+    } else { alert("Wrong PIN."); }
 }
 
 function addEntry(type) {
     if(type==='C'){
         const m = document.getElementById("mC").value;
-        data[m].contributions.push({amt: Number(document.getElementById("aC").value), date: document.getElementById("dC").value, month: document.getElementById("moC").value});
+        data[m].contributions.push({amt: Number(document.getElementById("aC").value), date: document.getElementById("dC").value});
     } else {
         const m = document.getElementById("mL").value;
         const amt = Number(document.getElementById("aL").value);
+        const date = document.getElementById("dL").value;
         const t = type === 'L' ? 'LOAN' : 'REPAYMENT';
-        data[m].loans.push({amt, date: new Date().toISOString().split('T')[0], bal: type==='L'?amt:-amt, type: t});
+        data[m].loans.push({amt, date, bal: type==='L'?amt:-amt, type: t});
     }
     saveData();
 }
