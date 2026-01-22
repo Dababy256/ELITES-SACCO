@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Elites SACCO Ultimate Master</title>
+<title>Elites SACCO Final Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     body{font-family:'Segoe UI', sans-serif; background:#F3E9D2; margin:0; color:#111}
@@ -137,13 +137,13 @@ function render() {
             <h2>Admin Entry Hub</h2>
             <div class="grid">
                 <div>
-                    <h3>Inflow</h3>
-                    <select id="mI">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                    <h3>Inflow (Auto-Advance)</h3>
+                    <select id="mI">${data.members.map(m=>`<option ${m===target?'selected':''}>${m}</option>`)}</select>
                     <select id="tI"><option value="S">Monthly Savings</option><option value="R">Loan Repayment</option></select>
                     <input type="month" id="moI" value="2024-02">
                     <input type="date" id="daI" placeholder="Auto-Date if blank">
                     <input type="number" id="amI" placeholder="Amount">
-                    <button class="gold" onclick="postInflow()">Post</button>
+                    <button class="gold" onclick="postInflow()">Post & Next Month</button>
                 </div>
                 <div>
                     <h3>Outflow</h3>
@@ -152,7 +152,7 @@ function render() {
                     <input type="date" id="daO" value="${today}">
                     <input type="text" id="reO" placeholder="Description">
                     <input type="number" id="amO" placeholder="Amount">
-                    <button class="gold" onclick="postOutflow()">Post</button>
+                    <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
             </div>
         </div>`;
@@ -193,8 +193,19 @@ function postInflow() {
         const base = getExpectedBase(mon), fee = amt - base;
         if(fee <= 0) date = mon + "-10"; else if(fee <= 5000) date = mon + "-11"; else if(fee <= 10000) date = mon + "-18"; else date = mon + "-25";
     } else if(!date) date = new Date().toISOString().split('T')[0];
+    
     if(t==='S') data[m].contributions.push({amt, date, month:mon}); else data[m].loans.push({amt, date, bal:-amt, type:'REPAYMENT'});
-    saveData();
+
+    // SMART MONTH ADVANCE
+    let dateObj = new Date(mon + "-01");
+    dateObj.setMonth(dateObj.getMonth() + 1);
+    const nextMonth = dateObj.toISOString().slice(0, 7);
+    
+    saveData().then(() => {
+        document.getElementById("moI").value = nextMonth;
+        document.getElementById("amI").value = "";
+        document.getElementById("daI").value = "";
+    });
 }
 
 function postOutflow() {
