@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Elites SACCO Master Pro</title>
+<title>Elites SACCO Final Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     body{font-family:'Segoe UI', sans-serif; background:#F3E9D2; margin:0; color:#111}
@@ -21,15 +21,14 @@
     .status{padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold}
     .paid{background:#d4edda; color:#155724}
     .pending{background:#f8d7da; color:#721c24}
-    .report-area{background:#eee; padding:15px; border-radius:8px; white-space:pre-wrap; font-family:monospace; margin-top:10px; display:none}
-    .stat-box{padding:15px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd}
+    .stat-box{padding:15px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd; color:#111}
 </style>
 </head>
 <body>
 
 <header>
     <div id="logoSlot"></div>
-    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Synchronizing System...</small></div>
+    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Synchronizing...</small></div>
 </header>
 
 <div class="container" id="app"></div>
@@ -48,10 +47,8 @@ async function loadData() {
         const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {headers:{'X-Master-Key':MASTER_KEY}});
         const json = await res.json();
         data = json.record;
-        // Initialize new fields if they don't exist
         if(!data.expenses) data.expenses = [];
         if(!data.investments) data.investments = [];
-        
         if(data.logo) document.getElementById("logoSlot").innerHTML = `<img src="${data.logo}">`;
         render();
     } catch (e) { console.error("Sync Error"); }
@@ -78,21 +75,10 @@ function calculateLateFee(monthStr, paidDateStr) {
     return Math.min(diffWeeks * 5000, 15000);
 }
 
-function calculateLoanInterest(loan) {
-    if(loan.type !== 'LOAN') return 0;
-    const start = new Date(loan.date);
-    const now = new Date();
-    const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
-    return months > 0 ? Math.round(loan.amt * 0.05 * months) : 0;
-}
-
 function render() {
     const app = document.getElementById("app");
-    document.getElementById("userLabel").textContent = user ? `Member: ${user.name}` : "Portal Locked";
-    app.innerHTML = "";
-
     if(!user) {
-        let h = `<div class="card" style="text-align:center"><h2>Member Login</h2><div class="grid">`;
+        let h = `<div class="card" style="text-align:center"><h2>Login</h2><div class="grid">`;
         data.members.forEach(m => h += `<button onclick="checkLogin('${m}')">${m}</button>`);
         app.innerHTML = h + `</div></div>`;
         return;
@@ -100,151 +86,96 @@ function render() {
 
     const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN || data[user.name].isExtraAdmin;
 
-    // --- CALCULATE GLOBAL TOTALS ---
+    // GLOBALS
     let totalSavings = 0, totalLateFees = 0, totalLoansOut = 0, totalInvested = 0, totalExpenses = 0;
-    
     data.members.forEach(m => {
-        data[m].contributions.forEach(c => {
-            totalSavings += Number(c.amt);
-            totalLateFees += calculateLateFee(c.month, c.date);
-        });
+        data[m].contributions.forEach(c => { totalSavings += Number(c.amt); totalLateFees += calculateLateFee(c.month, c.date); });
         data[m].loans.forEach(l => totalLoansOut += Number(l.bal));
     });
     data.investments.forEach(i => totalInvested += Number(i.amt));
     data.expenses.forEach(e => totalExpenses += Number(e.amt));
-
     const availableCash = (totalSavings + totalLateFees) - (totalLoansOut + totalInvested + totalExpenses);
 
-    // --- UI: TOP SUMMARY ---
-    app.innerHTML += `
+    app.innerHTML = `
         <div class="card" style="background:#111; color:#fff">
-            <h2>SACCO Treasury Overview</h2>
+            <h2>Treasury: UGX ${availableCash.toLocaleString()} Available</h2>
             <div class="grid">
-                <div class="stat-box" style="color:#000">Available Cash:<br><strong style="font-size:1.4em">UGX ${availableCash.toLocaleString()}</strong></div>
-                <div class="stat-box" style="color:#000">In Investments:<br><strong>UGX ${totalInvested.toLocaleString()}</strong></div>
-                <div class="stat-box" style="color:#000">Active Loans:<br><strong>UGX ${totalLoansOut.toLocaleString()}</strong></div>
+                <div class="stat-box">Invested: UGX ${totalInvested.toLocaleString()}</div>
+                <div class="stat-box">Loans Out: UGX ${totalLoansOut.toLocaleString()}</div>
+                <div class="stat-box">Expenses: UGX ${totalExpenses.toLocaleString()}</div>
             </div>
         </div>`;
 
-    // --- UI: PERSONAL CARD ---
-    let mySavings = 0, myLoanPrin = 0, myInt = 0;
-    data[user.name].contributions.forEach(c => mySavings += Number(c.amt));
-    data[user.name].loans.forEach(l => { myLoanPrin += Number(l.bal); myInt += calculateLoanInterest(l); });
-    const mPaid = data[user.name].membershipPaid ? "PAID" : "PENDING";
-
-    app.innerHTML += `
-        <div class="card" style="border-left:10px solid #B08D57">
-            <h3>My Balances: ${user.name}</h3>
-            <div class="grid">
-                <div>Saved: <strong>UGX ${mySavings.toLocaleString()}</strong></div>
-                <div>My Loan: <strong>UGX ${myLoanPrin.toLocaleString()}</strong></div>
-                <div>Member Status: <span class="status ${mPaid==='PAID'?'paid':'pending'}">${mPaid}</span></div>
-            </div>
-            <hr>
-            <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
-            <button onclick="user=null; render()" style="background:#666; font-size:11px">Logout</button>
-        </div>`;
-
-    // --- UI: ADMIN HUB ---
     if(isAdmin) {
         app.innerHTML += `
             <div class="card" style="border:2px solid #B08D57">
-                <h2>Admin Hub (Management)</h2>
+                <h2>Admin Control</h2>
                 <div class="grid">
                     <div>
-                        <h3>+ Expense / Investment</h3>
-                        <select id="entryType">
-                            <option value="EXPENSE">Expense (Costs)</option>
-                            <option value="INVEST">Investment (Bonds/Trust)</option>
-                        </select>
-                        <input type="text" id="entryReason" placeholder="Reason/Description">
-                        <input type="number" id="entryAmt" placeholder="Amount">
-                        <input type="date" id="entryDate" value="${new Date().toISOString().split('T')[0]}">
-                        <button class="gold" onclick="addGlobalEntry()">Record Outflow</button>
-                    </div>
-                    <div>
-                        <h3>+ Member Entry</h3>
+                        <h3>+ Savings / Repayment</h3>
                         <select id="mC">${data.members.map(m=>`<option>${m}</option>`)}</select>
                         <input type="month" id="moC" value="${new Date().toISOString().slice(0,7)}">
                         <input type="number" id="aC" placeholder="Amount">
-                        <button class="gold" onclick="addEntry('C')">Save Savings</button>
-                        <hr>
-                        <button class="gold" style="background:green" onclick="addEntry('R')">Record Repayment</button>
+                        <button class="gold" onclick="addEntry('C')">Add Savings</button>
+                        <button class="gold" style="background:green" onclick="addEntry('R')">Add Repayment</button>
+                    </div>
+                    <div>
+                        <h3>+ Loan Disbursement</h3>
+                        <select id="mL">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                        <input type="number" id="aL" placeholder="Loan Principal">
+                        <input type="date" id="dL" value="${new Date().toISOString().split('T')[0]}">
+                        <button class="gold" style="background:red" onclick="addEntry('L')">Disburse Loan</button>
+                    </div>
+                    <div>
+                        <h3>+ Expense / Invest</h3>
+                        <select id="gT"><option value="EXP">Expense</option><option value="INV">Investment</option></select>
+                        <input type="text" id="gR" placeholder="Description">
+                        <input type="number" id="gA" placeholder="Amount">
+                        <button class="gold" onclick="addGlobal()">Save Outflow</button>
                     </div>
                 </div>
             </div>`;
     }
 
-    // --- UI: EXPENSES & INVESTMENTS TABLES (VISIBLE TO ALL) ---
+    // LISTS
     app.innerHTML += `
         <div class="grid">
-            <div class="card">
-                <h3>Investment Portfolio (Bonds/Unit Trust)</h3>
-                <table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>
-                ${data.investments.map(i => `<tr><td>${i.date}</td><td>${i.reason}</td><td>${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
-                </table>
-            </div>
-            <div class="card">
-                <h3>SACCO Expenses</h3>
-                <table><tr><th>Date</th><th>Reason</th><th>Amount</th></tr>
-                ${data.expenses.map(e => `<tr><td>${e.date}</td><td>${e.reason}</td><td>${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
-                </table>
-            </div>
+            <div class="card"><h3>Investments</h3><table>${data.investments.map(i=>`<tr><td>${i.reason}</td><td>${Number(i.amt).toLocaleString()}</td></tr>`).join('')}</table></div>
+            <div class="card"><h3>Expenses</h3><table>${data.expenses.map(e=>`<tr><td>${e.reason}</td><td>${Number(e.amt).toLocaleString()}</td></tr>`).join('')}</table></div>
         </div>`;
 
-    // --- ARREARS TABLE (Privacy Filter) ---
-    let arrearsHtml = `<div class="card"><h2>Unpaid Arrears Tracking</h2><table><tr><th>Member</th><th>Month</th><th>Expected</th></tr>`;
-    const start = new Date("2024-02-01");
-    const end = new Date();
-    const visibleMembers = isAdmin ? data.members : [user.name];
-    visibleMembers.forEach(m => {
-        let temp = new Date(start);
-        while(temp <= end) {
-            const mStr = temp.toISOString().slice(0,7);
-            if(!data[m].contributions.find(c => c.month === mStr)) {
-                arrearsHtml += `<tr><td>${m}</td><td>${mStr}</td><td>${getExpectedAmount(mStr).toLocaleString()}</td></tr>`;
-            }
-            temp.setMonth(temp.getMonth() + 1);
+    // ARREARS
+    let arrH = `<div class="card"><h2>Unpaid Months (My View)</h2><table>`;
+    const visible = isAdmin ? data.members : [user.name];
+    visible.forEach(m => {
+        let t = new Date("2024-02-01");
+        while(t <= new Date()) {
+            let s = t.toISOString().slice(0,7);
+            if(!data[m].contributions.find(c=>c.month===s)) arrH += `<tr><td>${m}</td><td>${s}</td><td>${getExpectedAmount(s).toLocaleString()}</td></tr>`;
+            t.setMonth(t.getMonth()+1);
         }
     });
-    app.innerHTML += arrearsHtml + `</table></div>`;
+    app.innerHTML += arrH + `</table></div><button onclick="user=null;render()">Logout</button>`;
 }
 
-function addGlobalEntry() {
-    const type = document.getElementById("entryType").value;
-    const amt = document.getElementById("entryAmt").value;
-    const reason = document.getElementById("entryReason").value;
-    const date = document.getElementById("entryDate").value;
-    
-    if(!amt || !reason) return alert("Fill all fields");
-    
-    if(type === 'EXPENSE') data.expenses.push({amt, reason, date});
-    else data.investments.push({amt, reason, date});
-    
+function checkLogin(n) { const p = prompt(`PIN for ${n}:`); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
+
+function addEntry(t) {
+    const m = (t==='L') ? document.getElementById("mL").value : document.getElementById("mC").value;
+    const a = Number((t==='L') ? document.getElementById("aL").value : document.getElementById("aC").value);
+    const d = (t==='L') ? document.getElementById("dL").value : new Date().toISOString().split('T')[0];
+    if(t==='C') data[m].contributions.push({amt:a, date:d, month:document.getElementById("moC").value});
+    else data[m].loans.push({amt:a, date:d, bal: t==='L'?a:-a, type: t==='L'?'LOAN':'REPAYMENT'});
     saveData();
 }
 
-function checkLogin(n) {
-    const p = prompt(`PIN for ${n}:`);
-    if(p === data[n].pin) { user = { name:n }; render(); }
-    else alert("Wrong PIN.");
-}
-
-function addEntry(type) {
-    const m = document.getElementById("mC").value;
-    const amt = Number(document.getElementById("aC").value);
-    const date = new Date().toISOString().split('T')[0];
-    if(type === 'C') {
-        data[m].contributions.push({amt, date, month: document.getElementById("moC").value});
-    } else {
-        data[m].loans.push({amt, date, bal: -amt, type: 'REPAYMENT'});
-    }
+function addGlobal() {
+    const t = document.getElementById("gT").value;
+    const a = document.getElementById("gA").value;
+    const r = document.getElementById("gR").value;
+    if(t==='EXP') data.expenses.push({amt:a, reason:r, date:new Date()});
+    else data.investments.push({amt:a, reason:r, date:new Date()});
     saveData();
-}
-
-function changePIN() {
-    const p = prompt("New 4-digit PIN:");
-    if(p && p.length === 4) { data[user.name].pin = p; saveData(); alert("Success!"); }
 }
 
 loadData();
