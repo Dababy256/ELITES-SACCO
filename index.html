@@ -36,7 +36,8 @@
 <script>
 const BIN_ID = "6971f3eb43b1c97be94154dc"; 
 const MASTER_KEY = "$2a$10$83AEiP9GsrLhSQIC8.nuW.6QtHG5XVzJElaL67zasDR0h8BYGLsQu";
-const ADMIN_NAME = "Apule Gerald Humble";
+const PRIMARY_ADMIN = "Apule Gerald Humble";
+const SECONDARY_ADMIN = "Ameny Ronald";
 
 let user = null;
 let data = {};
@@ -92,7 +93,10 @@ function render() {
         return;
     }
 
-    // Individual Member Balance Card
+    // Role check: Admin or secondary admin or specially granted
+    const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN || data[user.name].isExtraAdmin;
+
+    // Individual Balance Card
     let mySavings = 0, myLoanPrin = 0, myInt = 0;
     data[user.name].contributions.forEach(c => mySavings += Number(c.amt));
     data[user.name].loans.forEach(l => {
@@ -103,7 +107,7 @@ function render() {
 
     app.innerHTML += `
         <div class="card" style="background:#FFFDE7; border-left:10px solid #B08D57">
-            <h3>My Balances: ${user.name}</h3>
+            <h3>My Balances: ${user.name} ${isAdmin ? '(Admin)' : ''}</h3>
             <div class="grid">
                 <div>Saved: <strong>UGX ${mySavings.toLocaleString()}</strong></div>
                 <div>Loan Principal: <strong>UGX ${myLoanPrin.toLocaleString()}</strong></div>
@@ -115,7 +119,7 @@ function render() {
             <button onclick="user=null; render()" style="background:#666; font-size:11px">Logout</button>
         </div>`;
 
-    if(user.role === 'admin') {
+    if(isAdmin) {
         app.innerHTML += `
             <div class="card" style="border:2px solid #B08D57">
                 <h2>Admin Hub</h2>
@@ -137,24 +141,30 @@ function render() {
                         <button class="gold" style="background:green" onclick="addEntry('R')">Repayment</button>
                     </div>
                     <div>
-                        <h3>Reports & Logo</h3>
+                        <h3>Management</h3>
                         <input type="month" id="repMonth">
                         <button class="gold" onclick="generateReport()">Monthly Report</button>
-                        <input type="file" onchange="handleLogo(event)" style="margin-top:5px">
+                        <hr>
                         <select id="mM">${data.members.map(m=>`<option>${m}</option>`)}</select>
-                        <button class="gold" onclick="toggleMembership()">Toggle Membership</button>
+                        <button class="gold" style="font-size:10px" onclick="toggleMembership()">Toggle Membership</button>
+                        <button class="gold" style="font-size:10px; background:#444; color:#fff" onclick="toggleExtraAdmin()">Grant/Revoke Admin</button>
+                        <input type="file" onchange="handleLogo(event)" style="margin-top:5px">
                     </div>
                 </div>
                 <div id="reportOutput" class="report-area"></div>
             </div>`;
     }
 
-    // ARREARS TABLE
+    // ARREARS TABLE (Privacy Filter Applied Here)
     let arrearsHtml = `<div class="card"><h2>Unpaid Arrears (Since Feb 2024)</h2><table>
         <tr><th>Member</th><th>Month</th><th>Expected</th><th>Status</th></tr>`;
     const start = new Date("2024-02-01");
     const end = new Date();
-    data.members.forEach(m => {
+    
+    // Logic: If Admin, show everyone. If Member, only show self.
+    const visibleMembers = isAdmin ? data.members : [user.name];
+
+    visibleMembers.forEach(m => {
         let temp = new Date(start);
         while(temp <= end) {
             const mStr = temp.toISOString().slice(0,7);
@@ -166,10 +176,11 @@ function render() {
     });
     app.innerHTML += arrearsHtml + `</table></div>`;
 
-    // GLOBAL HISTORY
-    let table = `<div class="card"><h2>Global Transaction Ledger</h2><table>
+    // GLOBAL HISTORY (Privacy Filter Applied Here)
+    let table = `<div class="card"><h2>Transaction Ledger</h2><table>
         <tr><th>Member</th><th>Type</th><th>Amount</th><th>Late Fee</th><th>Date</th></tr>`;
-    data.members.forEach(m => {
+    
+    visibleMembers.forEach(m => {
         data[m].contributions.forEach(c => {
             const fee = calculateLateFee(c.month, c.date);
             table += `<tr><td>${m}</td><td>Savings (${c.month})</td><td>${c.amt.toLocaleString()}</td><td>${fee > 0 ? 'UGX '+fee.toLocaleString() : '-'}</td><td>${c.date}</td></tr>`;
@@ -183,7 +194,7 @@ function render() {
 
 function checkLogin(n) {
     const p = prompt(`PIN for ${n}:`);
-    if(p === data[n].pin) { user = { name:n, role:n===ADMIN_NAME?'admin':'member' }; render(); }
+    if(p === data[n].pin) { user = { name:n }; render(); }
     else alert("Wrong PIN.");
 }
 
@@ -216,6 +227,14 @@ function toggleMembership() {
     const m = document.getElementById("mM").value;
     data[m].membershipPaid = !data[m].membershipPaid;
     saveData();
+}
+
+function toggleExtraAdmin() {
+    const m = document.getElementById("mM").value;
+    if(m === PRIMARY_ADMIN) return alert("Cannot revoke primary admin.");
+    data[m].isExtraAdmin = !data[m].isExtraAdmin;
+    saveData();
+    alert(`Admin rights for ${m} updated.`);
 }
 
 function changePIN() {
