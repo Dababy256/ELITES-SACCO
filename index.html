@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Elites SACCO Final Master</title>
+<title>Elites SACCO Ultimate Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     body{font-family:'Segoe UI', sans-serif; background:#F3E9D2; margin:0; color:#111}
@@ -18,12 +18,11 @@
     button.gold{background:#B08D57; color:#000}
     button.del{background:#ff4d4d; color:white; padding:4px 8px; font-size:10px}
     input,select{padding:10px; width:100%; margin-bottom:10px; border:1px solid #ccc; border-radius:8px}
-    .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:15px}
+    .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px}
     .stat-box{padding:12px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd; color:#111}
     .status-cleared{color:#2E7D32; font-weight:bold}
     .status-pending{color:#C62828; font-weight:bold}
     .arrears-banner{background:#FFF3E0; border:2px solid #FF9800; padding:15px; border-radius:8px; margin-bottom:15px}
-    .personal-highlight{background:#E8F5E9; border-left:5px solid #2E7D32}
 </style>
 </head>
 <body>
@@ -89,8 +88,9 @@ function render() {
     data.expenses.forEach(e => tExp += Number(e.amt));
     const cash = tSav - (tLoa + tInv + tExp);
 
-    // PERSONAL AND ARREARS CALCULATION
+    // TARGET CALCULATIONS
     let mySavingsTotal = data[target].contributions.reduce((acc, curr) => acc + Number(curr.amt), 0);
+    let myLoanBalance = data[target].loans.reduce((acc, curr) => acc + Number(curr.bal), 0);
     let totalOwed = 0;
     let loopD = new Date("2024-02-01");
     while(loopD <= new Date()) {
@@ -111,18 +111,19 @@ function render() {
         <div class="card" style="background:#111; color:#fff">
             <h2>CASH AT HAND: UGX ${cash.toLocaleString()}</h2>
             <div class="grid">
-                <div class="stat-box">Total SACCO Savings: ${tSav.toLocaleString()}</div>
+                <div class="stat-box">SACCO Savings: ${tSav.toLocaleString()}</div>
                 <div class="stat-box">Invested: ${tInv.toLocaleString()}</div>
-                <div class="stat-box">Loans Out: ${tLoa.toLocaleString()}</div>
+                <div class="stat-box">Total Loans Out: ${tLoa.toLocaleString()}</div>
             </div>
             ${isAdmin ? `<button class="gold" onclick="exportCSV()">Export to Excel</button>` : ''}
         </div>
 
         <div class="arrears-banner">
-            <h3 style="margin:0">Account: ${target}</h3>
+            <h3 style="margin:0">Dashboard: ${target}</h3>
             <div class="grid" style="margin-top:10px">
-                <div class="stat-box personal-highlight"><strong>My Total Saved:</strong><br>UGX ${mySavingsTotal.toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFEBEE"><strong>Outstanding Arrears:</strong><br><span style="color:#C62828">UGX ${totalOwed.toLocaleString()}</span></div>
+                <div class="stat-box" style="background:#E8F5E9"><strong>My Savings:</strong><br>UGX ${mySavingsTotal.toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFEBEE"><strong>Outstanding Arrears:</strong><br>UGX ${totalOwed.toLocaleString()}</div>
+                <div class="stat-box" style="background:#E3F2FD"><strong>My Loan Balance:</strong><br>UGX ${Math.max(0, myLoanBalance).toLocaleString()}</div>
             </div>
             <div style="margin-top:15px">
                 <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
@@ -133,31 +134,31 @@ function render() {
     if(isAdmin) {
         app.innerHTML += `
         <div class="card" style="border:2px solid #B08D57">
-            <h2>Admin Control Hub</h2>
+            <h2>Admin Entry Hub</h2>
             <div class="grid">
                 <div>
-                    <h3>Inflow (Savings/Repay)</h3>
+                    <h3>Inflow</h3>
                     <select id="mI">${data.members.map(m=>`<option>${m}</option>`)}</select>
                     <select id="tI"><option value="S">Monthly Savings</option><option value="R">Loan Repayment</option></select>
                     <input type="month" id="moI" value="2024-02">
-                    <input type="date" id="daI" placeholder="Smart-Date if blank">
+                    <input type="date" id="daI" placeholder="Auto-Date if blank">
                     <input type="number" id="amI" placeholder="Amount">
-                    <button class="gold" onclick="postInflow()">Post Inflow</button>
+                    <button class="gold" onclick="postInflow()">Post</button>
                 </div>
                 <div>
-                    <h3>Outflow (Loan/Spend)</h3>
+                    <h3>Outflow</h3>
                     <select id="tO"><option value="L">Loan</option><option value="E">Expense</option><option value="I">Invest</option></select>
                     <select id="mL_out">${data.members.map(m=>`<option ${m===target?'selected':''}>${m}</option>`)}</select>
                     <input type="date" id="daO" value="${today}">
                     <input type="text" id="reO" placeholder="Description">
                     <input type="number" id="amO" placeholder="Amount">
-                    <button class="gold" onclick="postOutflow()">Post Outflow</button>
+                    <button class="gold" onclick="postOutflow()">Post</button>
                 </div>
             </div>
         </div>`;
     }
 
-    let statusHTML = `<div class="card"><h2>Clearance Status & Personal Statement</h2>
+    let statusHTML = `<div class="card"><h2>Clearance & Statement</h2>
         ${isAdmin ? `<select id="viewMem" onchange="render()">${data.members.map(m => `<option ${m===target?'selected':''}>${m}</option>`)}</select>` : ''}
         <table><tr><th>Month</th><th>Status</th><th>Paid On</th><th>Late Fee</th></tr>`;
     
@@ -166,7 +167,7 @@ function render() {
         let mStr = reportD.toISOString().slice(0,7), paid = data[target].contributions.find(c => c.month === mStr), fee = 0;
         if(paid) {
             let due = new Date(mStr + "-10"), pDate = new Date(paid.date);
-            if(pDate > due) { fee = Math.min(Math.ceil((pDate-due)/(1000*60*60*24*7)) * 5000, 15000); }
+            if(pDate > due) fee = Math.min(Math.ceil((pDate-due)/(1000*60*60*24*7)) * 5000, 15000);
         }
         statusHTML += `<tr><td>${mStr}</td><td class="${paid?'status-cleared':'status-pending'}">${paid?'CLEARED':'PENDING'}</td><td>${paid?paid.date:'-'}</td><td>${fee>0?'UGX '+fee.toLocaleString():'None'}</td></tr>`;
         reportD.setMonth(reportD.getMonth() + 1);
@@ -174,7 +175,7 @@ function render() {
     app.innerHTML += statusHTML + `</table></div>`;
 
     if(isAdmin) {
-        let audit = `<div class="card"><h2>Audit Ledger (Fix Mistakes)</h2><table>`;
+        let audit = `<div class="card"><h2>Audit Table</h2><table>`;
         data.members.forEach(m => {
             data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`);
             data[m].loans.forEach((l,i) => audit += `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`);
