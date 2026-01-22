@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Elites SACCO Final Master</title>
+<title>Elites SACCO Smart Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     body{font-family:'Segoe UI', sans-serif; background:#F3E9D2; margin:0; color:#111}
@@ -20,7 +20,8 @@
     input,select{padding:10px; width:100%; margin-bottom:10px; border:1px solid #ccc; border-radius:8px}
     .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:15px}
     .stat-box{padding:12px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd; color:#111}
-    .cash-highlight{background:#E8F5E9; border:2px solid #2E7D32}
+    .status-cleared{color:#2E7D32; font-weight:bold}
+    .status-pending{color:#C62828; font-weight:bold}
 </style>
 </head>
 <body>
@@ -46,8 +47,6 @@ async function loadData() {
         const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {headers:{'X-Master-Key':MASTER_KEY}});
         const json = await res.json();
         data = json.record;
-        if(!data.expenses) data.expenses = [];
-        if(!data.investments) data.investments = [];
         if(data.logo) document.getElementById("logoSlot").innerHTML = `<img src="${data.logo}">`;
         render();
     } catch (e) { console.error("Sync Error"); }
@@ -61,142 +60,154 @@ async function saveData() {
     render();
 }
 
-function deleteEntry(category, memberName, index) {
-    if(!confirm("Delete this record permanently?")) return;
-    if(category === 'savings') data[memberName].contributions.splice(index, 1);
-    else if(category === 'loan') data[memberName].loans.splice(index, 1);
-    else if(category === 'expense') data.expenses.splice(index, 1);
-    else if(category === 'invest') data.investments.splice(index, 1);
+function deleteEntry(cat, mem, idx) {
+    if(!confirm("Permanently delete this record?")) return;
+    if(cat==='S') data[mem].contributions.splice(idx,1);
+    else if(cat==='L') data[mem].loans.splice(idx,1);
+    else if(cat==='E') data.expenses.splice(idx,1);
+    else if(cat==='I') data.investments.splice(idx,1);
     saveData();
+}
+
+function exportData() {
+    let csv = "Date,Entity,Type,Amount\n";
+    data.members.forEach(m => {
+        data[m].contributions.forEach(c => csv += `${c.month},${m},Savings,${c.amt}\n`);
+        data[m].loans.forEach(l => csv += `${l.date},${m},${l.type},${l.amt}\n`);
+    });
+    let hiddenElement = document.createElement('a');
+    hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csv);
+    hiddenElement.target = '_blank';
+    hiddenElement.download = 'SACCO_Report.csv';
+    hiddenElement.click();
 }
 
 function render() {
     const app = document.getElementById("app");
     if(!user) {
-        let h = `<div class="card" style="text-align:center"><h2>Member Login</h2><div class="grid">`;
+        let h = `<div class="card" style="text-align:center"><h2>Login</h2><div class="grid">`;
         data.members.forEach(m => h += `<button onclick="checkLogin('${m}')">${m}</button>`);
         app.innerHTML = h + `</div></div>`;
         return;
     }
 
     const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN || data[user.name].isExtraAdmin;
+    const today = new Date().toISOString().split('T')[0];
 
-    // FINANCIAL LOGIC
-    let totalSavings = 0, totalLoansOut = 0, totalInvested = 0, totalExpenses = 0;
+    // FINANCE LOGIC
+    let tSav = 0, tLoa = 0, tInv = 0, tExp = 0;
     data.members.forEach(m => {
-        data[m].contributions.forEach(c => totalSavings += Number(c.amt));
-        data[m].loans.forEach(l => totalLoansOut += Number(l.bal));
+        data[m].contributions.forEach(c => tSav += Number(c.amt));
+        data[m].loans.forEach(l => tLoa += Number(l.bal));
     });
-    data.investments.forEach(i => totalInvested += Number(i.amt));
-    data.expenses.forEach(e => totalExpenses += Number(e.amt));
-    
-    // Available Cash = Savings minus money that left the pocket
-    const availableCash = totalSavings - (totalLoansOut + totalInvested + totalExpenses);
+    data.investments.forEach(i => tInv += Number(i.amt));
+    data.expenses.forEach(e => tExp += Number(e.amt));
+    const cash = tSav - (tLoa + tInv + tExp);
 
     app.innerHTML = `
         <div class="card" style="background:#111; color:#fff">
-            <h2 style="color:#B08D57">TREASURY OVERVIEW</h2>
+            <h2>CASH AT HAND: UGX ${cash.toLocaleString()}</h2>
             <div class="grid">
-                <div class="stat-box cash-highlight"><strong>CASH AT HAND/BANK:</strong><br><span style="font-size:1.4em; color:#2E7D32">UGX ${availableCash.toLocaleString()}</span></div>
-                <div class="stat-box"><strong>Total Member Savings:</strong><br>UGX ${totalSavings.toLocaleString()}</div>
-                <div class="stat-box"><strong>Invested (Bonds):</strong><br>UGX ${totalInvested.toLocaleString()}</div>
-                <div class="stat-box"><strong>Active Loans:</strong><br>UGX ${totalLoansOut.toLocaleString()}</div>
+                <div class="stat-box">Savings: ${tSav.toLocaleString()}</div>
+                <div class="stat-box">Loans Out: ${tLoa.toLocaleString()}</div>
+                <div class="stat-box">Bonds/Trust: ${tInv.toLocaleString()}</div>
             </div>
-        </div>
-
-        <div class="card" style="border-left:10px solid #B08D57">
-            <h3>Member: ${user.name}</h3>
-            <div class="grid">
-                <div class="stat-box" style="background:#FFFDE7">My Total Saved: <strong>UGX ${data[user.name].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</strong></div>
-            </div>
-            <div style="margin-top:10px">
-                <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
-                <button onclick="user=null;render()" style="background:#666; font-size:11px">Logout</button>
-            </div>
+            ${isAdmin ? `<button class="gold" onclick="exportData()">Export to Excel</button>` : ''}
         </div>`;
 
     if(isAdmin) {
         app.innerHTML += `
-            <div class="card" style="border:2px solid #B08D57">
-                <h2>Admin Tools</h2>
-                <div class="grid">
-                    <div>
-                        <h3>Inflow</h3>
-                        <select id="mC">${data.members.map(m=>`<option>${m}</option>`)}</select>
-                        <select id="transType"><option value="C">Savings</option><option value="R">Loan Repayment</option></select>
-                        <input type="month" id="moC" value="2024-02">
-                        <input type="number" id="aC" placeholder="Amount">
-                        <button class="gold" onclick="addEntry(document.getElementById('transType').value)">Post Entry</button>
-                    </div>
-                    <div>
-                        <h3>Outflow</h3>
-                        <select id="outType"><option value="L">Disburse Loan</option><option value="EXP">Expense</option><option value="INV">Investment</option></select>
-                        <select id="mL">${data.members.map(m=>`<option>${m}</option>`)}</select>
-                        <input type="text" id="gR" placeholder="Description">
-                        <input type="number" id="gA" placeholder="Amount">
-                        <button class="gold" onclick="handleOutflow()">Post Outflow</button>
-                    </div>
+        <div class="card" style="border:2px solid #B08D57">
+            <h2>Admin Hub</h2>
+            <div class="grid">
+                <div>
+                    <h3>Inflows</h3>
+                    <select id="mI">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                    <select id="tI"><option value="S">Savings</option><option value="R">Repayment</option></select>
+                    <input type="month" id="moI" value="2024-02">
+                    <input type="date" id="daI" value="${today}">
+                    <input type="number" id="amI" placeholder="Amount">
+                    <button class="gold" onclick="postInflow()">Save</button>
                 </div>
-            </div>`;
+                <div>
+                    <h3>Outflows</h3>
+                    <select id="tO"><option value="L">Loan</option><option value="E">Expense</option><option value="I">Invest</option></select>
+                    <select id="mO">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                    <input type="text" id="reO" placeholder="Reason/Desc">
+                    <input type="date" id="daO" value="${today}">
+                    <input type="number" id="amO" placeholder="Amount">
+                    <button class="gold" onclick="postOutflow()">Save</button>
+                </div>
+            </div>
+        </div>`;
     }
 
-    // STATEMENT VIEW
-    let ledgerHtml = `<div class="card"><h2>${isAdmin ? 'Global Ledger' : 'My Personal Statement'}</h2><table>
-        <tr><th>Date</th><th>Entity</th><th>Type</th><th>Amount</th><th>Action</th></tr>`;
+    // STATUS SECTION (CLEARED vs PENDING)
+    let statusHTML = `<div class="card"><h2>Monthly Clearance Status</h2>
+        <select id="viewMem" onchange="render()" style="${isAdmin ? '' : 'display:none'}">
+            ${data.members.map(m => `<option ${m===user.name?'selected':''}>${m}</option>`)}
+        </select>
+        <table><tr><th>Month</th><th>Status</th><th>Payment Date</th><th>Late Fee</th></tr>`;
     
-    const visibleMembers = isAdmin ? data.members : [user.name];
-    visibleMembers.forEach(m => {
-        data[m].contributions.forEach((c, idx) => {
-            ledgerHtml += `<tr><td>${c.month}</td><td>${m}</td><td>Savings</td><td>${Number(c.amt).toLocaleString()}</td>
-            <td>${isAdmin ? `<button class="del" onclick="deleteEntry('savings','${m}',${idx})">Delete</button>` : '-'}</td></tr>`;
-        });
-        data[m].loans.forEach((l, idx) => {
-            ledgerHtml += `<tr><td>${l.date}</td><td>${m}</td><td>${l.type}</td><td>${Number(l.amt).toLocaleString()}</td>
-            <td>${isAdmin ? `<button class="del" onclick="deleteEntry('loan','${m}',${idx})">Delete</button>` : '-'}</td></tr>`;
-        });
-    });
+    let target = isAdmin ? document.getElementById("viewMem")?.value || user.name : user.name;
+    let start = new Date("2024-02-01");
+    while(start <= new Date()) {
+        let mStr = start.toISOString().slice(0,7);
+        let paid = data[target].contributions.find(c => c.month === mStr);
+        let due = new Date(mStr + "-10");
+        let fee = 0;
+        if(paid) {
+            let pDate = new Date(paid.date);
+            if(pDate > due) {
+                let weeks = Math.ceil((pDate - due) / (1000*60*60*24*7));
+                fee = Math.min(weeks * 5000, 15000);
+            }
+        }
+        statusHTML += `<tr><td>${mStr}</td>
+            <td class="${paid?'status-cleared':'status-pending'}">${paid?'CLEARED':'PENDING'}</td>
+            <td>${paid ? paid.date : '-'}</td>
+            <td>${fee > 0 ? 'UGX '+fee.toLocaleString() : '-'}</td></tr>`;
+        start.setMonth(start.getMonth() + 1);
+    }
+    app.innerHTML += statusHTML + `</table></div>`;
 
+    // AUDIT LEDGER (ADMIN ONLY DELETE)
     if(isAdmin) {
-        data.expenses.forEach((e, idx) => {
-            ledgerHtml += `<tr style="background:#fff1f1"><td>${e.date}</td><td>SACCO</td><td>Expense: ${e.reason}</td><td>-${Number(e.amt).toLocaleString()}</td>
-            <td><button class="del" onclick="deleteEntry('expense',null,${idx})">Delete</button></td></tr>`;
+        let audit = `<div class="card"><h2>Admin Audit Ledger (Delete Records)</h2><table>`;
+        data.members.forEach(m => {
+            data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="deleteEntry('S','${m}',${i})">X</button></td></tr>`);
+            data[m].loans.forEach((l,i) => audit += `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="deleteEntry('L','${m}',${i})">X</button></td></tr>`);
         });
-        data.investments.forEach((i, idx) => {
-            ledgerHtml += `<tr style="background:#f1faff"><td>${i.date}</td><td>SACCO</td><td>Invest: ${i.reason}</td><td>-${Number(i.amt).toLocaleString()}</td>
-            <td><button class="del" onclick="deleteEntry('invest',null,${idx})">Delete</button></td></tr>`;
-        });
+        app.innerHTML += audit + `</table></div>`;
     }
 
-    app.innerHTML += ledgerHtml + `</table></div>`;
+    app.innerHTML += `<center><button onclick="user=null;render()">Logout</button></center>`;
 }
 
-function handleOutflow() {
-    const type = document.getElementById("outType").value;
-    const amt = Number(document.getElementById("gA").value);
-    const reason = document.getElementById("gR").value;
-    const date = new Date().toISOString().split('T')[0];
-    if(type === 'L') addEntry('L');
-    else if(type === 'EXP') data.expenses.push({amt, reason, date});
-    else if(type === 'INV') data.investments.push({amt, reason, date});
+function postInflow() {
+    const m = document.getElementById("mI").value;
+    const t = document.getElementById("tI").value;
+    const amt = Number(document.getElementById("amI").value);
+    const date = document.getElementById("daI").value;
+    const mon = document.getElementById("moI").value;
+    if(t==='S') data[m].contributions.push({amt, date, month:mon});
+    else data[m].loans.push({amt, date, bal:-amt, type:'REPAYMENT'});
     saveData();
 }
 
-function addEntry(t) {
-    const m = (t==='L') ? document.getElementById("mL").value : document.getElementById("mC").value;
-    const a = Number((t==='L') ? document.getElementById("gA").value : document.getElementById("aC").value);
-    const d = new Date().toISOString().split('T')[0];
-    const mo = document.getElementById("moC").value;
-    if(t==='C') data[m].contributions.push({amt:a, date:d, month:mo});
-    else data[m].loans.push({amt:a, date:d, bal: t==='L'?a:-a, type: t==='L'?'LOAN':'REPAYMENT'});
+function postOutflow() {
+    const t = document.getElementById("tO").value;
+    const m = document.getElementById("mO").value;
+    const amt = Number(document.getElementById("amO").value);
+    const date = document.getElementById("daO").value;
+    const re = document.getElementById("reO").value;
+    if(t==='L') data[m].loans.push({amt, date, bal:amt, type:'LOAN'});
+    else if(t==='E') data.expenses.push({amt, reason:re, date});
+    else if(t==='I') data.investments.push({amt, reason:re, date});
     saveData();
 }
 
-function changePIN() {
-    const p = prompt("New 4-digit PIN:");
-    if(p && p.length === 4) { data[user.name].pin = p; saveData(); alert("Success!"); }
-}
-
-function checkLogin(n) { const p = prompt(`PIN for ${n}:`); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
+function checkLogin(n) { const p = prompt(`PIN:`); if(p===data[n].pin){user={name:n};render();}else alert("Fail"); }
 loadData();
 </script>
 </body>
