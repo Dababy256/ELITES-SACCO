@@ -11,28 +11,24 @@
     .container{padding:16px; max-width:1100px; margin:auto}
     .card{background:#fff; padding:20px; border-radius:12px; margin-bottom:16px; box-shadow:0 4px 10px rgba(0,0,0,0.1)}
     h2{margin-top:0; color:#111; border-bottom:2px solid #B08D57; padding-bottom:8px}
-    table{width:100%; border-collapse:collapse; font-size:13px}
+    table{width:100%; border-collapse:collapse; font-size:12px}
     th,td{border:1px solid #eee; padding:10px; text-align:left}
     th{background:#B08D57; color:#000}
-    button{padding:10px 18px; border:none; border-radius:6px; background:#111; color:#fff; cursor:pointer; font-weight:bold}
+    button{padding:10px 18px; border:none; border-radius:6px; background:#111; color:#fff; cursor:pointer; font-weight:bold; margin:2px}
     button.gold{background:#B08D57; color:#000}
     input,select{padding:10px; width:100%; margin-bottom:10px; border:1px solid #ccc; border-radius:8px}
     .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:15px}
-    .status{padding:5px 12px; border-radius:20px; font-size:12px; font-weight:bold}
-    .green{background:#27ae60; color:white}
-    .red{background:#c0392b; color:white}
-    .warning{color:#c0392b; font-weight:bold; font-size: 0.9em}
+    .status{padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold}
+    .paid{background:#d4edda; color:#155724}
+    .pending{background:#f8d7da; color:#721c24}
+    .report-area{background:#eee; padding:15px; border-radius:8px; white-space:pre-wrap; font-family:monospace; margin-top:10px; display:none}
 </style>
 </head>
 <body>
 
 <header>
     <div id="logoSlot"></div>
-    <div style="flex-grow:1">
-        <strong>ELITES SACCO</strong><br>
-        <small id="userLabel">Syncing...</small>
-    </div>
-    <span id="syncStatus" class="status red">OFFLINE</span>
+    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Loading Financial Data...</small></div>
 </header>
 
 <div class="container" id="app"></div>
@@ -40,7 +36,6 @@
 <script>
 const BIN_ID = "6971f3eb43b1c97be94154dc"; 
 const MASTER_KEY = "$2a$10$83AEiP9GsrLhSQIC8.nuW.6QtHG5XVzJElaL67zasDR0h8BYGLsQu";
-const MONTHLY_TARGET = 50000; // Adjust this to your actual monthly contribution amount
 const ADMIN_NAME = "Apule Gerald Humble";
 
 let user = null;
@@ -52,147 +47,162 @@ async function loadData() {
         const json = await res.json();
         data = json.record;
         if(data.logo) document.getElementById("logoSlot").innerHTML = `<img src="${data.logo}">`;
-        document.getElementById("syncStatus").textContent = "CLOUD LIVE";
-        document.getElementById("syncStatus").className = "status green";
         render();
-    } catch (e) { document.getElementById("syncStatus").textContent = "SYNC ERROR"; }
+    } catch (e) { console.error("Sync Error"); }
 }
 
 async function saveData() {
-    document.getElementById("syncStatus").textContent = "SAVING...";
     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
         method:'PUT', headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},
         body: JSON.stringify(data)
     });
-    document.getElementById("syncStatus").textContent = "CLOUD LIVE";
     render();
 }
 
-function getMissingMonths(memberName) {
-    const paidMonths = data[memberName].contributions.map(c => c.month);
-    const missing = [];
-    const now = new Date();
-    // Check last 12 months (can be adjusted)
-    for(let i=0; i<12; i++) {
-        let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        let mString = d.toISOString().slice(0,7);
-        if(!paidMonths.includes(mString)) missing.push(mString);
-    }
-    return missing;
+function getExpectedAmount(monthStr) {
+    const date = new Date(monthStr + "-01");
+    const switchDate = new Date("2024-08-01");
+    return date < switchDate ? 80000 : 100000;
+}
+
+function calculateLateFee(monthStr, paidDateStr) {
+    const dueDate = new Date(monthStr + "-10");
+    const paidDate = new Date(paidDateStr);
+    if (paidDate <= dueDate) return 0;
+    const diffTime = Math.abs(paidDate - dueDate);
+    const diffWeeks = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 7));
+    return Math.min(diffWeeks * 5000, 15000);
+}
+
+function generateReport() {
+    const month = document.getElementById("repMonth").value;
+    if(!month) return alert("Select a month first");
+    let report = `*** ELITES SACCO REPORT: ${month} ***\n\n`;
+    let totalColl = 0;
+    let totalPenalty = 0;
+
+    data.members.forEach(m => {
+        const record = data[m].contributions.find(c => c.month === month);
+        const expected = getExpectedAmount(month);
+        if(record) {
+            const fee = calculateLateFee(month, record.date);
+            report += `${m}: PAID UGX ${record.amt.toLocaleString()} (Penalty: ${fee})\n`;
+            totalColl += record.amt;
+            totalPenalty += fee;
+        } else {
+            report += `${m}: PENDING (Expected: ${expected.toLocaleString()})\n`;
+        }
+    });
+    report += `\n--------------------------\nTotal Collected: UGX ${totalColl.toLocaleString()}\nTotal Penalties: UGX ${totalPenalty.toLocaleString()}`;
+    const area = document.getElementById("reportOutput");
+    area.textContent = report;
+    area.style.display = "block";
 }
 
 function render() {
     const app = document.getElementById("app");
-    document.getElementById("userLabel").textContent = user ? `Member: ${user.name}` : "Access Portal";
+    document.getElementById("userLabel").textContent = user ? `Member: ${user.name}` : "Security Access";
     app.innerHTML = "";
 
     if(!user) {
-        let h = `<div class="card" style="text-align:center"><h2>Member Login</h2><div class="grid">`;
-        data.members.forEach(m => h += `<button style="padding:15px" onclick="checkLogin('${m}')">${m}</button>`);
+        let h = `<div class="card" style="text-align:center"><h2>Login</h2><div class="grid">`;
+        data.members.forEach(m => h += `<button onclick="checkLogin('${m}')">${m}</button>`);
         app.innerHTML = h + `</div></div>`;
         return;
     }
 
-    // Member Personal Summary
-    const missing = getMissingMonths(user.name);
-    let loanPrin = 0;
-    data[user.name].loans.forEach(l => loanPrin += Number(l.bal));
-
+    // Portal View
+    const mStatus = data[user.name].membershipPaid ? "PAID" : "PENDING";
     app.innerHTML += `
-        <div class="card" style="background:#FFF9C4; border-left:10px solid #FBC02D">
-            <h3>My Status: ${user.name}</h3>
-            <div class="grid">
-                <div>Outstanding Loan:<br><strong>UGX ${loanPrin.toLocaleString()}</strong></div>
-                <div>Unpaid Months:<br><span class="warning">${missing.length} Months (${missing.join(', ')})</span></div>
-                <div>Unpaid Amount:<br><span class="warning">UGX ${(missing.length * MONTHLY_TARGET).toLocaleString()}</span></div>
+        <div class="card">
+            <h3>Dashboard: ${user.name}</h3>
+            <div class="status ${mStatus === 'PAID' ? 'paid' : 'pending'}" style="display:inline-block">Membership Fee: ${mStatus}</div>
+            <div style="margin-top:15px">
+                <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
+                <button onclick="user=null; render()" style="background:#666; font-size:11px">Logout</button>
             </div>
-            <button onclick="changePIN()" style="margin-top:10px; background:#444; font-size:11px">Change My PIN</button>
         </div>`;
 
     if(user.role === 'admin') {
         app.innerHTML += `
             <div class="card" style="border:2px solid #B08D57">
-                <h2>Admin Hub</h2>
+                <h2>Admin Tools</h2>
                 <div class="grid">
                     <div>
-                        <h3>+ Savings</h3>
+                        <h3>Generate Monthly Report</h3>
+                        <input type="month" id="repMonth">
+                        <button class="gold" style="width:100%" onclick="generateReport()">Generate Text Report</button>
+                        <div id="reportOutput" class="report-area"></div>
+                    </div>
+                    <div>
+                        <h3>Record Entry</h3>
                         <select id="mC">${data.members.map(m=>`<option>${m}</option>`)}</select>
                         <input type="month" id="moC" value="${new Date().toISOString().slice(0,7)}">
                         <input type="date" id="dC" value="${new Date().toISOString().split('T')[0]}">
                         <input type="number" id="aC" placeholder="Amount">
                         <button class="gold" onclick="addEntry('C')">Save Contribution</button>
                     </div>
-                    <div>
-                        <h3>+ Loan/Repay</h3>
-                        <select id="mL">${data.members.map(m=>`<option>${m}</option>`)}</select>
-                        <input type="date" id="dL" value="${new Date().toISOString().split('T')[0]}">
-                        <input type="number" id="aL" placeholder="Amount">
-                        <button class="gold" onclick="addEntry('L')">Disburse Loan</button>
-                        <button class="gold" style="background:green" onclick="addEntry('R')">Repayment</button>
-                    </div>
-                    <div>
-                        <h3>Settings</h3>
-                        <label>Update Logo:</label><input type="file" onchange="handleLogo(event)">
-                        <button onclick="user=null; render()" style="background:#666; width:100%; margin-top:10px">Logout</button>
-                    </div>
+                </div>
+                <div style="margin-top:15px">
+                    <select id="mM">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                    <button class="gold" onclick="toggleMembership()">Toggle Membership Paid</button>
                 </div>
             </div>`;
-    } else {
-        app.innerHTML += `<button onclick="user=null; render()" style="background:#666; margin-bottom:15px">Logout</button>`;
     }
 
-    let table = `<div class="card"><h2>Global Ledger</h2><table><tr><th>Member</th><th>Action</th><th>Amount</th><th>Date</th></tr>`;
+    // ARREARS SECTION
+    let arrearsHtml = `<div class="card"><h2>Unpaid Arrears Tracking</h2><table>
+        <tr><th>Member</th><th>Month</th><th>Expected</th><th>Status</th></tr>`;
+    const start = new Date("2024-02-01");
+    const end = new Date();
     data.members.forEach(m => {
-        data[m].contributions.forEach(c => table += `<tr><td>${m}</td><td>Savings (${c.month})</td><td>${c.amt.toLocaleString()}</td><td>${c.date}</td></tr>`);
-        data[m].loans.forEach(l => table += `<tr style="color:${l.bal < 0 ? 'green':'red'}"><td>${m}</td><td>${l.type}</td><td>${l.amt.toLocaleString()}</td><td>${l.date}</td></tr>`);
+        let temp = new Date(start);
+        while(temp <= end) {
+            const mStr = temp.toISOString().slice(0,7);
+            if(!data[m].contributions.find(c => c.month === mStr)) {
+                arrearsHtml += `<tr><td>${m}</td><td>${mStr}</td><td>${getExpectedAmount(mStr).toLocaleString()}</td><td><span class="status pending">PENDING</span></td></tr>`;
+            }
+            temp.setMonth(temp.getMonth() + 1);
+        }
+    });
+    app.innerHTML += arrearsHtml + `</table></div>`;
+
+    // LEDGER
+    let table = `<div class="card"><h2>Global History</h2><table>
+        <tr><th>Member</th><th>Type</th><th>Amount</th><th>Late Fee</th><th>Date Paid</th></tr>`;
+    data.members.forEach(m => {
+        data[m].contributions.forEach(c => {
+            const fee = calculateLateFee(c.month, c.date);
+            table += `<tr><td>${m}</td><td>Savings (${c.month})</td><td>${c.amt.toLocaleString()}</td><td>${fee > 0 ? 'UGX '+fee.toLocaleString() : '-'}</td><td>${c.date}</td></tr>`;
+        });
     });
     app.innerHTML += table + `</table></div>`;
 }
 
-function checkLogin(name) {
-    const pin = prompt(`Enter PIN for ${name}:`);
-    if(pin === data[name].pin) {
-        user = { name: name, role: name === ADMIN_NAME ? "admin" : "member" };
-        render();
-    } else { alert("Wrong PIN."); }
+function checkLogin(n) {
+    const p = prompt(`PIN for ${n}:`);
+    if(p === data[n].pin) { user = { name:n, role:n===ADMIN_NAME?'admin':'member' }; render(); }
+    else alert("Wrong PIN.");
 }
 
-function changePIN() {
-    const newPin = prompt("Enter new 4-digit PIN:");
-    if(newPin && newPin.length === 4) {
-        data[user.name].pin = newPin;
-        saveData();
-        alert("PIN updated successfully!");
-    }
-}
-
-function addEntry(type) {
-    if(type==='C'){
-        const m = document.getElementById("mC").value;
-        data[m].contributions.push({amt: Number(document.getElementById("aC").value), date: document.getElementById("dC").value, month: document.getElementById("moC").value});
-    } else {
-        const m = document.getElementById("mL").value;
-        const amt = Number(document.getElementById("aL").value);
-        data[m].loans.push({amt, date: document.getElementById("dL").value, bal: type==='L'?amt:-amt, type: type==='L'?'LOAN':'REPAYMENT'});
-    }
+function toggleMembership() {
+    const m = document.getElementById("mM").value;
+    data[m].membershipPaid = !data[m].membershipPaid;
     saveData();
 }
 
-function handleLogo(e) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 120; canvas.height = 120;
-            canvas.getContext('2d').drawImage(img,0,0,120,120);
-            data.logo = canvas.toDataURL('image/jpeg', 0.7);
-            saveData();
-        };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+function addEntry(type) {
+    const m = document.getElementById("mC").value;
+    const amt = Number(document.getElementById("aC").value);
+    const date = document.getElementById("dC").value;
+    const month = document.getElementById("moC").value;
+    data[m].contributions.push({amt, date, month});
+    saveData();
+}
+
+function changePIN() {
+    const p = prompt("New 4-digit PIN:");
+    if(p && p.length === 4) { data[user.name].pin = p; saveData(); alert("PIN Updated!"); }
 }
 
 loadData();
