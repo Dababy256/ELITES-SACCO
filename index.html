@@ -1,38 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Elites SACCO</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-body{font-family:Arial,Helvetica,sans-serif;background:#F3E9D2;margin:0}
-header{background:#111;color:#fff;padding:12px;display:flex;align-items:center;gap:12px}
-header img{height:45px;border-radius:6px}
-.container{padding:16px;max-width:1200px;margin:auto}
-.card{background:#fff;padding:12px;border-radius:8px;margin-bottom:16px}
-h2{margin-top:0}
-table{width:100%;border-collapse:collapse;font-size:14px}
-th,td{border:1px solid #ccc;padding:6px;text-align:left}
-th{background:#B08D57;color:#000}
-button{padding:8px 12px;border:none;border-radius:6px;background:#111;color:#fff;cursor:pointer}
-button.gold{background:#B08D57;color:#000}
-button:disabled{opacity:0.5}
-input,select{padding:6px;width:100%;margin-bottom:6px}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
-.status{padding:4px 8px;border-radius:6px;color:#fff}
-.green{background:green}
-.red{background:red}
-</style>
-</head>
-
-<body>
-
 <header>
   <img id="logoImg" style="display:none">
   <div>
     <strong>Elites SACCO</strong><br>
-    <span id="userLabel"></span>
+    <small id="userLabel"></small>
   </div>
   <span id="freezeStatus" class="status green">ACTIVE</span>
 </header>
@@ -41,271 +11,241 @@ input,select{padding:6px;width:100%;margin-bottom:6px}
 
 <script>
 /* ========= CONFIG ========= */
-const MEMBERS=["Gerald","Member 2","Member 3","Member 4","Member 5"];
-const ADMIN_PIN="1234";
-const INTEREST=0.05;
+const MEMBERS = ["Gerald", "Member 2", "Member 3", "Member 4", "Member 5"];
+const ADMIN_PIN = "1234";
+const INTEREST = 0.05; // 5% Monthly Compound
+const TARGET_SAVINGS = 500000; // Example Goal
 
 /* ========= STATE ========= */
-let user=null;
-let frozen=localStorage.getItem("frozen")==="true";
-let data=JSON.parse(localStorage.getItem("sacco")||"{}");
-let logo=localStorage.getItem("logo");
+let user = null;
+let frozen = localStorage.getItem("frozen") === "true";
+let data = JSON.parse(localStorage.getItem("sacco") || "{}");
+let logo = localStorage.getItem("logo");
 
 /* ========= INIT ========= */
-MEMBERS.forEach(m=>{
-  if(!data[m]) data[m]={contributions:[],loans:[]};
-});
-if(!data.expenses) data.expenses=[];
+function initData() {
+    MEMBERS.forEach(m => {
+        if (!data[m]) data[m] = { contributions: [], loans: [] };
+    });
+    if (!data.expenses) data.expenses = [];
+}
+initData();
 
 /* ========= HELPERS ========= */
-  function downloadCSV(filename, rows) {
-  const csv = rows.map(r =>
-    r.map(v => `"${String(v ?? "").replace(/"/g,'""')}"`).join(",")
-  ).join("\n");
+function save() { localStorage.setItem("sacco", JSON.stringify(data)); }
 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = filename;
-  link.click();
+function pinCheck(cb) {
+    const p = prompt("Enter Admin PIN to confirm action:");
+    if (p === ADMIN_PIN) cb(); else alert("Unauthorized");
 }
 
-  function calculateLateFee(month, paymentDate) {
-  if (!paymentDate) return 0;
-
-  const dueDate = new Date(month + "-10");
-  const paidDate = new Date(paymentDate);
-
-  if (paidDate <= dueDate) return 0;
-
-  const diffDays = Math.floor((paidDate - dueDate) / (1000 * 60 * 60 * 24));
-  const weeksLate = Math.ceil(diffDays / 7);
-
-  return Math.min(weeksLate * 5000, 15000);
+function monthsBetween(startDate) {
+    const s = new Date(startDate);
+    const e = new Date();
+    return Math.max((e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth()), 0);
 }
 
-function save(){localStorage.setItem("sacco",JSON.stringify(data))}
-function pinCheck(cb){
-  const p=prompt("Enter Admin PIN");
-  if(p===ADMIN_PIN) cb(); else alert("Wrong PIN");
-}
-function monthsBetween(d){
-  const s=new Date(d),e=new Date();
-  return Math.max((e.getFullYear()-s.getFullYear())*12+(e.getMonth()-s.getMonth()),0);
-}
-function compound(p,m){return Math.round(p*Math.pow(1+INTEREST,m))}
+function compound(p, m) { return Math.round(p * Math.pow(1 + INTEREST, m)); }
 
-/* ========= LOGIN ========= */
-function login(name){
-  user={name,role:name==="Gerald"?"admin":"member"};
-  render();
+function downloadCSV(filename, rows) {
+    const csv = rows.map(r => r.map(v => `"${String(v ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    link.click();
 }
 
-/* ========= RENDER ========= */
-function render(){
-  document.getElementById("userLabel").textContent=user?user.name:"";
-  document.getElementById("freezeStatus").textContent=frozen?"FROZEN":"ACTIVE";
-  document.getElementById("freezeStatus").className="status "+(frozen?"red":"green");
-  if(logo){
-    const img=document.getElementById("logoImg");
-    img.src=logo;img.style.display="block";
-  }
-  const app=document.getElementById("app");
-  app.innerHTML="";
-
-  if(!user){
-    const c=document.createElement("div");c.className="card";
-    MEMBERS.forEach(m=>{
-      const b=document.createElement("button");
-      b.textContent="Login as "+m;
-      b.onclick=()=>login(m);
-      c.appendChild(b);c.appendChild(document.createElement("br"));
-    });
-    app.appendChild(c);
-    return;
-  }
-
-  /* DASHBOARD */
-  let totalC=0,totalL=0,totalE=0;
-  MEMBERS.forEach(m=>{
-    data[m].contributions.forEach(r=>totalC+=r.paid);
-    data[m].loans.forEach(l=>totalL+=l.balance);
-  });
-  data.expenses.forEach(e=>totalE+=e.amount);
-
-  app.innerHTML+=`
-  <div class="grid">
-    <div class="card">Contributions<br><b>${totalC}</b></div>
-    <div class="card">Loans<br><b>${totalL}</b></div>
-    <div class="card">Expenses<br><b>${totalE}</b></div>
-    <div class="card">Net<br><b>${totalC-totalL-totalE}</b></div>
-  </div>`;
-
-  /* ADMIN CONTROLS */
-  if(user.role==="admin"){
-    const a = document.createElement("div");
-a.className = "card";
-a.innerHTML = `
-  <h2>Admin Controls</h2>
-
-  <input type="file" id="logoUp"><br><br>
-
-  <button onclick="pinCheck(()=>{frozen=!frozen;localStorage.setItem('frozen',frozen);render()})">
-    ${frozen ? "Unfreeze" : "Freeze"} System
-  </button>
-
-  <br><br>
-  
-`;
-app.appendChild(a);
-
-    document.getElementById("logoUp").onchange=e=>{
-      const r=new FileReader();
-      r.onload=x=>{logo=x.target.result;localStorage.setItem("logo",logo);render()};
-      r.readAsDataURL(e.target.files[0]);
-    }
-  }
-
-  /* FORMS */
-  if(user.role==="admin" && !frozen){
-    const f=document.createElement("div");f.className="card";
-    f.innerHTML=`
-    <h2>Add Records</h2>
-    <select id="mSel">${MEMBERS.map(m=>`<option>${m}</option>`)}</select>
-    <input id="cMonth" placeholder="Month YYYY-MM">
-<input id="cPaidDate" type="date">
-<input id="cPaid" placeholder="Paid Amount">
-
-    <button class="gold" onclick="pinCheck(addContribution)">Add Contribution</button>
-    <hr>
-    <input id="lAmt" placeholder="Loan Amount">
-    <input id="lDate" type="date">
-    <button class="gold" onclick="pinCheck(addLoan)">Add Loan</button>
-    <hr>
-    <input id="eDesc" placeholder="Expense Description">
-    <input id="eAmt" placeholder="Expense Amount">
-    <button class="gold" onclick="pinCheck(addExpense)">Add Expense</button>`;
-    app.appendChild(f);
-  }
-
-  /* LEDGERS */
-  renderContributionLedger(app);
-  renderLoanLedger(app);
-  renderExpenses(app);
+function calculateLateFee(month, paymentDate) {
+    if (!paymentDate || !month) return 0;
+    const dueDate = new Date(month + "-10");
+    const paidDate = new Date(paymentDate);
+    if (paidDate <= dueDate) return 0;
+    const diffDays = Math.floor((paidDate - dueDate) / (1000 * 60 * 60 * 24));
+    const weeksLate = Math.ceil(diffDays / 7);
+    return Math.min(weeksLate * 5000, 15000); // Capped at 15k
 }
 
 /* ========= ACTIONS ========= */
-function addContribution(){
-  const m = mSel.value;
-  const lateFee = calculateLateFee(cMonth.value, cPaidDate.value);
-
-  data[m].contributions.push({
-    month: cMonth.value,
-    paid: Number(cPaid.value),
-    paidDate: cPaidDate.value,
-    lateFee: lateFee
-  });
-
-  save();
-  render();
+function login(name) {
+    user = { name, role: name === "Gerald" ? "admin" : "member" };
+    render();
 }
 
-function addLoan(){
-  const m=mSel.value;
-  const bal=compound(Number(lAmt.value),monthsBetween(lDate.value));
-  data[m].loans.push({principal:Number(lAmt.value),start:lDate.value,balance:bal});
-  save();render();
-}
-function addExpense(){
-  function exportContributionsCSV() {
-    alert("Export function triggered");
-  const rows = [
-    ["Member", "Month", "Paid Amount", "Late Fee"]
-  ];
+function addContribution() {
+    const m = document.getElementById("mSel").value;
+    const amt = Number(document.getElementById("cPaid").value);
+    const month = document.getElementById("cMonth").value;
+    const date = document.getElementById("cPaidDate").value;
 
-  MEMBERS.forEach(member => {
-    data[member].contributions.forEach(r => {
-      rows.push([
-        member,
-        r.month,
-        r.paid,
-        r.lateFee || 0
-      ]);
+    if (!amt || !month) return alert("Fill all fields");
+
+    data[m].contributions.push({
+        month: month,
+        paid: amt,
+        paidDate: date,
+        lateFee: calculateLateFee(month, date)
     });
-  });
-
-  downloadCSV("elites_contributions.csv", rows);
-}
-  window.exportContributionsCSV = exportContributionsCSV;
-
-  data.expenses.push({desc:eDesc.value,amount:Number(eAmt.value)});
-  save();render();
+    save(); render();
 }
 
-/* ========= LEDGERS ========= */
-function renderContributionLedger(app){
- let html = `<div class="card">
-  <h2>Contribution Ledger</h2>
-  <table>
-    <tr>
-      <th>Member</th>
-      <th>Month</th>
-      <th>Paid</th>
-      <th>Late Fee</th>
-    </tr>`;
+function addLoan() {
+    const m = document.getElementById("mSel").value;
+    const amt = Number(document.getElementById("lAmt").value);
+    const date = document.getElementById("lDate").value;
 
-MEMBERS.forEach(m => {
-  data[m].contributions.forEach(r => {
-    html += `<tr>
-      <td>${m}</td>
-      <td>${r.month}</td>
-      <td>${r.paid}</td>
-      <td>${r.lateFee || 0}</td>
-    </tr>`;
-  });
-});
+    if (!amt || !date) return alert("Fill all fields");
 
-html += `</table></div>`;
-app.innerHTML += html;
-
-  app.innerHTML+=html;
-}
-function renderLoanLedger(app){
-  let html=`<div class="card"><h2>Loan Ledger</h2><table>
-  <tr><th>Member</th><th>Principal</th><th>Balance</th></tr>`;
-  MEMBERS.forEach(m=>data[m].loans.forEach(l=>{
-    html+=`<tr><td>${m}</td><td>${l.principal}</td><td>${l.balance}</td></tr>`;
-  }));
-  html+=`</table></div>`;
-  app.innerHTML+=html;
-}
-function renderExpenses(app){
-  let html=`<div class="card"><h2>Expenses</h2><table>
-  <tr><th>Description</th><th>Amount</th></tr>`;
-  data.expenses.forEach(e=>{
-    html+=`<tr><td>${e.desc}</td><td>${e.amount}</td></tr>`;
-  });
-  html+=`</table></div>`;
-  app.innerHTML+=html;
+    data[m].loans.push({
+        principal: amt,
+        start: date,
+        balance: amt,
+        payments: []
+    });
+    save(); render();
 }
 
-/* ========= START ========= */
+function repayLoan() {
+    const m = document.getElementById("mSel").value;
+    const amt = Number(document.getElementById("rAmt").value);
+    if (data[m].loans.length === 0) return alert("No active loans");
+    
+    // Simple logic: apply to the first loan with a balance
+    let loan = data[m].loans.find(l => l.balance > 0);
+    if (loan) {
+        loan.balance -= amt;
+        save(); render();
+    }
+}
+
+function updateInterests() {
+    MEMBERS.forEach(m => {
+        data[m].loans.forEach(l => {
+            const mths = monthsBetween(l.start);
+            l.balance = compound(l.principal, mths);
+        });
+    });
+    save(); render();
+    alert("Interests updated based on today's date.");
+}
+
+function exportData() {
+    const rows = [["Type", "Member/Desc", "Amount", "Date/Month", "Extra"]];
+    MEMBERS.forEach(m => {
+        data[m].contributions.forEach(c => rows.push(["Contribution", m, c.paid, c.month, `Fee:${c.lateFee}`]));
+        data[m].loans.forEach(l => rows.push(["Loan", m, l.principal, l.start, `Bal:${l.balance}`]));
+    });
+    data.expenses.forEach(e => rows.push(["Expense", e.desc, e.amount, "-", "-"]));
+    downloadCSV("SACCO_Report.csv", rows);
+}
+
+/* ========= RENDER ========= */
+function render() {
+    const app = document.getElementById("app");
+    document.getElementById("userLabel").textContent = user ? `Logged in as: ${user.name}` : "Please Login";
+    document.getElementById("freezeStatus").textContent = frozen ? "SYSTEM FROZEN" : "ACTIVE";
+    document.getElementById("freezeStatus").className = "status " + (frozen ? "red" : "green");
+
+    if (logo) {
+        const img = document.getElementById("logoImg");
+        img.src = logo; img.style.display = "block";
+    }
+
+    app.innerHTML = "";
+
+    if (!user) {
+        let html = `<div class="card"><h2>Select Member</h2>`;
+        MEMBERS.forEach(m => {
+            html += `<button style="margin:4px; width:100%" onclick="login('${m}')">${m}</button>`;
+        });
+        app.innerHTML = html + `</div>`;
+        return;
+    }
+
+    // Dashboard Totals
+    let tc = 0, tl = 0, te = 0;
+    MEMBERS.forEach(m => {
+        data[m].contributions.forEach(r => tc += r.paid);
+        data[m].loans.forEach(l => tl += l.balance);
+    });
+    data.expenses.forEach(e => te += e.amount);
+    const net = tc - te;
+
+    app.innerHTML += `
+    <div class="grid">
+        <div class="card">Contributions<br><b>${tc.toLocaleString()}</b></div>
+        <div class="card">Active Loans<br><b>${tl.toLocaleString()}</b></div>
+        <div class="card">Expenses<br><b>${te.toLocaleString()}</b></div>
+        <div class="card">Available Cash<br><b>${(net - tl).toLocaleString()}</b></div>
+    </div>
+    <div class="card">
+        Target Goal: ${((tc / TARGET_SAVINGS) * 100).toFixed(1)}%
+        <div style="background:#eee; height:10px; border-radius:5px; margin-top:5px">
+            <div style="background:#B08D57; height:100%; width:${Math.min((tc / TARGET_SAVINGS) * 100, 100)}%; border-radius:5px"></div>
+        </div>
+    </div>`;
+
+    if (user.role === "admin") {
+        const adm = document.createElement("div");
+        adm.className = "card";
+        adm.innerHTML = `
+            <h3>Admin Tools</h3>
+            <button onclick="exportData()">Export CSV</button>
+            <button onclick="pinCheck(updateInterests)">Recalculate Interests</button>
+            <button class="gold" onclick="pinCheck(()=>{frozen=!frozen;localStorage.setItem('frozen',frozen);render()})">
+                ${frozen ? "Unfreeze System" : "Freeze System"}
+            </button>
+            <button style="background:red" onclick="pinCheck(()=>{if(confirm('Delete EVERYTHING?')){data={};initData();save();render();}})">Reset All</button>
+            <br><br><small>Upload Logo:</small> <input type="file" id="logoUp">
+        `;
+        app.appendChild(adm);
+        document.getElementById("logoUp").onchange = e => {
+            const r = new FileReader();
+            r.onload = x => { logo = x.target.result; localStorage.setItem("logo", logo); render() };
+            r.readAsDataURL(e.target.files[0]);
+        }
+
+        if (!frozen) {
+            const forms = document.createElement("div");
+            forms.className = "card";
+            forms.innerHTML = `
+                <h3>Record Entry</h3>
+                <select id="mSel">${MEMBERS.map(m => `<option>${m}</option>`)}</select>
+                <div class="grid">
+                    <div>
+                        <strong>Contribution</strong>
+                        <input id="cMonth" placeholder="YYYY-MM">
+                        <input id="cPaidDate" type="date">
+                        <input id="cPaid" type="number" placeholder="Amount">
+                        <button class="gold" onclick="pinCheck(addContribution)">Add</button>
+                    </div>
+                    <div>
+                        <strong>Loan / Repayment</strong>
+                        <input id="lAmt" type="number" placeholder="Loan Principal">
+                        <input id="lDate" type="date">
+                        <button class="gold" onclick="pinCheck(addLoan)">Issue Loan</button>
+                        <hr>
+                        <input id="rAmt" type="number" placeholder="Repayment Amt">
+                        <button onclick="pinCheck(repayLoan)">Record Payment</button>
+                    </div>
+                </div>`;
+            app.appendChild(forms);
+        }
+    }
+
+    // Ledgers
+    renderTable(app, "Contributions", ["Member", "Month", "Paid", "Fee"], 
+        MEMBERS.flatMap(m => data[m].contributions.map(c => [m, c.month, c.paid, c.lateFee])));
+    
+    renderTable(app, "Loans", ["Member", "Principal", "Balance"], 
+        MEMBERS.flatMap(m => data[m].loans.map(l => [m, l.principal, l.balance])));
+}
+
+function renderTable(app, title, headers, rows) {
+    let html = `<div class="card"><h3>${title}</h3><table><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>`;
+    rows.forEach(r => { html += `<tr>${r.map(td => `<td>${td}</td>`).join('')}</tr>`; });
+    app.innerHTML += html + `</table></div>`;
+}
+
 render();
 </script>
-</body>
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
