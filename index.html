@@ -77,20 +77,14 @@ function exportToCSV() {
     });
     data.expenses.forEach(e => rows.push([e.date, "SACCO", "Expense: "+e.reason, -e.amt]));
     data.investments.forEach(i => rows.push([i.date, "SACCO", "Invest: "+i.reason, -i.amt]));
-    
     let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
-    let encodedUri = encodeURI(csvContent);
-    let link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "Elites_SACCO_Full_Report.csv");
-    document.body.appendChild(link);
-    link.click();
+    window.open(encodeURI(csvContent));
 }
 
 function render() {
     const app = document.getElementById("app");
     if(!user) {
-        let h = `<div class="card" style="text-align:center"><h2>Login</h2><div class="grid">`;
+        let h = `<div class="card" style="text-align:center"><h2>Member Login</h2><div class="grid">`;
         data.members.forEach(m => h += `<button onclick="checkLogin('${m}')">${m}</button>`);
         app.innerHTML = h + `</div></div>`;
         return;
@@ -98,7 +92,7 @@ function render() {
 
     const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN || data[user.name].isExtraAdmin;
 
-    // TOTALS
+    // GLOBAL CALCULATIONS (Everyone sees these now)
     let totalSavings = 0, totalLoansOut = 0, totalInvested = 0, totalExpenses = 0;
     data.members.forEach(m => {
         data[m].contributions.forEach(c => totalSavings += Number(c.amt));
@@ -108,24 +102,39 @@ function render() {
     data.expenses.forEach(e => totalExpenses += Number(e.amt));
     const availableCash = totalSavings - (totalLoansOut + totalInvested + totalExpenses);
 
+    // PERSONAL CALCULATIONS
+    let mySavingsTotal = 0;
+    data[user.name].contributions.forEach(c => mySavingsTotal += Number(c.amt));
+
     app.innerHTML = `
         <div class="card" style="background:#111; color:#fff">
-            <h2>Treasury: UGX ${availableCash.toLocaleString()} Available</h2>
+            <h2>CASH AT HAND/BANK: UGX ${availableCash.toLocaleString()}</h2>
             <div class="grid">
                 <div class="stat-box">Invested: UGX ${totalInvested.toLocaleString()}</div>
                 <div class="stat-box">Loans Out: UGX ${totalLoansOut.toLocaleString()}</div>
                 <div class="stat-box">Expenses: UGX ${totalExpenses.toLocaleString()}</div>
             </div>
-            ${isAdmin ? `<button class="gold" style="margin-top:15px" onclick="exportToCSV()">Export All Data to Excel</button>` : ''}
+            ${isAdmin ? `<button class="gold" style="margin-top:15px" onclick="exportToCSV()">Export All Data (Excel)</button>` : ''}
+        </div>
+
+        <div class="card" style="border-left:10px solid #B08D57">
+            <h3>Member Dashboard: ${user.name}</h3>
+            <div class="grid">
+                <div class="stat-box" style="background:#FFFDE7">My Total Contributions:<br><strong>UGX ${mySavingsTotal.toLocaleString()}</strong></div>
+            </div>
+            <div style="margin-top:10px">
+                <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
+                <button onclick="user=null;render()" style="background:#666; font-size:11px">Logout</button>
+            </div>
         </div>`;
 
     if(isAdmin) {
         app.innerHTML += `
             <div class="card" style="border:2px solid #B08D57">
-                <h2>Admin Control</h2>
+                <h2>Admin Control Panel</h2>
                 <div class="grid">
                     <div>
-                        <h3>Member Payments</h3>
+                        <h3>Inflow (Savings/Repayment)</h3>
                         <select id="mC">${data.members.map(m=>`<option>${m}</option>`)}</select>
                         <select id="transType"><option value="C">Savings</option><option value="R">Loan Repayment</option></select>
                         <input type="month" id="moC" value="2024-02">
@@ -133,23 +142,22 @@ function render() {
                         <button class="gold" onclick="addEntry(document.getElementById('transType').value)">Submit</button>
                     </div>
                     <div>
-                        <h3>Outflows</h3>
+                        <h3>Outflow (Loan/Spend)</h3>
                         <select id="outType"><option value="L">Disburse Loan</option><option value="EXP">Expense</option><option value="INV">Investment</option></select>
                         <select id="mL">${data.members.map(m=>`<option>${m}</option>`)}</select>
-                        <input type="text" id="gR" placeholder="Description">
+                        <input type="text" id="gR" placeholder="Description/Reason">
                         <input type="number" id="gA" placeholder="Amount">
-                        <button class="gold" onclick="handleOutflow()">Record Outflow</button>
+                        <button class="gold" onclick="handleOutflow()">Submit Outflow</button>
                     </div>
                 </div>
             </div>`;
     }
 
-    // PRIVACY FILTERED LEDGER
-    let ledgerHtml = `<div class="card"><h2>${isAdmin ? 'Global Ledger' : 'My Personal Ledger'}</h2><table>
+    // LEDGER VIEW
+    let ledgerHtml = `<div class="card"><h2>${isAdmin ? 'Global Ledger' : 'My Personal Statement'}</h2><table>
         <tr><th>Date</th><th>Entity</th><th>Type</th><th>Amount</th><th>Action</th></tr>`;
     
     const visibleMembers = isAdmin ? data.members : [user.name];
-
     visibleMembers.forEach(m => {
         data[m].contributions.forEach((c, idx) => {
             ledgerHtml += `<tr><td>${c.month}</td><td>${m}</td><td>Savings</td><td>${Number(c.amt).toLocaleString()}</td>
@@ -172,7 +180,7 @@ function render() {
         });
     }
 
-    app.innerHTML += ledgerHtml + `</table></div><div style="text-align:center; padding:20px"><button onclick="user=null;render()">Logout</button></div>`;
+    app.innerHTML += ledgerHtml + `</table></div>`;
 }
 
 function handleOutflow() {
@@ -194,6 +202,11 @@ function addEntry(t) {
     if(t==='C') data[m].contributions.push({amt:a, date:d, month:mo});
     else data[m].loans.push({amt:a, date:d, bal: t==='L'?a:-a, type: t==='L'?'LOAN':'REPAYMENT'});
     saveData();
+}
+
+function changePIN() {
+    const p = prompt("New 4-digit PIN:");
+    if(p && p.length === 4) { data[user.name].pin = p; saveData(); alert("Success!"); }
 }
 
 function checkLogin(n) { const p = prompt(`PIN for ${n}:`); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
