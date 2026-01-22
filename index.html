@@ -23,6 +23,7 @@
     .status-cleared{color:#2E7D32; font-weight:bold}
     .status-pending{color:#C62828; font-weight:bold}
     .arrears-banner{background:#FFF3E0; border:2px solid #FF9800; padding:15px; border-radius:8px; margin-bottom:15px}
+    .personal-highlight{background:#E8F5E9; border-left:5px solid #2E7D32}
 </style>
 </head>
 <body>
@@ -88,7 +89,8 @@ function render() {
     data.expenses.forEach(e => tExp += Number(e.amt));
     const cash = tSav - (tLoa + tInv + tExp);
 
-    // CALCULATE ARREARS
+    // PERSONAL AND ARREARS CALCULATION
+    let mySavingsTotal = data[target].contributions.reduce((acc, curr) => acc + Number(curr.amt), 0);
     let totalOwed = 0;
     let loopD = new Date("2024-02-01");
     while(loopD <= new Date()) {
@@ -109,7 +111,7 @@ function render() {
         <div class="card" style="background:#111; color:#fff">
             <h2>CASH AT HAND: UGX ${cash.toLocaleString()}</h2>
             <div class="grid">
-                <div class="stat-box">Savings: ${tSav.toLocaleString()}</div>
+                <div class="stat-box">Total SACCO Savings: ${tSav.toLocaleString()}</div>
                 <div class="stat-box">Invested: ${tInv.toLocaleString()}</div>
                 <div class="stat-box">Loans Out: ${tLoa.toLocaleString()}</div>
             </div>
@@ -117,10 +119,15 @@ function render() {
         </div>
 
         <div class="arrears-banner">
-            <h3>Account: ${target}</h3>
-            <p>Outstanding Arrears + Fees: <strong style="color:#C62828">UGX ${totalOwed.toLocaleString()}</strong></p>
-            <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
-            <button onclick="user=null;render()" style="background:#666; font-size:11px">Logout</button>
+            <h3 style="margin:0">Account: ${target}</h3>
+            <div class="grid" style="margin-top:10px">
+                <div class="stat-box personal-highlight"><strong>My Total Saved:</strong><br>UGX ${mySavingsTotal.toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFEBEE"><strong>Outstanding Arrears:</strong><br><span style="color:#C62828">UGX ${totalOwed.toLocaleString()}</span></div>
+            </div>
+            <div style="margin-top:15px">
+                <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
+                <button onclick="user=null;render()" style="background:#666; font-size:11px">Logout</button>
+            </div>
         </div>`;
 
     if(isAdmin) {
@@ -140,7 +147,7 @@ function render() {
                 <div>
                     <h3>Outflow (Loan/Spend)</h3>
                     <select id="tO"><option value="L">Loan</option><option value="E">Expense</option><option value="I">Invest</option></select>
-                    <select id="mL_out">${data.members.map(m=>`<option>${m}</option>`)}</select>
+                    <select id="mL_out">${data.members.map(m=>`<option ${m===target?'selected':''}>${m}</option>`)}</select>
                     <input type="date" id="daO" value="${today}">
                     <input type="text" id="reO" placeholder="Description">
                     <input type="number" id="amO" placeholder="Amount">
@@ -150,7 +157,7 @@ function render() {
         </div>`;
     }
 
-    let statusHTML = `<div class="card"><h2>Clearance Status</h2>
+    let statusHTML = `<div class="card"><h2>Clearance Status & Personal Statement</h2>
         ${isAdmin ? `<select id="viewMem" onchange="render()">${data.members.map(m => `<option ${m===target?'selected':''}>${m}</option>`)}</select>` : ''}
         <table><tr><th>Month</th><th>Status</th><th>Paid On</th><th>Late Fee</th></tr>`;
     
@@ -167,13 +174,13 @@ function render() {
     app.innerHTML += statusHTML + `</table></div>`;
 
     if(isAdmin) {
-        let audit = `<div class="card"><h2>Audit Ledger</h2><table>`;
+        let audit = `<div class="card"><h2>Audit Ledger (Fix Mistakes)</h2><table>`;
         data.members.forEach(m => {
             data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`);
             data[m].loans.forEach((l,i) => audit += `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`);
         });
-        data.expenses.forEach((e,i) => audit += `<tr><td>SACCO</td><td>Expense</td><td>${e.amt}</td><td><button class="del" onclick="del('E',null,${i})">X</button></td></tr>`);
-        data.investments.forEach((inv,i) => audit += `<tr><td>SACCO</td><td>Invest</td><td>${inv.amt}</td><td><button class="del" onclick="del('I',null,${i})">X</button></td></tr>`);
+        data.expenses.forEach((e,i) => audit += `<tr><td>SACCO</td><td>Expense</td><td>${e.amt}</td><td><button class="del" onclick="del('E',null,i)">X</button></td></tr>`);
+        data.investments.forEach((inv,i) => audit += `<tr><td>SACCO</td><td>Invest</td><td>${inv.amt}</td><td><button class="del" onclick="del('I',null,i)">X</button></td></tr>`);
         app.innerHTML += audit + `</table></div>`;
     }
 }
