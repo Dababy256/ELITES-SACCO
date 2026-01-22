@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Elites SACCO Master</title>
+<title>Elites SACCO Master Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     body{font-family:'Segoe UI', sans-serif; background:#F3E9D2; margin:0; color:#111}
@@ -17,11 +17,12 @@
     button{padding:10px 18px; border:none; border-radius:6px; background:#111; color:#fff; cursor:pointer; font-weight:bold; margin:2px}
     button.gold{background:#B08D57; color:#000}
     input,select{padding:10px; width:100%; margin-bottom:10px; border:1px solid #ccc; border-radius:8px}
-    .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:15px}
+    .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:15px}
     .status{padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold}
     .paid{background:#d4edda; color:#155724}
     .pending{background:#f8d7da; color:#721c24}
     .report-area{background:#eee; padding:15px; border-radius:8px; white-space:pre-wrap; font-family:monospace; margin-top:10px; display:none}
+    .stat-box{padding:15px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd}
 </style>
 </head>
 <body>
@@ -47,6 +48,10 @@ async function loadData() {
         const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {headers:{'X-Master-Key':MASTER_KEY}});
         const json = await res.json();
         data = json.record;
+        // Initialize new fields if they don't exist
+        if(!data.expenses) data.expenses = [];
+        if(!data.investments) data.investments = [];
+        
         if(data.logo) document.getElementById("logoSlot").innerHTML = `<img src="${data.logo}">`;
         render();
     } catch (e) { console.error("Sync Error"); }
@@ -93,103 +98,130 @@ function render() {
         return;
     }
 
-    // Role check: Admin or secondary admin or specially granted
     const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN || data[user.name].isExtraAdmin;
 
-    // Individual Balance Card
+    // --- CALCULATE GLOBAL TOTALS ---
+    let totalSavings = 0, totalLateFees = 0, totalLoansOut = 0, totalInvested = 0, totalExpenses = 0;
+    
+    data.members.forEach(m => {
+        data[m].contributions.forEach(c => {
+            totalSavings += Number(c.amt);
+            totalLateFees += calculateLateFee(c.month, c.date);
+        });
+        data[m].loans.forEach(l => totalLoansOut += Number(l.bal));
+    });
+    data.investments.forEach(i => totalInvested += Number(i.amt));
+    data.expenses.forEach(e => totalExpenses += Number(e.amt));
+
+    const availableCash = (totalSavings + totalLateFees) - (totalLoansOut + totalInvested + totalExpenses);
+
+    // --- UI: TOP SUMMARY ---
+    app.innerHTML += `
+        <div class="card" style="background:#111; color:#fff">
+            <h2>SACCO Treasury Overview</h2>
+            <div class="grid">
+                <div class="stat-box" style="color:#000">Available Cash:<br><strong style="font-size:1.4em">UGX ${availableCash.toLocaleString()}</strong></div>
+                <div class="stat-box" style="color:#000">In Investments:<br><strong>UGX ${totalInvested.toLocaleString()}</strong></div>
+                <div class="stat-box" style="color:#000">Active Loans:<br><strong>UGX ${totalLoansOut.toLocaleString()}</strong></div>
+            </div>
+        </div>`;
+
+    // --- UI: PERSONAL CARD ---
     let mySavings = 0, myLoanPrin = 0, myInt = 0;
     data[user.name].contributions.forEach(c => mySavings += Number(c.amt));
-    data[user.name].loans.forEach(l => {
-        myLoanPrin += Number(l.bal);
-        myInt += calculateLoanInterest(l);
-    });
+    data[user.name].loans.forEach(l => { myLoanPrin += Number(l.bal); myInt += calculateLoanInterest(l); });
     const mPaid = data[user.name].membershipPaid ? "PAID" : "PENDING";
 
     app.innerHTML += `
-        <div class="card" style="background:#FFFDE7; border-left:10px solid #B08D57">
-            <h3>My Balances: ${user.name} ${isAdmin ? '(Admin)' : ''}</h3>
+        <div class="card" style="border-left:10px solid #B08D57">
+            <h3>My Balances: ${user.name}</h3>
             <div class="grid">
                 <div>Saved: <strong>UGX ${mySavings.toLocaleString()}</strong></div>
-                <div>Loan Principal: <strong>UGX ${myLoanPrin.toLocaleString()}</strong></div>
-                <div>Loan Interest (5%): <strong style="color:red">UGX ${myInt.toLocaleString()}</strong></div>
+                <div>My Loan: <strong>UGX ${myLoanPrin.toLocaleString()}</strong></div>
+                <div>Member Status: <span class="status ${mPaid==='PAID'?'paid':'pending'}">${mPaid}</span></div>
             </div>
-            <div class="status ${mPaid==='PAID'?'paid':'pending'}" style="margin-top:10px; display:inline-block">Membership Fee: ${mPaid}</div>
             <hr>
             <button onclick="changePIN()" style="background:#444; font-size:11px">Change PIN</button>
             <button onclick="user=null; render()" style="background:#666; font-size:11px">Logout</button>
         </div>`;
 
+    // --- UI: ADMIN HUB ---
     if(isAdmin) {
         app.innerHTML += `
             <div class="card" style="border:2px solid #B08D57">
-                <h2>Admin Hub</h2>
+                <h2>Admin Hub (Management)</h2>
                 <div class="grid">
                     <div>
-                        <h3>+ Entry</h3>
+                        <h3>+ Expense / Investment</h3>
+                        <select id="entryType">
+                            <option value="EXPENSE">Expense (Costs)</option>
+                            <option value="INVEST">Investment (Bonds/Trust)</option>
+                        </select>
+                        <input type="text" id="entryReason" placeholder="Reason/Description">
+                        <input type="number" id="entryAmt" placeholder="Amount">
+                        <input type="date" id="entryDate" value="${new Date().toISOString().split('T')[0]}">
+                        <button class="gold" onclick="addGlobalEntry()">Record Outflow</button>
+                    </div>
+                    <div>
+                        <h3>+ Member Entry</h3>
                         <select id="mC">${data.members.map(m=>`<option>${m}</option>`)}</select>
                         <input type="month" id="moC" value="${new Date().toISOString().slice(0,7)}">
-                        <input type="date" id="dC" value="${new Date().toISOString().split('T')[0]}">
                         <input type="number" id="aC" placeholder="Amount">
                         <button class="gold" onclick="addEntry('C')">Save Savings</button>
-                    </div>
-                    <div>
-                        <h3>+ Loans</h3>
-                        <select id="mL">${data.members.map(m=>`<option>${m}</option>`)}</select>
-                        <input type="date" id="dL" value="${new Date().toISOString().split('T')[0]}">
-                        <input type="number" id="aL" placeholder="Amount">
-                        <button class="gold" onclick="addEntry('L')">Give Loan</button>
-                        <button class="gold" style="background:green" onclick="addEntry('R')">Repayment</button>
-                    </div>
-                    <div>
-                        <h3>Management</h3>
-                        <input type="month" id="repMonth">
-                        <button class="gold" onclick="generateReport()">Monthly Report</button>
                         <hr>
-                        <select id="mM">${data.members.map(m=>`<option>${m}</option>`)}</select>
-                        <button class="gold" style="font-size:10px" onclick="toggleMembership()">Toggle Membership</button>
-                        <button class="gold" style="font-size:10px; background:#444; color:#fff" onclick="toggleExtraAdmin()">Grant/Revoke Admin</button>
-                        <input type="file" onchange="handleLogo(event)" style="margin-top:5px">
+                        <button class="gold" style="background:green" onclick="addEntry('R')">Record Repayment</button>
                     </div>
                 </div>
-                <div id="reportOutput" class="report-area"></div>
             </div>`;
     }
 
-    // ARREARS TABLE (Privacy Filter Applied Here)
-    let arrearsHtml = `<div class="card"><h2>Unpaid Arrears (Since Feb 2024)</h2><table>
-        <tr><th>Member</th><th>Month</th><th>Expected</th><th>Status</th></tr>`;
+    // --- UI: EXPENSES & INVESTMENTS TABLES (VISIBLE TO ALL) ---
+    app.innerHTML += `
+        <div class="grid">
+            <div class="card">
+                <h3>Investment Portfolio (Bonds/Unit Trust)</h3>
+                <table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>
+                ${data.investments.map(i => `<tr><td>${i.date}</td><td>${i.reason}</td><td>${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
+                </table>
+            </div>
+            <div class="card">
+                <h3>SACCO Expenses</h3>
+                <table><tr><th>Date</th><th>Reason</th><th>Amount</th></tr>
+                ${data.expenses.map(e => `<tr><td>${e.date}</td><td>${e.reason}</td><td>${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
+                </table>
+            </div>
+        </div>`;
+
+    // --- ARREARS TABLE (Privacy Filter) ---
+    let arrearsHtml = `<div class="card"><h2>Unpaid Arrears Tracking</h2><table><tr><th>Member</th><th>Month</th><th>Expected</th></tr>`;
     const start = new Date("2024-02-01");
     const end = new Date();
-    
-    // Logic: If Admin, show everyone. If Member, only show self.
     const visibleMembers = isAdmin ? data.members : [user.name];
-
     visibleMembers.forEach(m => {
         let temp = new Date(start);
         while(temp <= end) {
             const mStr = temp.toISOString().slice(0,7);
             if(!data[m].contributions.find(c => c.month === mStr)) {
-                arrearsHtml += `<tr><td>${m}</td><td>${mStr}</td><td>${getExpectedAmount(mStr).toLocaleString()}</td><td><span class="status pending">PENDING</span></td></tr>`;
+                arrearsHtml += `<tr><td>${m}</td><td>${mStr}</td><td>${getExpectedAmount(mStr).toLocaleString()}</td></tr>`;
             }
             temp.setMonth(temp.getMonth() + 1);
         }
     });
     app.innerHTML += arrearsHtml + `</table></div>`;
+}
 
-    // GLOBAL HISTORY (Privacy Filter Applied Here)
-    let table = `<div class="card"><h2>Transaction Ledger</h2><table>
-        <tr><th>Member</th><th>Type</th><th>Amount</th><th>Late Fee</th><th>Date</th></tr>`;
+function addGlobalEntry() {
+    const type = document.getElementById("entryType").value;
+    const amt = document.getElementById("entryAmt").value;
+    const reason = document.getElementById("entryReason").value;
+    const date = document.getElementById("entryDate").value;
     
-    visibleMembers.forEach(m => {
-        data[m].contributions.forEach(c => {
-            const fee = calculateLateFee(c.month, c.date);
-            table += `<tr><td>${m}</td><td>Savings (${c.month})</td><td>${c.amt.toLocaleString()}</td><td>${fee > 0 ? 'UGX '+fee.toLocaleString() : '-'}</td><td>${c.date}</td></tr>`;
-        });
-        data[m].loans.forEach(l => {
-            table += `<tr style="color:${l.bal < 0 ? 'green':'red'}"><td>${m}</td><td>${l.type}</td><td>${l.amt.toLocaleString()}</td><td>-</td><td>${l.date}</td></tr>`;
-        });
-    });
-    app.innerHTML += table + `</table></div>`;
+    if(!amt || !reason) return alert("Fill all fields");
+    
+    if(type === 'EXPENSE') data.expenses.push({amt, reason, date});
+    else data.investments.push({amt, reason, date});
+    
+    saveData();
 }
 
 function checkLogin(n) {
@@ -199,64 +231,20 @@ function checkLogin(n) {
 }
 
 function addEntry(type) {
+    const m = document.getElementById("mC").value;
+    const amt = Number(document.getElementById("aC").value);
+    const date = new Date().toISOString().split('T')[0];
     if(type === 'C') {
-        const m = document.getElementById("mC").value;
-        data[m].contributions.push({amt: Number(document.getElementById("aC").value), date: document.getElementById("dC").value, month: document.getElementById("moC").value});
+        data[m].contributions.push({amt, date, month: document.getElementById("moC").value});
     } else {
-        const m = document.getElementById("mL").value;
-        const amt = Number(document.getElementById("aL").value);
-        const date = document.getElementById("dL").value;
-        data[m].loans.push({amt, date, bal: type==='L'?amt:-amt, type: type==='L'?'LOAN':'REPAYMENT'});
+        data[m].loans.push({amt, date, bal: -amt, type: 'REPAYMENT'});
     }
     saveData();
-}
-
-function generateReport() {
-    const month = document.getElementById("repMonth").value;
-    if(!month) return alert("Select month");
-    let report = `ELITES SACCO REPORT: ${month}\n\n`;
-    data.members.forEach(m => {
-        const record = data[m].contributions.find(c => c.month === month);
-        report += `${m}: ${record ? 'PAID UGX '+record.amt.toLocaleString() : 'PENDING'}\n`;
-    });
-    const area = document.getElementById("reportOutput");
-    area.textContent = report; area.style.display = "block";
-}
-
-function toggleMembership() {
-    const m = document.getElementById("mM").value;
-    data[m].membershipPaid = !data[m].membershipPaid;
-    saveData();
-}
-
-function toggleExtraAdmin() {
-    const m = document.getElementById("mM").value;
-    if(m === PRIMARY_ADMIN) return alert("Cannot revoke primary admin.");
-    data[m].isExtraAdmin = !data[m].isExtraAdmin;
-    saveData();
-    alert(`Admin rights for ${m} updated.`);
 }
 
 function changePIN() {
     const p = prompt("New 4-digit PIN:");
     if(p && p.length === 4) { data[user.name].pin = p; saveData(); alert("Success!"); }
-}
-
-function handleLogo(e) {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 120; canvas.height = 120;
-            canvas.getContext('2d').drawImage(img,0,0,120,120);
-            data.logo = canvas.toDataURL('image/jpeg', 0.7);
-            saveData();
-        };
-        img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
 }
 
 loadData();
