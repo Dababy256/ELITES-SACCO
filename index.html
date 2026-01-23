@@ -70,81 +70,86 @@ function render() {
     }
 
     const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN;
-    const target = isAdmin ? document.getElementById("viewMem")?.value || user.name : user.name;
-    const activeMember = lastSelectedMember || target;
+    const target = user.name; 
+    const activeMemberForAdmin = lastSelectedMember || target;
 
-    // --- CALCULATION ENGINE ---
-    let grossSavings = 0;
-    let totalInterestEarned = 0;
-    let currentOutstandingLoans = 0;
-    let totalExpenses = 0;
-    let totalInvestments = 0;
-
+    // --- TREASURY MATH (LOCKED) ---
+    let grossSavingsTotal = 0, totalInterestEarned = 0, currentOutstandingLoans = 0, totalExpenses = 0, totalInvestments = 0;
     data.members.forEach(m => {
-        data[m].contributions.forEach(c => grossSavings += Number(c.amt));
-        
+        data[m].contributions.forEach(c => grossSavingsTotal += Number(c.amt));
         let mLoans = data[m].loans.filter(l => l.type === 'LOAN');
         let mRepays = data[m].loans.filter(l => l.type === 'REPAYMENT');
-        
         mLoans.forEach((loan, idx) => {
             let id = idx + 1;
             let principal = Number(loan.amt);
             let paid = mRepays.filter(r => r.loanId == id).reduce((a, b) => a + Number(b.amt), 0);
-            
             let balance = principal - paid;
             if(balance > 0) currentOutstandingLoans += balance;
             if(paid > principal) totalInterestEarned += (paid - principal);
         });
     });
-
     data.expenses.forEach(e => totalExpenses += Number(e.amt));
     data.investments.forEach(i => totalInvestments += Number(i.amt));
-
     let totalOutflows = currentOutstandingLoans + totalExpenses + totalInvestments;
-    let netCashResult = (grossSavings + totalInterestEarned) - totalOutflows;
+    let netCashResult = (grossSavingsTotal + totalInterestEarned) - totalOutflows;
 
+    // --- PERSONAL DATA CALCULATION ---
+    let myDebt = 0;
+    let myLoanRecords = data[target].loans.filter(l=>l.type==='LOAN');
+    let myRepaymentRecords = data[target].loans.filter(r=>r.type==='REPAYMENT');
     
+    myLoanRecords.forEach((l, i) => {
+        let paid = myRepaymentRecords.filter(r => r.loanId == (i+1)).reduce((a,b)=>a+Number(b.amt),0);
+        let bal = Number(l.amt) - paid;
+        if(bal > 0) myDebt += bal;
+    });
 
     app.innerHTML = `
         <div class="card" style="background:#111; color:#fff">
             <h1 style="margin:0; color:#B08D57; font-size:24px">NET CASH: UGX ${netCashResult.toLocaleString()}</h1>
-            <p style="margin:5px 0 15px 0; opacity:0.8">Available SACCO Liquidity</p>
-            <div class="grid">
-                <div class="stat-box" style="background:#222; color:#fff; border:1px solid #444">
-                    <small>Gross Savings In</small><br>
-                    <strong>${grossSavings.toLocaleString()}</strong>
-                </div>
-                <div class="stat-box" style="background:#222; color:#fff; border:1px solid #B08D57">
-                    <small>Interest/Profit</small><br>
-                    <strong>${totalInterestEarned.toLocaleString()}</strong>
-                </div>
-                <div class="stat-box" style="background:#222; color:#fff; border:1px solid #444">
-                    <small>Total Outflows</small><br>
-                    <strong>${totalOutflows.toLocaleString()}</strong>
-                </div>
+            <div class="grid" style="margin-top:10px">
+                <div class="stat-box" style="background:#222; color:#fff; border:1px solid #444"><small>Gross Savings</small><br><strong>${grossSavingsTotal.toLocaleString()}</strong></div>
+                <div class="stat-box" style="background:#222; color:#fff; border:1px solid #B08D57"><small>Interest Profit</small><br><strong>${totalInterestEarned.toLocaleString()}</strong></div>
+                <div class="stat-box" style="background:#222; color:#fff; border:1px solid #444"><small>Outflows</small><br><strong>${totalOutflows.toLocaleString()}</strong></div>
             </div>
         </div>
 
         <div class="card">
-            <h3>Logged in as: ${user.name}</h3>
+            <h3>Account: ${target}</h3>
             <div class="grid">
-                <div class="stat-box"><strong>Your Savings:</strong><br>${data[user.name].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
-                <div class="stat-box">
-                    <button class="gold" onclick="changePIN()">Change PIN</button>
-                    <button onclick="user=null;render()">Logout</button>
-                </div>
+                <div class="stat-box" style="background:#E8F5E9"><strong>My Savings Total:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFEBEE"><strong>Active Loan Debt:</strong><br>UGX ${myDebt.toLocaleString()}</div>
             </div>
+            <div style="margin-top:10px">
+                <button class="gold" onclick="changePIN()">Change PIN</button>
+                <button onclick="user=null;render()">Logout</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Personal Ledgers</h2>
+            <h3>Savings History</h3>
+            <table>
+                <tr><th>Date</th><th>Month</th><th>Amount</th></tr>
+                ${data[target].contributions.map(c => `<tr><td>${c.date}</td><td>${c.month}</td><td>${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
+            </table>
+            
+            <h3>Loan & Repayment History</h3>
+            <table>
+                <tr><th>Date</th><th>Type</th><th>Ref/ID</th><th>Amount</th></tr>
+                ${data[target].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:'New Loan'}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
+            </table>
         </div>`;
 
     if(isAdmin) {
         app.innerHTML += `
         <div class="card" style="border:2px solid #B08D57">
-            <h2>Admin Entry Hub</h2>
+            <h2>Admin Hub</h2>
             <div class="grid">
                 <div>
                     <h3>Inflow</h3>
                     <select id="mI" onchange="lastSelectedMember=this.value; render()">
-                        ${data.members.map(m => `<option value="${m}" ${m === activeMember ? 'selected' : ''}>${m}</option>`).join('')}
+                        ${data.members.map(m => `<option value="${m}" ${m === activeMemberForAdmin ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
                     <select id="tI" onchange="currentInflowType=this.value; render()">
                         <option value="S" ${currentInflowType==='S'?'selected':''}>Savings</option>
@@ -152,8 +157,8 @@ function render() {
                     </select>
                     ${currentInflowType === 'R' ? `
                         <select id="lID">
-                            ${data[activeMember].loans.filter(l=>l.type==='LOAN').length > 0 
-                                ? data[activeMember].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Loan ${i+1}</option>`).join('')
+                            ${data[activeMemberForAdmin].loans.filter(l=>l.type==='LOAN').length > 0 
+                                ? data[activeMemberForAdmin].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Loan ${i+1}</option>`).join('')
                                 : `<option disabled>No Loans Found</option>`}
                         </select>` : `<input type="month" id="moI" value="2024-02">`}
                     <input type="date" id="daI">
