@@ -93,14 +93,13 @@ function render() {
     let totalOutflows = currentOutstandingLoans + totalExpenses + totalInvestments;
     let netCashResult = (grossSavingsTotal + totalInterestEarned) - totalOutflows;
 
-    // PERSONAL DATA
+    // PERSONAL DEBT
     let myDebt = 0;
     data[target].loans.filter(l=>l.type==='LOAN').forEach((l, i) => {
         let paid = data[target].loans.filter(r => r.type==='REPAYMENT' && r.loanId == (i+1)).reduce((a,b)=>a+Number(b.amt),0);
         if((Number(l.amt)-paid) > 0) myDebt += (Number(l.amt)-paid);
     });
 
-    // START HTML RENDERING
     let html = `
         <div class="card" style="background:#111; color:#fff">
             <h1 style="margin:0; color:#B08D57; font-size:24px">NET CASH: UGX ${netCashResult.toLocaleString()}</h1>
@@ -142,7 +141,7 @@ function render() {
                         <select id="lID">
                             ${data[activeMemberForAdmin].loans.filter(l=>l.type==='LOAN').length > 0 
                                 ? data[activeMemberForAdmin].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Repay Loan ${i+1}</option>`).join('')
-                                : `<option disabled>No Active Loans</option>`}
+                                : `<option value="none" disabled selected>No Active Loans</option>`}
                         </select>` : `<input type="month" id="moI" value="2024-02">`}
                     <input type="date" id="daI" value="${new Date().toISOString().split('T')[0]}">
                     <input type="number" id="amI" placeholder="Amount">
@@ -164,7 +163,6 @@ function render() {
         </div>`;
     }
 
-    // PERSONAL LEDGERS (Separated & Positioned Below Admin)
     html += `
         <div class="card">
             <h2>Personal Savings History</h2>
@@ -197,7 +195,6 @@ function render() {
             </div>
         </div>`;
     }
-
     app.innerHTML = html;
 }
 
@@ -209,9 +206,14 @@ function postInflow() {
         data[m].contributions.push({amt, date, month:document.getElementById("moI").value});
     } else {
         const lIdSelect = document.getElementById("lID");
-        if(lIdSelect && lIdSelect.value.includes("Loan")) {
-            let actualId = lIdSelect.value.replace('Repay Loan ', '');
+        if(lIdSelect && lIdSelect.value !== "none") {
+            // Simplified logic: Extract the number directly from the string
+            let selectedText = lIdSelect.options[lIdSelect.selectedIndex].text;
+            let actualId = selectedText.replace('Repay Loan ', '');
             data[m].loans.push({amt, date, type:'REPAYMENT', loanId: actualId});
+        } else {
+            alert("Please select a valid loan to repay.");
+            return;
         }
     }
     saveData();
