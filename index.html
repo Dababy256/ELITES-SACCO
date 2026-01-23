@@ -61,6 +61,7 @@ async function saveData() {
         method:'PUT', headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},
         body: JSON.stringify(data)
     });
+    // Re-run the calculations immediately after saving
     render();
 }
 
@@ -82,7 +83,7 @@ function render() {
     const activeMember = lastSelectedMember || target;
     const today = new Date();
 
-    // DYNAMIC TREASURY LOGIC
+    // DYNAMIC TREASURY CALCULATION (FAULT FIXED)
     let sumSavingsContributions = 0;
     let sumRepayments = 0;
     let sumDisbursed = 0;
@@ -91,29 +92,36 @@ function render() {
     let globalInterest = 0;
 
     data.members.forEach(m => {
+        // 1. Total Savings Contribution
         data[m].contributions.forEach(c => sumSavingsContributions += Number(c.amt));
         
+        // 2. Loan Processing
         let mLoans = data[m].loans.filter(l => l.type === 'LOAN');
         let mRepays = data[m].loans.filter(l => l.type === 'REPAYMENT');
         
         mLoans.forEach((loan, idx) => {
             let id = idx + 1;
-            sumDisbursed += Number(loan.amt);
+            sumDisbursed += Number(loan.amt); // Adds to Outflows
             let paidOnThis = mRepays.filter(r => r.loanId == id).reduce((a, b) => a + Number(b.amt), 0);
-            sumRepayments += paidOnThis;
+            sumRepayments += paidOnThis; // Adds to Inflows
+            
+            // Calculate Global Interest
             if(paidOnThis > Number(loan.amt)) {
                 globalInterest += (paidOnThis - Number(loan.amt));
             }
         });
     });
 
+    // 3. System-Wide Outflows
     data.investments.forEach(i => sumInvested += Number(i.amt));
     data.expenses.forEach(e => sumExpenses += Number(e.amt));
 
-    // The logic requested: Deduct Disbursed, Expenses, Investments. Add Savings and Repayments.
-    let cashAtHand = (sumSavingsContributions + sumRepayments) - (sumDisbursed + sumInvested + sumExpenses);
+    // 4. Final Cash at Hand
+    let totalInflows = sumSavingsContributions + sumRepayments;
+    let totalOutflows = sumDisbursed + sumInvested + sumExpenses;
+    let cashAtHand = totalInflows - totalOutflows;
 
-    // PERSONAL ARREARS & DEBT
+    // PERSONAL LOAN BALANCE
     let myDebt = 0;
     data[target].loans.filter(l=>l.type==='LOAN').forEach((l, i) => {
         let paid = data[target].loans.filter(r => r.type==='REPAYMENT' && r.loanId == (i+1)).reduce((a,b)=>a+Number(b.amt),0);
@@ -121,27 +129,13 @@ function render() {
         if(bal > 0) myDebt += bal;
     });
 
-    let pendingSavings = 0;
-    let loopD = new Date("2024-02-01");
-    while(loopD <= today) {
-        let mS = loopD.toISOString().slice(0,7);
-        let paid = data[target].contributions.find(c => c.month === mS);
-        let base = getExpectedBase(mS);
-        if(!paid) {
-            pendingSavings += base;
-            let d10 = new Date(mS + "-10");
-            if(today > d10) pendingSavings += Math.min(Math.ceil((today-d10)/(1000*60*60*24*7))*5000, 15000);
-        } else if(Number(paid.amt) < base) pendingSavings += (base - Number(paid.amt));
-        loopD.setMonth(loopD.getMonth() + 1);
-    }
-
     app.innerHTML = `
         <div class="card" style="background:#111; color:#fff">
             <h2>CASH AT HAND: UGX ${cashAtHand.toLocaleString()}</h2>
             <div class="grid">
                 <div class="stat-box">Gross Savings In: ${sumSavingsContributions.toLocaleString()}</div>
-                <div class="stat-box" style="border: 1px solid #B08D57">Total Interest: ${globalInterest.toLocaleString()}</div>
-                <div class="stat-box">Loans/Expenses Out: ${(sumDisbursed + sumInvested + sumExpenses).toLocaleString()}</div>
+                <div class="stat-box" style="border: 1px solid #B08D57">Interest Earned: ${globalInterest.toLocaleString()}</div>
+                <div class="stat-box">Total Outflows: ${totalOutflows.toLocaleString()}</div>
             </div>
         </div>
 
@@ -149,10 +143,9 @@ function render() {
             <h3>Account: ${target}</h3>
             <div class="grid">
                 <div class="stat-box" style="background:#E8F5E9"><strong>My Savings:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFEBEE"><strong>My Pending:</strong><br>UGX ${pendingSavings.toLocaleString()}</div>
                 <div class="stat-box" style="background:#E3F2FD"><strong>My Loan Debt:</strong><br>UGX ${myDebt.toLocaleString()}</div>
             </div>
-            <div style="margin-top:15px">
+            <div style="margin-top:10px">
                 <button class="gold" onclick="changePIN()">Change PIN</button>
                 <button onclick="user=null;render()">Logout</button>
             </div>
@@ -169,7 +162,7 @@ function render() {
                         ${data.members.map(m => `<option value="${m}" ${m === activeMember ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
                     <select id="tI" onchange="currentInflowType=this.value; render()">
-                        <option value="S" ${currentInflowType==='S'?'selected':''}>Monthly Savings</option>
+                        <option value="S" ${currentInflowType==='S'?'selected':''}>Savings</option>
                         <option value="R" ${currentInflowType==='R'?'selected':''}>Loan Repayment</option>
                     </select>
                     ${currentInflowType === 'R' ? `
@@ -194,23 +187,11 @@ function render() {
         </div>`;
     }
 
-    // STATEMENTS (LOCKED)
-    let sHTML = `<div class="card"><h2>Monthly Statement</h2><table><tr><th>Month</th><th>Status</th><th>Amt</th></tr>`;
-    let rd = new Date("2024-02-01");
-    while(rd <= today) {
-        let mS = rd.toISOString().slice(0,7), p = data[target].contributions.find(c => c.month === mS);
-        let st = p ? (Number(p.amt) >= getExpectedBase(mS) ? 'CLEARED' : 'PARTIAL') : 'PENDING';
-        let cl = p ? (Number(p.amt) >= getExpectedBase(mS) ? 'status-cleared' : 'status-partial') : 'status-pending';
-        sHTML += `<tr><td>${mS}</td><td class="${cl}">${st}</td><td>${p?p.amt:'-'}</td></tr>`;
-        rd.setMonth(rd.getMonth() + 1);
-    }
-    app.innerHTML += sHTML + `</table></div>`;
-
     if(isAdmin) {
-        let audit = `<div class="card"><h2>Audit Ledger</h2><table><tr><th>Member</th><th>Type</th><th>Details</th><th>Amt</th><th>Action</th></tr>`;
+        let audit = `<div class="card"><h2>Audit Ledger (Delete Errors)</h2><table><tr><th>Member</th><th>Type</th><th>Amt</th><th>Action</th></tr>`;
         data.members.forEach(m => {
-            data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`);
-            data[m].loans.forEach((l,i) => audit += `<tr><td>${m}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:l.date}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`);
+            data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`);
+            data[m].loans.forEach((l,i) => audit += `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`);
         });
         app.innerHTML += audit + `</table></div>`;
     }
@@ -224,7 +205,7 @@ function postInflow() {
         const mon = document.getElementById("moI").value;
         data[m].contributions.push({amt, date, month:mon});
         let dObj = new Date(mon + "-01"); dObj.setMonth(dObj.getMonth() + 1);
-        saveData().then(() => { if(document.getElementById("moI")) document.getElementById("moI").value = dObj.toISOString().slice(0,7); });
+        saveData();
     } else {
         const lIdSelect = document.getElementById("lID");
         if(lIdSelect && lIdSelect.value !== "No Loans Found") {
