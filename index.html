@@ -11,12 +11,12 @@
     .container{padding:16px; max-width:1100px; margin:auto}
     .card{background:#fff; padding:20px; border-radius:12px; margin-bottom:16px; box-shadow:0 4px 10px rgba(0,0,0,0.1)}
     h2{margin-top:0; color:#111; border-bottom:2px solid #B08D57; padding-bottom:8px}
-    table{width:100%; border-collapse:collapse; font-size:12px; margin-bottom:15px}
-    th,td{border:1px solid #eee; padding:10px; text-align:left}
+    table{width:100%; border-collapse:collapse; font-size:11px; margin-bottom:15px}
+    th,td{border:1px solid #eee; padding:8px; text-align:left}
     th{background:#B08D57; color:#000}
     button{padding:8px 12px; border:none; border-radius:6px; background:#111; color:#fff; cursor:pointer; font-weight:bold; margin:2px}
     button.gold{background:#B08D57; color:#000}
-    button.del{background:#ff4d4d; color:white; padding:4px 8px; font-size:10px}
+    button.del{background:#ff4d4d; color:white; padding:2px 6px; font-size:10px; border-radius:4px}
     input,select{padding:10px; width:100%; margin-bottom:10px; border:1px solid #ccc; border-radius:8px}
     .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px}
     .stat-box{padding:12px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd; color:#111}
@@ -81,7 +81,7 @@ function render() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
-    // FINANCE TOTALS
+    // TOTALS LOGIC
     let tSav = 0, tRepay = 0, tDisbursed = 0, tInv = 0, tExp = 0;
     data.members.forEach(m => {
         data[m].contributions.forEach(c => tSav += Number(c.amt));
@@ -93,19 +93,17 @@ function render() {
     data.investments.forEach(i => tInv += Number(i.amt));
     data.expenses.forEach(e => tExp += Number(e.amt));
 
-    // LOAN BALANCE LOGIC (CAPPED AT 0)
+    // PERSONAL BALANCES
     let myLoans = data[target].loans.filter(l => l.type === 'LOAN');
     let myRepays = data[target].loans.filter(l => l.type === 'REPAYMENT');
     let totalOutstanding = 0;
-
-    myLoans.forEach((loan, index) => {
-        let loanId = index + 1;
-        let paidForThisLoan = myRepays.filter(r => r.loanId == loanId).reduce((a,b) => a + Number(b.amt), 0);
-        let bal = Number(loan.amt) - paidForThisLoan;
+    myLoans.forEach((loan, idx) => {
+        let paid = myRepays.filter(r => r.loanId == (idx+1)).reduce((a,b) => a + Number(b.amt), 0);
+        let bal = Number(loan.amt) - paid;
         if(bal > 0) totalOutstanding += bal;
     });
 
-    // SAVINGS PENDING LOGIC (LOCKED)
+    // SAVINGS ARREARS (LOCKED)
     let livePending = 0;
     let loopD = new Date("2024-02-01");
     while(loopD <= today) {
@@ -116,9 +114,7 @@ function render() {
             livePending += base;
             let d10 = new Date(mS + "-10");
             if(today > d10) livePending += Math.min(Math.ceil((today-d10)/(1000*60*60*24*7))*5000, 15000);
-        } else if(Number(paid.amt) < base) {
-            livePending += (base - Number(paid.amt));
-        }
+        } else if(Number(paid.amt) < base) livePending += (base - Number(paid.amt));
         loopD.setMonth(loopD.getMonth() + 1);
     }
 
@@ -126,18 +122,18 @@ function render() {
         <div class="card" style="background:#111; color:#fff">
             <h2>CASH AT HAND: UGX ${(tSav + tRepay - (tDisbursed + tInv + tExp)).toLocaleString()}</h2>
             <div class="grid">
-                <div class="stat-box">SACCO Savings: ${tSav.toLocaleString()}</div>
-                <div class="stat-box">Total Interest/Repays: ${tRepay.toLocaleString()}</div>
-                <div class="stat-box">Total Loans Out: ${(tDisbursed - tRepay < 0 ? 0 : tDisbursed - tRepay).toLocaleString()}</div>
+                <div class="stat-box">Savings: ${tSav.toLocaleString()}</div>
+                <div class="stat-box">Interest/Repay: ${tRepay.toLocaleString()}</div>
+                <div class="stat-box">Out Loans: ${(tDisbursed - tRepay < 0 ? 0 : tDisbursed - tRepay).toLocaleString()}</div>
             </div>
         </div>
 
         <div class="arrears-banner">
-            <h3>Dashboard: ${target}</h3>
+            <h3>Profile: ${target}</h3>
             <div class="grid">
                 <div class="stat-box" style="background:#E8F5E9"><strong>Total Saved:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
                 <div class="stat-box" style="background:#FFEBEE"><strong>Pending Savings:</strong><br>UGX ${livePending.toLocaleString()}</div>
-                <div class="stat-box" style="background:#E3F2FD"><strong>Loan Balance:</strong><br>UGX ${totalOutstanding.toLocaleString()}</div>
+                <div class="stat-box" style="background:#E3F2FD"><strong>Loan Debt:</strong><br>UGX ${totalOutstanding.toLocaleString()}</div>
             </div>
             <div style="margin-top:10px">
                 <button onclick="changePIN()">Change PIN</button>
@@ -151,22 +147,20 @@ function render() {
             <h2>Admin Entry Hub</h2>
             <div class="grid">
                 <div>
-                    <h3>Inflow</h3>
+                    <h3>Inflow Entry</h3>
                     <select id="mI" onchange="lastSelectedMember=this.value; render()">
                         ${data.members.map(m => `<option value="${m}" ${m === (lastSelectedMember || target) ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
-                    <select id="tI" onchange="render()"><option value="S">Monthly Savings</option><option value="R">Loan Repayment</option></select>
+                    <select id="tI" onchange="render()"><option value="S">Savings</option><option value="R">Loan Repayment</option></select>
                     ${document.getElementById("tI")?.value === 'R' ? `
-                        <select id="lID">
-                            ${data[lastSelectedMember || target].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Loan ${i+1} (UGX ${l.amt})</option>`).join('')}
-                        </select>` : `<input type="month" id="moI" value="2024-02">`}
+                        <select id="lID">${data[lastSelectedMember || target].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Loan ${i+1}</option>`).join('')}</select>` : `<input type="month" id="moI" value="2024-02">`}
                     <input type="date" id="daI" placeholder="Date">
                     <input type="number" id="amI" placeholder="Amount">
                     <button class="gold" onclick="postInflow()">Post Inflow</button>
                 </div>
                 <div>
-                    <h3>Outflow</h3>
-                    <select id="tO"><option value="L">Loan Disbursement</option><option value="E">Expense</option><option value="I">Invest</option></select>
+                    <h3>Outflow Entry</h3>
+                    <select id="tO"><option value="L">Loan Disbursed</option><option value="E">Expense</option><option value="I">Investment</option></select>
                     <input type="date" id="daO" value="${todayStr}">
                     <input type="text" id="reO" placeholder="Note">
                     <input type="number" id="amO" placeholder="Amount">
@@ -176,10 +170,8 @@ function render() {
         </div>`;
     }
 
-    // SAVINGS TABLE (LOCKED)
-    let sHTML = `<div class="card"><h2>Savings Clearance</h2>
-        ${isAdmin ? `<select id="viewMem" onchange="render()">${data.members.map(m => `<option ${m===target?'selected':''}>${m}</option>`)}</select>` : ''}
-        <table><tr><th>Month</th><th>Status</th><th>Paid</th></tr>`;
+    // TABLES
+    let sHTML = `<div class="card"><h2>Statements</h2><table><tr><th>Month</th><th>Status</th><th>Amt</th></tr>`;
     let rd = new Date("2024-02-01");
     while(rd <= today) {
         let mS = rd.toISOString().slice(0,7), paid = data[target].contributions.find(c => c.month === mS);
@@ -189,17 +181,23 @@ function render() {
         rd.setMonth(rd.getMonth() + 1);
     }
     
-    // LOAN HISTORY (NEW 3-TIER STATUS)
-    let lHTML = `<h2>Loan Tracker</h2><table><tr><th>ID</th><th>Principal</th><th>Repaid</th><th>Balance</th><th>Status</th></tr>`;
+    let lHTML = `<h2>Loan History</h2><table><tr><th>ID</th><th>Principal</th><th>Paid</th><th>Status</th></tr>`;
     myLoans.forEach((loan, i) => {
-        let id = i + 1;
-        let repaid = myRepays.filter(r => r.loanId == id).reduce((a,b) => a + Number(b.amt), 0);
+        let id = i + 1, repaid = myRepays.filter(r => r.loanId == id).reduce((a,b) => a + Number(b.amt), 0);
         let bal = Number(loan.amt) - repaid;
-        let status = bal <= 0 ? "PAID" : (repaid > 0 ? "PARTIAL" : "UNPAID");
         let cls = bal <= 0 ? "status-cleared" : (repaid > 0 ? "status-partial" : "status-pending");
-        lHTML += `<tr><td>Loan ${id}</td><td>${Number(loan.amt).toLocaleString()}</td><td>${repaid.toLocaleString()}</td><td>${(bal < 0 ? 0 : bal).toLocaleString()}</td><td class="${cls}">${status}</td></tr>`;
+        lHTML += `<tr><td>Loan ${id}</td><td>${Number(loan.amt).toLocaleString()}</td><td>${repaid.toLocaleString()}</td><td class="${cls}">${bal<=0?'PAID':'ACTIVE'}</td></tr>`;
     });
     app.innerHTML += sHTML + `</table>` + lHTML + `</table></div>`;
+    
+    if(isAdmin) {
+        let audit = `<div class="card"><h2>Audit Ledger (Edit/Delete)</h2><table><tr><th>Member</th><th>Category</th><th>Details</th><th>Amt</th><th>Action</th></tr>`;
+        data.members.forEach(m => {
+            data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`);
+            data[m].loans.forEach((l,i) => audit += `<tr><td>${m}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:l.date}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`);
+        });
+        app.innerHTML += audit + `</table></div>`;
+    }
 }
 
 function postInflow() {
@@ -227,10 +225,9 @@ function postOutflow() {
     saveData();
 }
 
-function del(cat, mem, idx) { if(confirm("Delete?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else data[mem].loans.splice(idx,1); saveData();}}
+function del(cat, mem, idx) { if(confirm("Permanently delete this record?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else data[mem].loans.splice(idx,1); saveData();}}
 function changePIN() { let p = prompt("New 4-digit PIN:"); if(p && p.length===4){data[user.name].pin=p; saveData();} }
 function checkLogin(n) { let p = prompt("PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
-function exportCSV() { let csv = "Date,Member,Type,Amt\n"; data.members.forEach(m=>{data[m].contributions.forEach(c=>csv+=`${c.date},${m},Savings,${c.amt}\n`); data[m].loans.forEach(l=>csv+=`${l.date},${m},${l.type},${l.amt}\n`);}); window.open('data:text/csv;charset=utf-8,' + encodeURI(csv)); }
 loadData();
 </script>
 </body>
