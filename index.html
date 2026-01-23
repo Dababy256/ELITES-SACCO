@@ -20,17 +20,13 @@
     input,select{padding:10px; width:100%; margin-bottom:10px; border:1px solid #ccc; border-radius:8px}
     .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px}
     .stat-box{padding:12px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd; color:#111}
-    .status-cleared{color:#2E7D32; font-weight:bold}
-    .status-partial{color:#EF6C00; font-weight:bold}
-    .status-pending{color:#C62828; font-weight:bold}
-    .arrears-banner{background:#FFF3E0; border:2px solid #FF9800; padding:15px; border-radius:8px; margin-bottom:15px}
 </style>
 </head>
 <body>
 
 <header>
     <div id="logoSlot"></div>
-    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Synchronizing...</small></div>
+    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Master System</small></div>
 </header>
 
 <div class="container" id="app"></div>
@@ -64,10 +60,6 @@ async function saveData() {
     render();
 }
 
-function getExpectedBase(monthStr) {
-    return (new Date(monthStr + "-01") < new Date("2024-08-01")) ? 80000 : 100000;
-}
-
 function render() {
     const app = document.getElementById("app");
     if(!user) {
@@ -80,67 +72,52 @@ function render() {
     const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN;
     const target = isAdmin ? document.getElementById("viewMem")?.value || user.name : user.name;
     const activeMember = lastSelectedMember || target;
-    const today = new Date();
 
-    // TREASURY CALCULATION - UPDATED LOGIC
-    let sumGrossSavings = 0;
-    let sumAllRepayments = 0;
-    let sumDisbursedLoans = 0;
-    let sumInvested = 0;
-    let sumExpenses = 0;
-    let sumTotalInterest = 0;
+    // --- FINAL MATH ENGINE ---
+    let grossSavings = 0;
+    let totalInterestEarned = 0;
+    let currentOutstandingLoans = 0;
+    let totalExpenses = 0;
+    let totalInvestments = 0;
 
     data.members.forEach(m => {
-        data[m].contributions.forEach(c => sumGrossSavings += Number(c.amt));
+        data[m].contributions.forEach(c => grossSavings += Number(c.amt));
         
         let mLoans = data[m].loans.filter(l => l.type === 'LOAN');
         let mRepays = data[m].loans.filter(l => l.type === 'REPAYMENT');
         
         mLoans.forEach((loan, idx) => {
             let id = idx + 1;
-            sumDisbursedLoans += Number(loan.amt);
-            let paidOnThis = mRepays.filter(r => r.loanId == id).reduce((a, b) => a + Number(b.amt), 0);
-            sumAllRepayments += paidOnThis;
+            let principal = Number(loan.amt);
+            let paid = mRepays.filter(r => r.loanId == id).reduce((a, b) => a + Number(b.amt), 0);
             
-            if(paidOnThis > Number(loan.amt)) {
-                sumTotalInterest += (paidOnThis - Number(loan.amt));
-            }
+            // Calculate Outstanding (Cannot be negative)
+            let balance = principal - paid;
+            if(balance > 0) currentOutstandingLoans += balance;
+
+            // Calculate Interest (Profit)
+            if(paid > principal) totalInterestEarned += (paid - principal);
         });
     });
 
-    data.investments.forEach(i => sumInvested += Number(i.amt));
-    data.expenses.forEach(e => sumExpenses += Number(e.amt));
+    data.expenses.forEach(e => totalExpenses += Number(e.amt));
+    data.investments.forEach(i => totalInvestments += Number(i.amt));
 
-    // Dynamic Outflows Logic: Money currently "Out" in the field
-    let totalOutflows = (sumDisbursedLoans - sumAllRepayments) + sumInvested + sumExpenses;
-    
-    // Cash at Hand: Spendable liquid cash
-    let cashAtHand = (sumGrossSavings + sumTotalInterest) - totalOutflows;
-
-    // Personal Balances
-    let myDebt = 0;
-    data[target].loans.filter(l=>l.type==='LOAN').forEach((l, i) => {
-        let paid = data[target].loans.filter(r => r.type==='REPAYMENT' && r.loanId == (i+1)).reduce((a,b)=>a+Number(b.amt),0);
-        let bal = Number(l.amt) - paid;
-        if(bal > 0) myDebt += bal;
-    });
+    let totalOutflows = currentOutstandingLoans + totalExpenses + totalInvestments;
+    let netCash = (grossSavings + totalInterestEarned) - totalOutflows;
 
     app.innerHTML = `
         <div class="card" style="background:#111; color:#fff">
-            <h2>CASH AT HAND: UGX ${cashAtHand.toLocaleString()}</h2>
+            <h2 style="border-bottom:2px solid #B08D57">NET CASH: UGX ${netCash.toLocaleString()}</h2>
             <div class="grid">
-                <div class="stat-box">Gross Savings: ${sumGrossSavings.toLocaleString()}</div>
-                <div class="stat-box" style="border: 1px solid #B08D57">Interest Earned: ${sumTotalInterest.toLocaleString()}</div>
+                <div class="stat-box">Gross Savings: ${grossSavings.toLocaleString()}</div>
+                <div class="stat-box" style="border:1px solid #B08D57">Interest/Profit: ${totalInterestEarned.toLocaleString()}</div>
                 <div class="stat-box">Total Outflows: ${totalOutflows.toLocaleString()}</div>
             </div>
         </div>
 
-        <div class="arrears-banner">
+        <div class="card" style="background:#FFF3E0; border:1px solid #FF9800">
             <h3>Profile: ${target}</h3>
-            <div class="grid">
-                <div class="stat-box" style="background:#E8F5E9"><strong>Total Saved:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
-                <div class="stat-box" style="background:#E3F2FD"><strong>Active Loan:</strong><br>UGX ${myDebt.toLocaleString()}</div>
-            </div>
             <div style="margin-top:10px">
                 <button class="gold" onclick="changePIN()">Change PIN</button>
                 <button onclick="user=null;render()">Logout</button>
@@ -174,22 +151,24 @@ function render() {
                 <div>
                     <h3>Outflow</h3>
                     <select id="tO"><option value="L">Loan Disbursed</option><option value="E">Expense</option><option value="I">Investment</option></select>
-                    <input type="date" id="daO" value="${today.toISOString().split('T')[0]}">
+                    <input type="date" id="daO" value="${new Date().toISOString().split('T')[0]}">
                     <input type="text" id="reO" placeholder="Note">
                     <input type="number" id="amO" placeholder="Amount">
                     <button class="gold" onclick="postOutflow()">Post</button>
                 </div>
             </div>
+        </div>
+        
+        <div class="card">
+            <h2>Audit Ledger</h2>
+            <table>
+                <tr><th>Member</th><th>Type</th><th>Amt</th><th>Action</th></tr>
+                ${data.members.map(m => `
+                    ${data[m].contributions.map((c,i) => `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`).join('')}
+                    ${data[m].loans.map((l,i) => `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`).join('')}
+                `).join('')}
+            </table>
         </div>`;
-    }
-
-    if(isAdmin) {
-        let audit = `<div class="card"><h2>Audit Ledger</h2><table><tr><th>Member</th><th>Type</th><th>Amt</th><th>Action</th></tr>`;
-        data.members.forEach(m => {
-            data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`);
-            data[m].loans.forEach((l,i) => audit += `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`);
-        });
-        app.innerHTML += audit + `</table></div>`;
     }
 }
 
@@ -198,21 +177,16 @@ function postInflow() {
     let date = document.getElementById("daI").value || new Date().toISOString().split('T')[0];
     lastSelectedMember = m;
     if(t === 'S') {
-        const mon = document.getElementById("moI").value;
-        data[m].contributions.push({amt, date, month:mon});
-        saveData();
+        data[m].contributions.push({amt, date, month:document.getElementById("moI").value});
     } else {
-        const lIdSelect = document.getElementById("lID");
-        if(lIdSelect && lIdSelect.value !== "No Loans Found") {
-            data[m].loans.push({amt, date, type:'REPAYMENT', loanId: lIdSelect.value});
-            saveData();
-        }
+        const lId = document.getElementById("lID").value;
+        if(lId !== "No Loans Found") data[m].loans.push({amt, date, type:'REPAYMENT', loanId: lId});
     }
+    saveData();
 }
 
 function postOutflow() {
-    const t = document.getElementById("tO").value, amt = Number(document.getElementById("amO").value), date = document.getElementById("daO").value;
-    const m = document.getElementById("mI").value;
+    const t = document.getElementById("tO").value, amt = Number(document.getElementById("amO").value), date = document.getElementById("daO").value, m = document.getElementById("mI").value;
     if(t==='L') data[m].loans.push({amt, date, type:'LOAN'});
     else if(t==='E') data.expenses.push({amt, reason:document.getElementById("reO").value, date});
     else if(t==='I') data.investments.push({amt, reason:document.getElementById("reO").value, date});
