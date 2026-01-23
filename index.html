@@ -20,7 +20,9 @@
     input,select{padding:10px; width:100%; margin-bottom:10px; border:1px solid #ccc; border-radius:8px}
     .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px}
     .stat-box{padding:12px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd; color:#111}
+    /* Status Colors */
     .status-cleared{color:#2E7D32; font-weight:bold}
+    .status-partial{color:#EF6C00; font-weight:bold}
     .status-pending{color:#C62828; font-weight:bold}
     .arrears-banner{background:#FFF3E0; border:2px solid #FF9800; padding:15px; border-radius:8px; margin-bottom:15px}
 </style>
@@ -80,7 +82,7 @@ function render() {
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
-    // TOTALS
+    // FINANCE TOTALS
     let tSav = 0, tLoa = 0, tInv = 0, tExp = 0;
     data.members.forEach(m => {
         data[m].contributions.forEach(c => tSav += Number(c.amt));
@@ -89,34 +91,33 @@ function render() {
     data.investments.forEach(i => tInv += Number(i.amt));
     data.expenses.forEach(e => tExp += Number(e.amt));
 
-    // MEMBER SPECIFIC CALCS
+    // PERSONAL HIGHLIGHTS
     let mySavingsTotal = data[target].contributions.reduce((acc, curr) => acc + Number(curr.amt), 0);
     let myLoanBalance = data[target].loans.reduce((acc, curr) => acc + Number(curr.bal), 0);
     
-    // LIVE PENDING BALANCE CALCULATION
+    // LIVE PENDING BALANCE CALC
     let livePending = 0;
     let loopD = new Date("2024-02-01");
     while(loopD <= today) {
         let mS = loopD.toISOString().slice(0,7);
         let paid = data[target].contributions.find(c => c.month === mS);
         let base = getExpectedBase(mS);
-        
         if(!paid) {
             livePending += base;
-            // Apply live late fees if the 10th has passed for an unpaid month
             let due10 = new Date(mS + "-10");
             if(today > due10) {
                 let diff = Math.ceil((today - due10) / (1000*60*60*24*7));
                 livePending += Math.min(diff * 5000, 15000);
             }
         } else {
-            // Check if they paid late and have a residual fee
             let due10 = new Date(mS + "-10");
             let pDate = new Date(paid.date);
             if(pDate > due10) {
                 let weeks = Math.ceil((pDate - due10) / (1000*60*60*24*7));
                 let expectedTotal = base + Math.min(weeks * 5000, 15000);
                 if(Number(paid.amt) < expectedTotal) livePending += (expectedTotal - Number(paid.amt));
+            } else if (Number(paid.amt) < base) {
+                livePending += (base - Number(paid.amt));
             }
         }
         loopD.setMonth(loopD.getMonth() + 1);
@@ -170,7 +171,7 @@ function render() {
                     <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
             </div>
-            ${isAdmin ? `<button class="gold" onclick="exportCSV()">Export to Excel</button>` : ''}
+            <button class="gold" onclick="exportCSV()">Export to Excel</button>
         </div>`;
     }
 
@@ -181,17 +182,29 @@ function render() {
     let reportD = new Date("2024-02-01");
     while(reportD <= today) {
         let mStr = reportD.toISOString().slice(0,7), paid = data[target].contributions.find(c => c.month === mStr), fee = 0;
+        let base = getExpectedBase(mStr);
+        let status = "PENDING", statusClass = "status-pending";
+
         if(paid) {
+            let amt = Number(paid.amt);
+            if(amt >= base) {
+                status = "CLEARED";
+                statusClass = "status-cleared";
+            } else if (amt > 0) {
+                status = "PARTIAL";
+                statusClass = "status-partial";
+            }
+            
             let due = new Date(mStr + "-10"), pDate = new Date(paid.date);
             if(pDate > due) fee = Math.min(Math.ceil((pDate-due)/(1000*60*60*24*7)) * 5000, 15000);
         }
-        statusHTML += `<tr><td>${mStr}</td><td class="${paid?'status-cleared':'status-pending'}">${paid?'CLEARED':'PENDING'}</td><td>${paid?paid.date:'-'}</td><td>${fee>0?'UGX '+fee.toLocaleString():'None'}</td></tr>`;
+        statusHTML += `<tr><td>${mStr}</td><td class="${statusClass}">${status}</td><td>${paid?paid.date:'-'}</td><td>${fee>0?'UGX '+fee.toLocaleString():'None'}</td></tr>`;
         reportD.setMonth(reportD.getMonth() + 1);
     }
     app.innerHTML += statusHTML + `</table></div>`;
     
     if(isAdmin) {
-        let audit = `<div class="card"><h2>Audit Table</h2><table>`;
+        let audit = `<div class="card"><h2>Audit Table (Delete Mistakes)</h2><table>`;
         data.members.forEach(m => {
             data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`);
         });
