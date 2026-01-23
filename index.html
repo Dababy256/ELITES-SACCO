@@ -93,7 +93,7 @@ function render() {
     let totalOutflows = currentOutstandingLoans + totalExpenses + totalInvestments;
     let netCashResult = (grossSavingsTotal + totalInterestEarned) - totalOutflows;
 
-    // PERSONAL DEBT
+    // PERSONAL DATA
     let myDebt = 0;
     data[target].loans.filter(l=>l.type==='LOAN').forEach((l, i) => {
         let paid = data[target].loans.filter(r => r.type==='REPAYMENT' && r.loanId == (i+1)).reduce((a,b)=>a+Number(b.amt),0);
@@ -163,6 +163,8 @@ function render() {
         </div>`;
     }
 
+    // Separate Tables with Logic for Numbered Loan Labels
+    let loanIndex = 0;
     html += `
         <div class="card">
             <h2>Personal Savings History</h2>
@@ -176,7 +178,16 @@ function render() {
             <h2>Personal Loan & Repayment History</h2>
             <table>
                 <tr><th>Date</th><th>Type</th><th>Reference</th><th>Amount</th></tr>
-                ${data[target].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:'New Disbursement'}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
+                ${data[target].loans.map(l => {
+                    let label = "";
+                    if(l.type === 'LOAN') {
+                        loanIndex++;
+                        label = "Loan " + loanIndex;
+                    } else {
+                        label = "Repayment - Loan " + l.loanId;
+                    }
+                    return `<tr><td>${l.date}</td><td>${l.type}</td><td>${label}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`;
+                }).join('')}
             </table>
         </div>`;
 
@@ -187,10 +198,17 @@ function render() {
             <div style="overflow-x:auto">
                 <table>
                     <tr><th>Member</th><th>Type</th><th>Details</th><th>Amt</th><th>Action</th></tr>
-                    ${data.members.map(m => `
+                    ${data.members.map(m => {
+                        let innerLoanIdx = 0;
+                        return `
                         ${data[m].contributions.map((c,i) => `<tr><td>${m}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`).join('')}
-                        ${data[m].loans.map((l,i) => `<tr><td>${m}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:'Loan'}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`).join('')}
-                    `).join('')}
+                        ${data[m].loans.map((l,i) => {
+                            let auditLbl = "";
+                            if(l.type==='LOAN') { innerLoanIdx++; auditLbl = "Loan " + innerLoanIdx; }
+                            else { auditLbl = "Repay L" + l.loanId; }
+                            return `<tr><td>${m}</td><td>${l.type}</td><td>${auditLbl}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`;
+                        }).join('')}`;
+                    }).join('')}
                 </table>
             </div>
         </div>`;
@@ -207,7 +225,6 @@ function postInflow() {
     } else {
         const lIdSelect = document.getElementById("lID");
         if(lIdSelect && lIdSelect.value !== "none") {
-            // Simplified logic: Extract the number directly from the string
             let selectedText = lIdSelect.options[lIdSelect.selectedIndex].text;
             let actualId = selectedText.replace('Repay Loan ', '');
             data[m].loans.push({amt, date, type:'REPAYMENT', loanId: actualId});
