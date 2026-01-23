@@ -73,7 +73,7 @@ function render() {
     const target = isAdmin ? document.getElementById("viewMem")?.value || user.name : user.name;
     const activeMember = lastSelectedMember || target;
 
-    // --- FINAL MATH ENGINE ---
+    // --- CALCULATION ENGINE ---
     let grossSavings = 0;
     let totalInterestEarned = 0;
     let currentOutstandingLoans = 0;
@@ -91,11 +91,8 @@ function render() {
             let principal = Number(loan.amt);
             let paid = mRepays.filter(r => r.loanId == id).reduce((a, b) => a + Number(b.amt), 0);
             
-            // Calculate Outstanding (Cannot be negative)
             let balance = principal - paid;
             if(balance > 0) currentOutstandingLoans += balance;
-
-            // Calculate Interest (Profit)
             if(paid > principal) totalInterestEarned += (paid - principal);
         });
     });
@@ -104,30 +101,45 @@ function render() {
     data.investments.forEach(i => totalInvestments += Number(i.amt));
 
     let totalOutflows = currentOutstandingLoans + totalExpenses + totalInvestments;
-    let netCash = (grossSavings + totalInterestEarned) - totalOutflows;
+    let netCashResult = (grossSavings + totalInterestEarned) - totalOutflows;
+
+    
 
     app.innerHTML = `
         <div class="card" style="background:#111; color:#fff">
-            <h2 style="border-bottom:2px solid #B08D57">NET CASH: UGX ${netCash.toLocaleString()}</h2>
+            <h1 style="margin:0; color:#B08D57; font-size:24px">NET CASH: UGX ${netCashResult.toLocaleString()}</h1>
+            <p style="margin:5px 0 15px 0; opacity:0.8">Available SACCO Liquidity</p>
             <div class="grid">
-                <div class="stat-box">Gross Savings: ${grossSavings.toLocaleString()}</div>
-                <div class="stat-box" style="border:1px solid #B08D57">Interest/Profit: ${totalInterestEarned.toLocaleString()}</div>
-                <div class="stat-box">Total Outflows: ${totalOutflows.toLocaleString()}</div>
+                <div class="stat-box" style="background:#222; color:#fff; border:1px solid #444">
+                    <small>Gross Savings In</small><br>
+                    <strong>${grossSavings.toLocaleString()}</strong>
+                </div>
+                <div class="stat-box" style="background:#222; color:#fff; border:1px solid #B08D57">
+                    <small>Interest/Profit</small><br>
+                    <strong>${totalInterestEarned.toLocaleString()}</strong>
+                </div>
+                <div class="stat-box" style="background:#222; color:#fff; border:1px solid #444">
+                    <small>Total Outflows</small><br>
+                    <strong>${totalOutflows.toLocaleString()}</strong>
+                </div>
             </div>
         </div>
 
-        <div class="card" style="background:#FFF3E0; border:1px solid #FF9800">
-            <h3>Profile: ${target}</h3>
-            <div style="margin-top:10px">
-                <button class="gold" onclick="changePIN()">Change PIN</button>
-                <button onclick="user=null;render()">Logout</button>
+        <div class="card">
+            <h3>Logged in as: ${user.name}</h3>
+            <div class="grid">
+                <div class="stat-box"><strong>Your Savings:</strong><br>${data[user.name].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
+                <div class="stat-box">
+                    <button class="gold" onclick="changePIN()">Change PIN</button>
+                    <button onclick="user=null;render()">Logout</button>
+                </div>
             </div>
         </div>`;
 
     if(isAdmin) {
         app.innerHTML += `
         <div class="card" style="border:2px solid #B08D57">
-            <h2>Admin Hub</h2>
+            <h2>Admin Entry Hub</h2>
             <div class="grid">
                 <div>
                     <h3>Inflow</h3>
@@ -146,7 +158,7 @@ function render() {
                         </select>` : `<input type="month" id="moI" value="2024-02">`}
                     <input type="date" id="daI">
                     <input type="number" id="amI" placeholder="Amount">
-                    <button class="gold" onclick="postInflow()">Post</button>
+                    <button class="gold" onclick="postInflow()">Post Inflow</button>
                 </div>
                 <div>
                     <h3>Outflow</h3>
@@ -154,20 +166,22 @@ function render() {
                     <input type="date" id="daO" value="${new Date().toISOString().split('T')[0]}">
                     <input type="text" id="reO" placeholder="Note">
                     <input type="number" id="amO" placeholder="Amount">
-                    <button class="gold" onclick="postOutflow()">Post</button>
+                    <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
             </div>
         </div>
-        
+
         <div class="card">
             <h2>Audit Ledger</h2>
-            <table>
-                <tr><th>Member</th><th>Type</th><th>Amt</th><th>Action</th></tr>
-                ${data.members.map(m => `
-                    ${data[m].contributions.map((c,i) => `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`).join('')}
-                    ${data[m].loans.map((l,i) => `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`).join('')}
-                `).join('')}
-            </table>
+            <div style="overflow-x:auto">
+                <table>
+                    <tr><th>Member</th><th>Type</th><th>Amt</th><th>Action</th></tr>
+                    ${data.members.map(m => `
+                        ${data[m].contributions.map((c,i) => `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`).join('')}
+                        ${data[m].loans.map((l,i) => `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`).join('')}
+                    `).join('')}
+                </table>
+            </div>
         </div>`;
     }
 }
