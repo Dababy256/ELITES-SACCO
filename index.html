@@ -100,7 +100,8 @@ function render() {
         if((Number(l.amt)-paid) > 0) myDebt += (Number(l.amt)-paid);
     });
 
-    app.innerHTML = `
+    // START HTML RENDERING
+    let html = `
         <div class="card" style="background:#111; color:#fff">
             <h1 style="margin:0; color:#B08D57; font-size:24px">NET CASH: UGX ${netCashResult.toLocaleString()}</h1>
             <div class="grid" style="margin-top:10px">
@@ -113,34 +114,23 @@ function render() {
         <div class="card">
             <h3>Account: ${target}</h3>
             <div class="grid">
-                <div class="stat-box"><strong>My Savings:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFEBEE"><strong>My Debt:</strong><br>UGX ${myDebt.toLocaleString()}</div>
+                <div class="stat-box"><strong>Total Savings:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFEBEE"><strong>Active Loan Debt:</strong><br>UGX ${myDebt.toLocaleString()}</div>
             </div>
             <div style="margin-top:10px">
                 <button class="gold" onclick="changePIN()">Change PIN</button>
                 <button onclick="user=null;render()">Logout</button>
             </div>
-        </div>
-
-        <div class="card">
-            <h2>Personal Ledger</h2>
-            <table>
-                <tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th></tr>
-                ${data[target].contributions.map(c => `<tr><td>${c.date}</td><td>Savings</td><td>${c.month}</td><td>${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
-                ${data[target].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:'New Loan'}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
-            </table>
         </div>`;
 
     if(isAdmin) {
-        // Auto-calculate next loan ID for outflow label
         let nextLoanID = data[activeMemberForAdmin].loans.filter(l => l.type === 'LOAN').length + 1;
-
-        app.innerHTML += `
+        html += `
         <div class="card" style="border:2px solid #B08D57">
             <h2>Admin Entry Hub</h2>
             <div class="grid">
                 <div>
-                    <h3>Inflow (Money In)</h3>
+                    <h3>Inflow</h3>
                     <select id="mI" onchange="lastSelectedMember=this.value; render()">
                         ${data.members.map(m => `<option value="${m}" ${m === activeMemberForAdmin ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
@@ -159,11 +149,11 @@ function render() {
                     <button class="gold" onclick="postInflow()">Post Inflow</button>
                 </div>
                 <div>
-                    <h3>Outflow (Money Out)</h3>
+                    <h3>Outflow</h3>
                     <select id="tO" onchange="render()">
                         <option value="L">Loan Disbursed (Assigning: Loan ${nextLoanID})</option>
-                        <option value="E">Expense (Permanent)</option>
-                        <option value="I">Investment (Locked Cash)</option>
+                        <option value="E">Expense</option>
+                        <option value="I">Investment</option>
                     </select>
                     <input type="date" id="daO" value="${new Date().toISOString().split('T')[0]}">
                     <input type="text" id="reO" placeholder="Reference Note">
@@ -171,13 +161,34 @@ function render() {
                     <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
             </div>
-        </div>
+        </div>`;
+    }
 
+    // PERSONAL LEDGERS (Separated & Positioned Below Admin)
+    html += `
         <div class="card">
-            <h2>Audit Ledger</h2>
+            <h2>Personal Savings History</h2>
+            <table>
+                <tr><th>Date</th><th>Month Ref</th><th>Amount</th></tr>
+                ${data[target].contributions.map(c => `<tr><td>${c.date}</td><td>${c.month}</td><td>${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
+            </table>
+        </div>
+        
+        <div class="card">
+            <h2>Personal Loan & Repayment History</h2>
+            <table>
+                <tr><th>Date</th><th>Type</th><th>Reference</th><th>Amount</th></tr>
+                ${data[target].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:'New Disbursement'}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
+            </table>
+        </div>`;
+
+    if(isAdmin) {
+        html += `
+        <div class="card">
+            <h2>Global Audit Ledger</h2>
             <div style="overflow-x:auto">
                 <table>
-                    <tr><th>Member</th><th>Type</th><th>Ref</th><th>Amt</th><th>Action</th></tr>
+                    <tr><th>Member</th><th>Type</th><th>Details</th><th>Amt</th><th>Action</th></tr>
                     ${data.members.map(m => `
                         ${data[m].contributions.map((c,i) => `<tr><td>${m}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`).join('')}
                         ${data[m].loans.map((l,i) => `<tr><td>${m}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:'Loan'}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`).join('')}
@@ -186,6 +197,8 @@ function render() {
             </div>
         </div>`;
     }
+
+    app.innerHTML = html;
 }
 
 function postInflow() {
