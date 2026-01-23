@@ -44,6 +44,7 @@ const SECONDARY_ADMIN = "Ameny Ronald";
 let user = null;
 let data = {};
 let lastSelectedMember = null;
+let currentInflowType = "S"; // Track selected type locally to persist through render
 
 async function loadData() {
     try {
@@ -78,6 +79,7 @@ function render() {
 
     const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN;
     const target = isAdmin ? document.getElementById("viewMem")?.value || user.name : user.name;
+    const activeMember = lastSelectedMember || target;
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
 
@@ -135,10 +137,6 @@ function render() {
                 <div class="stat-box" style="background:#FFEBEE"><strong>Pending Savings:</strong><br>UGX ${livePending.toLocaleString()}</div>
                 <div class="stat-box" style="background:#E3F2FD"><strong>Loan Debt:</strong><br>UGX ${totalOutstanding.toLocaleString()}</div>
             </div>
-            <div style="margin-top:10px">
-                <button onclick="changePIN()">Change PIN</button>
-                <button onclick="user=null;render()">Logout</button>
-            </div>
         </div>`;
 
     if(isAdmin) {
@@ -149,11 +147,18 @@ function render() {
                 <div>
                     <h3>Inflow Entry</h3>
                     <select id="mI" onchange="lastSelectedMember=this.value; render()">
-                        ${data.members.map(m => `<option value="${m}" ${m === (lastSelectedMember || target) ? 'selected' : ''}>${m}</option>`).join('')}
+                        ${data.members.map(m => `<option value="${m}" ${m === activeMember ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
-                    <select id="tI" onchange="render()"><option value="S">Savings</option><option value="R">Loan Repayment</option></select>
-                    ${document.getElementById("tI")?.value === 'R' ? `
-                        <select id="lID">${data[lastSelectedMember || target].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Loan ${i+1}</option>`).join('')}</select>` : `<input type="month" id="moI" value="2024-02">`}
+                    <select id="tI" onchange="currentInflowType=this.value; render()">
+                        <option value="S" ${currentInflowType==='S'?'selected':''}>Savings</option>
+                        <option value="R" ${currentInflowType==='R'?'selected':''}>Loan Repayment</option>
+                    </select>
+                    ${currentInflowType === 'R' ? `
+                        <select id="lID">
+                            ${data[activeMember].loans.filter(l=>l.type==='LOAN').length > 0 
+                                ? data[activeMember].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Loan ${i+1} (UGX ${l.amt})</option>`).join('')
+                                : `<option disabled>No Loans Found</option>`}
+                        </select>` : `<input type="month" id="moI" value="2024-02">`}
                     <input type="date" id="daI" placeholder="Date">
                     <input type="number" id="amI" placeholder="Amount">
                     <button class="gold" onclick="postInflow()">Post Inflow</button>
@@ -170,7 +175,7 @@ function render() {
         </div>`;
     }
 
-    // TABLES
+    // STATEMENTS & AUDIT (LOCKED)
     let sHTML = `<div class="card"><h2>Statements</h2><table><tr><th>Month</th><th>Status</th><th>Amt</th></tr>`;
     let rd = new Date("2024-02-01");
     while(rd <= today) {
@@ -181,7 +186,7 @@ function render() {
         rd.setMonth(rd.getMonth() + 1);
     }
     
-    let lHTML = `<h2>Loan History</h2><table><tr><th>ID</th><th>Principal</th><th>Paid</th><th>Status</th></tr>`;
+    let lHTML = `<h2>Loan Tracker</h2><table><tr><th>ID</th><th>Principal</th><th>Paid</th><th>Status</th></tr>`;
     myLoans.forEach((loan, i) => {
         let id = i + 1, repaid = myRepays.filter(r => r.loanId == id).reduce((a,b) => a + Number(b.amt), 0);
         let bal = Number(loan.amt) - repaid;
@@ -191,7 +196,7 @@ function render() {
     app.innerHTML += sHTML + `</table>` + lHTML + `</table></div>`;
     
     if(isAdmin) {
-        let audit = `<div class="card"><h2>Audit Ledger (Edit/Delete)</h2><table><tr><th>Member</th><th>Category</th><th>Details</th><th>Amt</th><th>Action</th></tr>`;
+        let audit = `<div class="card"><h2>Audit Ledger</h2><table><tr><th>Member</th><th>Type</th><th>Details</th><th>Amt</th><th>Action</th></tr>`;
         data.members.forEach(m => {
             data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`);
             data[m].loans.forEach((l,i) => audit += `<tr><td>${m}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:l.date}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`);
@@ -201,7 +206,7 @@ function render() {
 }
 
 function postInflow() {
-    const m = document.getElementById("mI").value, t = document.getElementById("tI").value, amt = Number(document.getElementById("amI").value);
+    const m = document.getElementById("mI").value, t = currentInflowType, amt = Number(document.getElementById("amI").value);
     let date = document.getElementById("daI").value || new Date().toISOString().split('T')[0];
     lastSelectedMember = m;
     if(t === 'S') {
@@ -210,9 +215,11 @@ function postInflow() {
         let dObj = new Date(mon + "-01"); dObj.setMonth(dObj.getMonth() + 1);
         saveData().then(() => { if(document.getElementById("moI")) document.getElementById("moI").value = dObj.toISOString().slice(0,7); });
     } else {
-        const lId = document.getElementById("lID").value;
-        data[m].loans.push({amt, date, type:'REPAYMENT', loanId: lId});
-        saveData();
+        const lIdSelect = document.getElementById("lID");
+        if(lIdSelect && lIdSelect.value !== "No Loans Found") {
+            data[m].loans.push({amt, date, type:'REPAYMENT', loanId: lIdSelect.value});
+            saveData();
+        } else { alert("Error: No loan ID selected."); }
     }
 }
 
@@ -225,8 +232,8 @@ function postOutflow() {
     saveData();
 }
 
-function del(cat, mem, idx) { if(confirm("Permanently delete this record?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else data[mem].loans.splice(idx,1); saveData();}}
-function changePIN() { let p = prompt("New 4-digit PIN:"); if(p && p.length===4){data[user.name].pin=p; saveData();} }
+function del(cat, mem, idx) { if(confirm("Permanently delete?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else data[mem].loans.splice(idx,1); saveData();}}
+function changePIN() { let p = prompt("New PIN:"); if(p && p.length===4){data[user.name].pin=p; saveData();} }
 function checkLogin(n) { let p = prompt("PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
 loadData();
 </script>
