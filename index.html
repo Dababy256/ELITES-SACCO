@@ -11,7 +11,7 @@
     .container{padding:16px; max-width:1100px; margin:auto}
     .card{background:#fff; padding:20px; border-radius:12px; margin-bottom:16px; box-shadow:0 4px 10px rgba(0,0,0,0.1)}
     h2{margin-top:0; color:#111; border-bottom:2px solid #B08D57; padding-bottom:8px}
-    table{width:100%; border-collapse:collapse; font-size:12px}
+    table{width:100%; border-collapse:collapse; font-size:12px; margin-bottom:15px}
     th,td{border:1px solid #eee; padding:10px; text-align:left}
     th{background:#B08D57; color:#000}
     button{padding:8px 12px; border:none; border-radius:6px; background:#111; color:#fff; cursor:pointer; font-weight:bold; margin:2px}
@@ -20,7 +20,6 @@
     input,select{padding:10px; width:100%; margin-bottom:10px; border:1px solid #ccc; border-radius:8px}
     .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px}
     .stat-box{padding:12px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd; color:#111}
-    /* Status Colors */
     .status-cleared{color:#2E7D32; font-weight:bold}
     .status-partial{color:#EF6C00; font-weight:bold}
     .status-pending{color:#C62828; font-weight:bold}
@@ -95,7 +94,7 @@ function render() {
     let mySavingsTotal = data[target].contributions.reduce((acc, curr) => acc + Number(curr.amt), 0);
     let myLoanBalance = data[target].loans.reduce((acc, curr) => acc + Number(curr.bal), 0);
     
-    // LIVE PENDING BALANCE CALC
+    // LIVE PENDING BALANCE CALC (LOCKED)
     let livePending = 0;
     let loopD = new Date("2024-02-01");
     while(loopD <= today) {
@@ -164,17 +163,17 @@ function render() {
                 </div>
                 <div>
                     <h3>Outflow</h3>
-                    <select id="tO"><option value="L">Loan</option><option value="E">Expense</option><option value="I">Invest</option></select>
+                    <select id="tO"><option value="L">Loan Disbursement</option><option value="E">Expense</option><option value="I">Invest</option></select>
                     <input type="date" id="daO" value="${todayStr}">
-                    <input type="text" id="reO" placeholder="Description">
+                    <input type="text" id="reO" placeholder="Description/Note">
                     <input type="number" id="amO" placeholder="Amount">
                     <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
             </div>
-            <button class="gold" onclick="exportCSV()">Export to Excel</button>
         </div>`;
     }
 
+    // SAVINGS TABLE (3-TIER STATUS)
     let statusHTML = `<div class="card"><h2>Clearance Statement</h2>
         ${isAdmin ? `<select id="viewMem" onchange="render()">${data.members.map(m => `<option ${m===target?'selected':''}>${m}</option>`)}</select>` : ''}
         <table><tr><th>Month</th><th>Status</th><th>Paid On</th><th>Late Fee</th></tr>`;
@@ -184,29 +183,41 @@ function render() {
         let mStr = reportD.toISOString().slice(0,7), paid = data[target].contributions.find(c => c.month === mStr), fee = 0;
         let base = getExpectedBase(mStr);
         let status = "PENDING", statusClass = "status-pending";
-
         if(paid) {
             let amt = Number(paid.amt);
-            if(amt >= base) {
-                status = "CLEARED";
-                statusClass = "status-cleared";
-            } else if (amt > 0) {
-                status = "PARTIAL";
-                statusClass = "status-partial";
-            }
-            
+            if(amt >= base) { status = "CLEARED"; statusClass = "status-cleared"; }
+            else if (amt > 0) { status = "PARTIAL"; statusClass = "status-partial"; }
             let due = new Date(mStr + "-10"), pDate = new Date(paid.date);
             if(pDate > due) fee = Math.min(Math.ceil((pDate-due)/(1000*60*60*24*7)) * 5000, 15000);
         }
         statusHTML += `<tr><td>${mStr}</td><td class="${statusClass}">${status}</td><td>${paid?paid.date:'-'}</td><td>${fee>0?'UGX '+fee.toLocaleString():'None'}</td></tr>`;
         reportD.setMonth(reportD.getMonth() + 1);
     }
-    app.innerHTML += statusHTML + `</table></div>`;
+    statusHTML += `</table>`;
+
+    // LOAN HISTORY TABLE
+    let loanHTML = `<h2>Loan History Tracker</h2><table><tr><th>Loan ID</th><th>Date Taken</th><th>Principal</th><th>Status</th></tr>`;
+    let loanCount = 0;
+    let runningRepayments = data[target].loans.filter(l => l.type === 'REPAYMENT').reduce((acc, curr) => acc + Math.abs(curr.bal), 0);
+    
+    data[target].loans.filter(l => l.type === 'LOAN').forEach(l => {
+        loanCount++;
+        let status = "PENDING", statusClass = "status-pending";
+        if(runningRepayments >= l.amt) {
+            status = "CLEARED"; statusClass = "status-cleared";
+            runningRepayments -= l.amt;
+        } else {
+            runningRepayments = 0;
+        }
+        loanHTML += `<tr><td>Loan ${loanCount}</td><td>${l.date}</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td class="${statusClass}">${status}</td></tr>`;
+    });
+    app.innerHTML += statusHTML + loanHTML + `</table></div>`;
     
     if(isAdmin) {
-        let audit = `<div class="card"><h2>Audit Table (Delete Mistakes)</h2><table>`;
+        let audit = `<div class="card"><h2>Audit Ledger</h2><table>`;
         data.members.forEach(m => {
             data[m].contributions.forEach((c,i) => audit += `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`);
+            data[m].loans.forEach((l,i) => audit += `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`);
         });
         app.innerHTML += audit + `</table></div>`;
     }
@@ -214,8 +225,7 @@ function render() {
 
 function postInflow() {
     const m = document.getElementById("mI").value, t = document.getElementById("tI").value, amt = Number(document.getElementById("amI").value), mon = document.getElementById("moI").value;
-    let date = document.getElementById("daI").value;
-    lastSelectedMember = m;
+    let date = document.getElementById("daI").value; lastSelectedMember = m;
     if(!date && t==='S') {
         const base = getExpectedBase(mon), fee = amt - base;
         if(fee <= 0) date = mon + "-10"; else if(fee <= 5000) date = mon + "-11"; else if(fee <= 10000) date = mon + "-18"; else date = mon + "-25";
@@ -227,16 +237,17 @@ function postInflow() {
 
 function postOutflow() {
     const t = document.getElementById("tO").value, amt = Number(document.getElementById("amO").value), re = document.getElementById("reO").value, date = document.getElementById("daO").value;
-    if(t==='L') data[document.getElementById("mI").value].loans.push({amt, date, bal:amt, type:'LOAN'});
+    const m = document.getElementById("mI").value;
+    if(t==='L') data[m].loans.push({amt, date, bal:amt, type:'LOAN'});
     else if(t==='E') data.expenses.push({amt, reason:re, date});
     else if(t==='I') data.investments.push({amt, reason:re, date});
     saveData();
 }
 
-function del(cat, mem, idx) { if(confirm("Delete?")){ if(cat==='S')data[mem].contributions.splice(idx,1); saveData();}}
+function del(cat, mem, idx) { if(confirm("Delete?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else if(cat==='L')data[mem].loans.splice(idx,1); saveData();}}
 function changePIN() { let p = prompt("New 4-digit PIN:"); if(p && p.length===4){data[user.name].pin=p; saveData();} }
 function checkLogin(n) { let p = prompt("PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
-function exportCSV() { let csv = "Date,Member,Amt\n"; data.members.forEach(m=>data[m].contributions.forEach(c=>csv+=`${c.date},${m},${c.amt}\n`)); window.open('data:text/csv;charset=utf-8,' + encodeURI(csv)); }
+function exportCSV() { let csv = "Date,Member,Type,Amt\n"; data.members.forEach(m=>{data[m].contributions.forEach(c=>csv+=`${c.date},${m},Savings,${c.amt}\n`); data[m].loans.forEach(l=>csv+=`${l.date},${m},${l.type},${l.amt}\n`);}); window.open('data:text/csv;charset=utf-8,' + encodeURI(csv)); }
 loadData();
 </script>
 </body>
