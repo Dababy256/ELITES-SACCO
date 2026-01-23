@@ -44,7 +44,7 @@ const SECONDARY_ADMIN = "Ameny Ronald";
 let user = null;
 let data = {};
 let lastSelectedMember = null;
-let currentInflowType = "S"; // Track selected type locally to persist through render
+let currentInflowType = "S";
 
 async function loadData() {
     try {
@@ -81,61 +81,75 @@ function render() {
     const target = isAdmin ? document.getElementById("viewMem")?.value || user.name : user.name;
     const activeMember = lastSelectedMember || target;
     const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
 
-    // TOTALS LOGIC
-    let tSav = 0, tRepay = 0, tDisbursed = 0, tInv = 0, tExp = 0;
+    // TREASURY CALCULATION
+    let totalSavings = 0, totalRepayments = 0, totalDisbursed = 0, totalInvested = 0, totalExpenses = 0, globalInterest = 0;
+
     data.members.forEach(m => {
-        data[m].contributions.forEach(c => tSav += Number(c.amt));
-        data[m].loans.forEach(l => {
-            if(l.type === 'LOAN') tDisbursed += Number(l.amt);
-            if(l.type === 'REPAYMENT') tRepay += Number(l.amt);
+        data[m].contributions.forEach(c => totalSavings += Number(c.amt));
+        
+        let mLoans = data[m].loans.filter(l => l.type === 'LOAN');
+        let mRepays = data[m].loans.filter(l => l.type === 'REPAYMENT');
+        
+        mLoans.forEach((loan, idx) => {
+            let id = idx + 1;
+            totalDisbursed += Number(loan.amt);
+            let paidOnThis = mRepays.filter(r => r.loanId == id).reduce((a, b) => a + Number(b.amt), 0);
+            totalRepayments += paidOnThis;
+            
+            // Calculate Interest: Anything paid beyond the original principal
+            if(paidOnThis > Number(loan.amt)) {
+                globalInterest += (paidOnThis - Number(loan.amt));
+            }
         });
     });
-    data.investments.forEach(i => tInv += Number(i.amt));
-    data.expenses.forEach(e => tExp += Number(e.amt));
 
-    // PERSONAL BALANCES
+    data.investments.forEach(i => totalInvested += Number(i.amt));
+    data.expenses.forEach(e => totalExpenses += Number(e.amt));
+
+    let cashAtHand = (totalSavings + totalRepayments) - (totalDisbursed + totalInvested + totalExpenses);
+
+    // PERSONAL LOAN BALANCE (CAPPED AT 0)
     let myLoans = data[target].loans.filter(l => l.type === 'LOAN');
     let myRepays = data[target].loans.filter(l => l.type === 'REPAYMENT');
-    let totalOutstanding = 0;
-    myLoans.forEach((loan, idx) => {
-        let paid = myRepays.filter(r => r.loanId == (idx+1)).reduce((a,b) => a + Number(b.amt), 0);
-        let bal = Number(loan.amt) - paid;
-        if(bal > 0) totalOutstanding += bal;
+    let myDebt = 0;
+    myLoans.forEach((l, i) => {
+        let paid = myRepays.filter(r => r.loanId == (i+1)).reduce((a,b) => a + Number(b.amt), 0);
+        let bal = Number(l.amt) - paid;
+        if(bal > 0) myDebt += bal;
     });
 
     // SAVINGS ARREARS (LOCKED)
-    let livePending = 0;
+    let pendingSavings = 0;
     let loopD = new Date("2024-02-01");
     while(loopD <= today) {
         let mS = loopD.toISOString().slice(0,7);
         let paid = data[target].contributions.find(c => c.month === mS);
         let base = getExpectedBase(mS);
         if(!paid) {
-            livePending += base;
+            pendingSavings += base;
             let d10 = new Date(mS + "-10");
-            if(today > d10) livePending += Math.min(Math.ceil((today-d10)/(1000*60*60*24*7))*5000, 15000);
-        } else if(Number(paid.amt) < base) livePending += (base - Number(paid.amt));
+            if(today > d10) pendingSavings += Math.min(Math.ceil((today-d10)/(1000*60*60*24*7))*5000, 15000);
+        } else if(Number(paid.amt) < base) pendingSavings += (base - Number(paid.amt));
         loopD.setMonth(loopD.getMonth() + 1);
     }
 
     app.innerHTML = `
         <div class="card" style="background:#111; color:#fff">
-            <h2>CASH AT HAND: UGX ${(tSav + tRepay - (tDisbursed + tInv + tExp)).toLocaleString()}</h2>
+            <h2>CASH AT HAND: UGX ${cashAtHand.toLocaleString()}</h2>
             <div class="grid">
-                <div class="stat-box">Savings: ${tSav.toLocaleString()}</div>
-                <div class="stat-box">Interest/Repay: ${tRepay.toLocaleString()}</div>
-                <div class="stat-box">Out Loans: ${(tDisbursed - tRepay < 0 ? 0 : tDisbursed - tRepay).toLocaleString()}</div>
+                <div class="stat-box">Total Savings: ${totalSavings.toLocaleString()}</div>
+                <div class="stat-box" style="border: 1px solid #B08D57">Interest Earned: ${globalInterest.toLocaleString()}</div>
+                <div class="stat-box">Loans Out: ${(totalDisbursed - totalRepayments < 0 ? 0 : totalDisbursed - totalRepayments).toLocaleString()}</div>
             </div>
         </div>
 
         <div class="arrears-banner">
-            <h3>Profile: ${target}</h3>
+            <h3>Account: ${target}</h3>
             <div class="grid">
-                <div class="stat-box" style="background:#E8F5E9"><strong>Total Saved:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFEBEE"><strong>Pending Savings:</strong><br>UGX ${livePending.toLocaleString()}</div>
-                <div class="stat-box" style="background:#E3F2FD"><strong>Loan Debt:</strong><br>UGX ${totalOutstanding.toLocaleString()}</div>
+                <div class="stat-box" style="background:#E8F5E9"><strong>My Savings:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFEBEE"><strong>My Pending:</strong><br>UGX ${pendingSavings.toLocaleString()}</div>
+                <div class="stat-box" style="background:#E3F2FD"><strong>My Loan Debt:</strong><br>UGX ${myDebt.toLocaleString()}</div>
             </div>
         </div>`;
 
@@ -145,12 +159,12 @@ function render() {
             <h2>Admin Entry Hub</h2>
             <div class="grid">
                 <div>
-                    <h3>Inflow Entry</h3>
+                    <h3>Inflow</h3>
                     <select id="mI" onchange="lastSelectedMember=this.value; render()">
                         ${data.members.map(m => `<option value="${m}" ${m === activeMember ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
                     <select id="tI" onchange="currentInflowType=this.value; render()">
-                        <option value="S" ${currentInflowType==='S'?'selected':''}>Savings</option>
+                        <option value="S" ${currentInflowType==='S'?'selected':''}>Monthly Savings</option>
                         <option value="R" ${currentInflowType==='R'?'selected':''}>Loan Repayment</option>
                     </select>
                     ${currentInflowType === 'R' ? `
@@ -159,14 +173,14 @@ function render() {
                                 ? data[activeMember].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Loan ${i+1} (UGX ${l.amt})</option>`).join('')
                                 : `<option disabled>No Loans Found</option>`}
                         </select>` : `<input type="month" id="moI" value="2024-02">`}
-                    <input type="date" id="daI" placeholder="Date">
+                    <input type="date" id="daI">
                     <input type="number" id="amI" placeholder="Amount">
                     <button class="gold" onclick="postInflow()">Post Inflow</button>
                 </div>
                 <div>
-                    <h3>Outflow Entry</h3>
+                    <h3>Outflow</h3>
                     <select id="tO"><option value="L">Loan Disbursed</option><option value="E">Expense</option><option value="I">Investment</option></select>
-                    <input type="date" id="daO" value="${todayStr}">
+                    <input type="date" id="daO" value="${today.toISOString().split('T')[0]}">
                     <input type="text" id="reO" placeholder="Note">
                     <input type="number" id="amO" placeholder="Amount">
                     <button class="gold" onclick="postOutflow()">Post Outflow</button>
@@ -176,22 +190,22 @@ function render() {
     }
 
     // STATEMENTS & AUDIT (LOCKED)
-    let sHTML = `<div class="card"><h2>Statements</h2><table><tr><th>Month</th><th>Status</th><th>Amt</th></tr>`;
+    let sHTML = `<div class="card"><h2>Monthly Statement</h2><table><tr><th>Month</th><th>Status</th><th>Amt</th></tr>`;
     let rd = new Date("2024-02-01");
     while(rd <= today) {
-        let mS = rd.toISOString().slice(0,7), paid = data[target].contributions.find(c => c.month === mS);
-        let status = paid ? (Number(paid.amt) >= getExpectedBase(mS) ? 'CLEARED' : 'PARTIAL') : 'PENDING';
-        let cls = paid ? (Number(paid.amt) >= getExpectedBase(mS) ? 'status-cleared' : 'status-partial') : 'status-pending';
-        sHTML += `<tr><td>${mS}</td><td class="${cls}">${status}</td><td>${paid?paid.amt:'-'}</td></tr>`;
+        let mS = rd.toISOString().slice(0,7), p = data[target].contributions.find(c => c.month === mS);
+        let st = p ? (Number(p.amt) >= getExpectedBase(mS) ? 'CLEARED' : 'PARTIAL') : 'PENDING';
+        let cl = p ? (Number(p.amt) >= getExpectedBase(mS) ? 'status-cleared' : 'status-partial') : 'status-pending';
+        sHTML += `<tr><td>${mS}</td><td class="${cl}">${st}</td><td>${p?p.amt:'-'}</td></tr>`;
         rd.setMonth(rd.getMonth() + 1);
     }
     
-    let lHTML = `<h2>Loan Tracker</h2><table><tr><th>ID</th><th>Principal</th><th>Paid</th><th>Status</th></tr>`;
-    myLoans.forEach((loan, i) => {
-        let id = i + 1, repaid = myRepays.filter(r => r.loanId == id).reduce((a,b) => a + Number(b.amt), 0);
-        let bal = Number(loan.amt) - repaid;
-        let cls = bal <= 0 ? "status-cleared" : (repaid > 0 ? "status-partial" : "status-pending");
-        lHTML += `<tr><td>Loan ${id}</td><td>${Number(loan.amt).toLocaleString()}</td><td>${repaid.toLocaleString()}</td><td class="${cls}">${bal<=0?'PAID':'ACTIVE'}</td></tr>`;
+    let lHTML = `<h2>Loan Records</h2><table><tr><th>ID</th><th>Principal</th><th>Paid</th><th>Status</th></tr>`;
+    myLoans.forEach((l, i) => {
+        let id = i + 1, paid = myRepays.filter(r => r.loanId == id).reduce((a,b) => a + Number(b.amt), 0);
+        let bal = Number(l.amt) - paid;
+        let cl = bal <= 0 ? "status-cleared" : (paid > 0 ? "status-partial" : "status-pending");
+        lHTML += `<tr><td>Loan ${id}</td><td>${Number(l.amt).toLocaleString()}</td><td>${paid.toLocaleString()}</td><td class="${cl}">${bal<=0?'PAID':'ACTIVE'}</td></tr>`;
     });
     app.innerHTML += sHTML + `</table>` + lHTML + `</table></div>`;
     
@@ -219,20 +233,20 @@ function postInflow() {
         if(lIdSelect && lIdSelect.value !== "No Loans Found") {
             data[m].loans.push({amt, date, type:'REPAYMENT', loanId: lIdSelect.value});
             saveData();
-        } else { alert("Error: No loan ID selected."); }
+        }
     }
 }
 
 function postOutflow() {
-    const t = document.getElementById("tO").value, amt = Number(document.getElementById("amO").value), re = document.getElementById("reO").value, date = document.getElementById("daO").value;
+    const t = document.getElementById("tO").value, amt = Number(document.getElementById("amO").value, date = document.getElementById("daO").value);
     const m = document.getElementById("mI").value;
     if(t==='L') data[m].loans.push({amt, date, type:'LOAN'});
-    else if(t==='E') data.expenses.push({amt, reason:re, date});
-    else if(t==='I') data.investments.push({amt, reason:re, date});
+    else if(t==='E') data.expenses.push({amt, reason:document.getElementById("reO").value, date});
+    else if(t==='I') data.investments.push({amt, reason:document.getElementById("reO").value, date});
     saveData();
 }
 
-function del(cat, mem, idx) { if(confirm("Permanently delete?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else data[mem].loans.splice(idx,1); saveData();}}
+function del(cat, mem, idx) { if(confirm("Delete?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else data[mem].loans.splice(idx,1); saveData();}}
 function changePIN() { let p = prompt("New PIN:"); if(p && p.length===4){data[user.name].pin=p; saveData();} }
 function checkLogin(n) { let p = prompt("PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
 loadData();
