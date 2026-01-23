@@ -93,15 +93,11 @@ function render() {
     let totalOutflows = currentOutstandingLoans + totalExpenses + totalInvestments;
     let netCashResult = (grossSavingsTotal + totalInterestEarned) - totalOutflows;
 
-    // --- PERSONAL DATA CALCULATION ---
+    // PERSONAL DATA
     let myDebt = 0;
-    let myLoanRecords = data[target].loans.filter(l=>l.type==='LOAN');
-    let myRepaymentRecords = data[target].loans.filter(r=>r.type==='REPAYMENT');
-    
-    myLoanRecords.forEach((l, i) => {
-        let paid = myRepaymentRecords.filter(r => r.loanId == (i+1)).reduce((a,b)=>a+Number(b.amt),0);
-        let bal = Number(l.amt) - paid;
-        if(bal > 0) myDebt += bal;
+    data[target].loans.filter(l=>l.type==='LOAN').forEach((l, i) => {
+        let paid = data[target].loans.filter(r => r.type==='REPAYMENT' && r.loanId == (i+1)).reduce((a,b)=>a+Number(b.amt),0);
+        if((Number(l.amt)-paid) > 0) myDebt += (Number(l.amt)-paid);
     });
 
     app.innerHTML = `
@@ -117,8 +113,8 @@ function render() {
         <div class="card">
             <h3>Account: ${target}</h3>
             <div class="grid">
-                <div class="stat-box" style="background:#E8F5E9"><strong>My Savings Total:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFEBEE"><strong>Active Loan Debt:</strong><br>UGX ${myDebt.toLocaleString()}</div>
+                <div class="stat-box"><strong>My Savings:</strong><br>UGX ${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFEBEE"><strong>My Debt:</strong><br>UGX ${myDebt.toLocaleString()}</div>
             </div>
             <div style="margin-top:10px">
                 <button class="gold" onclick="changePIN()">Change PIN</button>
@@ -127,49 +123,50 @@ function render() {
         </div>
 
         <div class="card">
-            <h2>Personal Ledgers</h2>
-            <h3>Savings History</h3>
+            <h2>Personal Ledger</h2>
             <table>
-                <tr><th>Date</th><th>Month</th><th>Amount</th></tr>
-                ${data[target].contributions.map(c => `<tr><td>${c.date}</td><td>${c.month}</td><td>${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
-            </table>
-            
-            <h3>Loan & Repayment History</h3>
-            <table>
-                <tr><th>Date</th><th>Type</th><th>Ref/ID</th><th>Amount</th></tr>
+                <tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th></tr>
+                ${data[target].contributions.map(c => `<tr><td>${c.date}</td><td>Savings</td><td>${c.month}</td><td>${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
                 ${data[target].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:'New Loan'}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
             </table>
         </div>`;
 
     if(isAdmin) {
+        // Auto-calculate next loan ID for outflow label
+        let nextLoanID = data[activeMemberForAdmin].loans.filter(l => l.type === 'LOAN').length + 1;
+
         app.innerHTML += `
         <div class="card" style="border:2px solid #B08D57">
-            <h2>Admin Hub</h2>
+            <h2>Admin Entry Hub</h2>
             <div class="grid">
                 <div>
-                    <h3>Inflow</h3>
+                    <h3>Inflow (Money In)</h3>
                     <select id="mI" onchange="lastSelectedMember=this.value; render()">
                         ${data.members.map(m => `<option value="${m}" ${m === activeMemberForAdmin ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
                     <select id="tI" onchange="currentInflowType=this.value; render()">
-                        <option value="S" ${currentInflowType==='S'?'selected':''}>Savings</option>
+                        <option value="S" ${currentInflowType==='S'?'selected':''}>Savings Contribution</option>
                         <option value="R" ${currentInflowType==='R'?'selected':''}>Loan Repayment</option>
                     </select>
                     ${currentInflowType === 'R' ? `
                         <select id="lID">
                             ${data[activeMemberForAdmin].loans.filter(l=>l.type==='LOAN').length > 0 
-                                ? data[activeMemberForAdmin].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Loan ${i+1}</option>`).join('')
-                                : `<option disabled>No Loans Found</option>`}
+                                ? data[activeMemberForAdmin].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Repay Loan ${i+1}</option>`).join('')
+                                : `<option disabled>No Active Loans</option>`}
                         </select>` : `<input type="month" id="moI" value="2024-02">`}
-                    <input type="date" id="daI">
+                    <input type="date" id="daI" value="${new Date().toISOString().split('T')[0]}">
                     <input type="number" id="amI" placeholder="Amount">
                     <button class="gold" onclick="postInflow()">Post Inflow</button>
                 </div>
                 <div>
-                    <h3>Outflow</h3>
-                    <select id="tO"><option value="L">Loan Disbursed</option><option value="E">Expense</option><option value="I">Investment</option></select>
+                    <h3>Outflow (Money Out)</h3>
+                    <select id="tO" onchange="render()">
+                        <option value="L">Loan Disbursed (Assigning: Loan ${nextLoanID})</option>
+                        <option value="E">Expense (Permanent)</option>
+                        <option value="I">Investment (Locked Cash)</option>
+                    </select>
                     <input type="date" id="daO" value="${new Date().toISOString().split('T')[0]}">
-                    <input type="text" id="reO" placeholder="Note">
+                    <input type="text" id="reO" placeholder="Reference Note">
                     <input type="number" id="amO" placeholder="Amount">
                     <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
@@ -180,10 +177,10 @@ function render() {
             <h2>Audit Ledger</h2>
             <div style="overflow-x:auto">
                 <table>
-                    <tr><th>Member</th><th>Type</th><th>Amt</th><th>Action</th></tr>
+                    <tr><th>Member</th><th>Type</th><th>Ref</th><th>Amt</th><th>Action</th></tr>
                     ${data.members.map(m => `
-                        ${data[m].contributions.map((c,i) => `<tr><td>${m}</td><td>Savings</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`).join('')}
-                        ${data[m].loans.map((l,i) => `<tr><td>${m}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`).join('')}
+                        ${data[m].contributions.map((c,i) => `<tr><td>${m}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`).join('')}
+                        ${data[m].loans.map((l,i) => `<tr><td>${m}</td><td>${l.type}</td><td>${l.type==='REPAYMENT'?'Loan '+l.loanId:'Loan'}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`).join('')}
                     `).join('')}
                 </table>
             </div>
@@ -193,13 +190,16 @@ function render() {
 
 function postInflow() {
     const m = document.getElementById("mI").value, t = currentInflowType, amt = Number(document.getElementById("amI").value);
-    let date = document.getElementById("daI").value || new Date().toISOString().split('T')[0];
+    let date = document.getElementById("daI").value;
     lastSelectedMember = m;
     if(t === 'S') {
         data[m].contributions.push({amt, date, month:document.getElementById("moI").value});
     } else {
-        const lId = document.getElementById("lID").value;
-        if(lId !== "No Loans Found") data[m].loans.push({amt, date, type:'REPAYMENT', loanId: lId});
+        const lIdSelect = document.getElementById("lID");
+        if(lIdSelect && lIdSelect.value.includes("Loan")) {
+            let actualId = lIdSelect.value.replace('Repay Loan ', '');
+            data[m].loans.push({amt, date, type:'REPAYMENT', loanId: actualId});
+        }
     }
     saveData();
 }
