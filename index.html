@@ -102,37 +102,32 @@ function render() {
     data.investments.forEach(i => totalInvestments += Number(i.amt));
     let netCashResult = (grossSavingsTotal + totalInterestEarned) - (currentOutstandingLoans + totalExpenses + totalInvestments);
 
-    // --- ARREARS & PENALTY ENGINE ---
-    let totalArrearsWithFines = 0;
-    const today = new Date();
-    const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}`;
-    
-    let checkY = 2024, checkM = 2;
-    while (checkY < today.getFullYear() || (checkY === today.getFullYear() && checkM <= today.getMonth() + 1)) {
-        let mStr = `${checkY}-${String(checkM).padStart(2,'0')}`;
-        let targetAmt = getMonthlyTarget(mStr);
-        let paid = data[target].contributions.filter(c => c.month === mStr).reduce((a,b)=>a+Number(b.amt),0);
-        
-        // Logic: Only apply penalty if NOT complete
-        if (paid < targetAmt) {
-            let monthArrear = (targetAmt - paid);
-            let penalty = 0;
-
-            if (mStr !== currentMonthStr) {
-                // PAST MONTH: Flat 15,000
-                penalty = 15000;
-            } else {
-                // CURRENT MONTH: 5000/week after the 10th
-                if (today.getDate() >= 10) {
-                    let weeksPassed = Math.floor((today.getDate() - 10) / 7) + 1;
-                    penalty = Math.min(weeksPassed * 5000, 15000);
+    // --- ARREARS ENGINE ---
+    function calcArrears(mName) {
+        let total = 0;
+        const today = new Date();
+        const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}`;
+        let checkY = 2024, checkM = 2;
+        while (checkY < today.getFullYear() || (checkY === today.getFullYear() && checkM <= today.getMonth() + 1)) {
+            let mStr = `${checkY}-${String(checkM).padStart(2,'0')}`;
+            let targetAmt = getMonthlyTarget(mStr);
+            let paid = data[mName].contributions.filter(c => c.month === mStr).reduce((a,b)=>a+Number(b.amt),0);
+            if (paid < targetAmt) {
+                let monthArrear = (targetAmt - paid);
+                let penalty = 0;
+                if (mStr !== currentMonthStr) penalty = 15000;
+                else if (today.getDate() >= 10) {
+                    let weeks = Math.floor((today.getDate() - 10) / 7) + 1;
+                    penalty = Math.min(weeks * 5000, 15000);
                 }
+                total += (monthArrear + penalty);
             }
-            totalArrearsWithFines += (monthArrear + penalty);
+            checkM++; if(checkM > 12) { checkM = 1; checkY++; }
         }
-        checkM++; if(checkM > 12) { checkM = 1; checkY++; }
+        return total;
     }
 
+    let myArrears = calcArrears(target);
     let myDebt = 0;
     data[target].loans.filter(l=>l.type==='LOAN').forEach((l, i) => {
         let paid = data[target].loans.filter(r => r.type==='REPAYMENT' && r.loanId == (i+1)).reduce((a,b)=>a+Number(b.amt),0);
@@ -146,24 +141,24 @@ function render() {
 
         <div class="card">
             <div style="display:flex; justify-content:space-between">
-                <h3>Account: ${target}</h3>
-                <button class="gold" onclick="exportPersonal()">Export My History</button>
+                <h3>My Account: ${target}</h3>
+                <button class="gold" onclick="exportPersonal('${target}')">Export My Statement</button>
             </div>
             <div class="grid">
-                <div class="stat-box"><strong>Total Savings:</strong><br>${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFEBEE"><strong>Loan Debt:</strong><br>${myDebt.toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFF9C4"><strong>Savings Arrears (Inc. Fines):</strong><br>UGX ${totalArrearsWithFines.toLocaleString()}</div>
+                <div class="stat-box"><strong>My Total Savings:</strong><br>${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFEBEE"><strong>Active Loan Debt:</strong><br>${myDebt.toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFF9C4"><strong>Arrears + Fines:</strong><br>UGX ${myArrears.toLocaleString()}</div>
             </div>
-            <button onclick="user=null;render()" style="margin-top:10px">Logout</button>
         </div>`;
 
     if(isAdmin) {
+        let nextL = data[activeMemberForAdmin].loans.filter(l => l.type === 'LOAN').length + 1;
         html += `
         <div class="card" style="border:2px solid #B08D57">
             <h2>Admin Hub</h2>
             <div class="grid">
                 <div>
-                    <h3>Inflow</h3>
+                    <h3>Inflow Management</h3>
                     <select id="mI" onchange="lastSelectedMember=this.value; render()">
                         ${data.members.map(m => `<option value="${m}" ${m === activeMemberForAdmin ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
@@ -176,17 +171,24 @@ function render() {
                     <button class="gold" onclick="postInflow()">Post Inflow</button>
                 </div>
                 <div>
-                    <h3>Outflow</h3>
-                    <select id="tO"><option value="L">Loan</option><option value="E">Expense</option><option value="I">Investment</option></select>
+                    <h3>Outflow Management</h3>
+                    <select id="tO"><option value="L">Loan (ID: ${nextL})</option><option value="E">Expense</option><option value="I">Investment</option></select>
                     <input type="text" id="reO" placeholder="Description">
                     <input type="number" id="amO" placeholder="Amount">
                     <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
             </div>
+            <hr>
+            <h3>Reviewing Ledger for: ${activeMemberForAdmin}</h3>
+            <div class="grid">
+                <div class="stat-box">Arrears: ${calcArrears(activeMemberForAdmin).toLocaleString()}</div>
+                <button class="gold" onclick="exportPersonal('${activeMemberForAdmin}')">Export ${activeMemberForAdmin}'s Ledger</button>
+            </div>
         </div>`;
     }
 
-    let loanC = 0;
+    // --- SHARED TABLES FOR ALL ---
+    let lCount = 0;
     html += `
         <div class="card">
             <h2>Personal Savings History</h2>
@@ -199,11 +201,20 @@ function render() {
             </table>
         </div>
         <div class="card">
-            <h2>Loan Ledger</h2>
+            <h2>Loan & Repayment Ledger</h2>
             <table>
-                ${data[target].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan '+(++loanC):'Repay L'+l.loanId}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
+                ${data[target].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan '+(++lCount):'Repay L'+l.loanId}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
             </table>
-        </div>`;
+        </div>
+        <div class="card">
+            <h2>SACCO General Activity (Expenses & Investments)</h2>
+            <table>
+                <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr>
+                ${data.expenses.map(e => `<tr><td>${e.date}</td><td>Expense</td><td>${e.reason}</td><td>${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
+                ${data.investments.map(i => `<tr><td>${i.date}</td><td>Investment</td><td>${i.reason}</td><td>${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
+            </table>
+        </div>
+        <button onclick="user=null;render()">Logout</button>`;
 
     app.innerHTML = html;
 }
@@ -228,13 +239,13 @@ function postOutflow() {
     saveData();
 }
 
-function exportPersonal() {
+function exportPersonal(name) {
     let csv = "Date,Type,Ref,Amount\n";
-    data[user.name].contributions.forEach(c => csv += `${c.date},Savings,${c.month},${c.amt}\n`);
-    data[user.name].loans.forEach(l => csv += `${l.date},${l.type},${l.type==='LOAN'?'Loan':'Repay L'+l.loanId},${l.amt}\n`);
+    data[name].contributions.forEach(c => csv += `${c.date},Savings,${c.month},${c.amt}\n`);
+    data[name].loans.forEach(l => csv += `${l.date},${l.type},${l.type==='LOAN'?'Loan':'Repay L'+l.loanId},${l.amt}\n`);
     const blob = new Blob([csv], {type:'text/csv'});
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `${user.name}_Statement.csv`; a.click();
+    const a = document.createElement('a'); a.href = url; a.download = `${name}_Statement.csv`; a.click();
 }
 
 function checkLogin(n) { let p = prompt("PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Wrong PIN"); }
