@@ -16,7 +16,8 @@
     th{background:#B08D57; color:#000}
     button{padding:8px 12px; border:none; border-radius:6px; background:#111; color:#fff; cursor:pointer; font-weight:bold; margin:2px}
     button.gold{background:#B08D57; color:#000}
-    button.del{background:#ff4d4d; color:white; padding:2px 6px; font-size:10px; border-radius:4px}
+    button.del{background:#ff4d4d; color:white; padding:4px 8px; font-size:10px}
+    button.edit{background:#2196F3; color:white; padding:4px 8px; font-size:10px}
     input,select{padding:10px; width:100%; margin-bottom:10px; border:1px solid #ccc; border-radius:8px}
     .grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px}
     .stat-box{padding:12px; border-radius:8px; background:#f9f9f9; border:1px solid #ddd; color:#111}
@@ -128,11 +129,6 @@ function render() {
     }
 
     let myArrears = calcArrears(target);
-    let myDebt = 0;
-    data[target].loans.filter(l=>l.type==='LOAN').forEach((l, i) => {
-        let paid = data[target].loans.filter(r => r.type==='REPAYMENT' && r.loanId == (i+1)).reduce((a,b)=>a+Number(b.amt),0);
-        if((Number(l.amt)-paid) > 0) myDebt += (Number(l.amt)-paid);
-    });
 
     let html = `
         <div class="card" style="background:#111; color:#fff">
@@ -140,25 +136,20 @@ function render() {
         </div>
 
         <div class="card">
-            <div style="display:flex; justify-content:space-between">
-                <h3>My Account: ${target}</h3>
-                <button class="gold" onclick="exportPersonal('${target}')">Export My Statement</button>
-            </div>
+            <h3>My Account: ${target}</h3>
             <div class="grid">
-                <div class="stat-box"><strong>My Total Savings:</strong><br>${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFEBEE"><strong>Active Loan Debt:</strong><br>${myDebt.toLocaleString()}</div>
+                <div class="stat-box"><strong>Total Savings:</strong><br>${data[target].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
                 <div class="stat-box" style="background:#FFF9C4"><strong>Arrears + Fines:</strong><br>UGX ${myArrears.toLocaleString()}</div>
             </div>
         </div>`;
 
     if(isAdmin) {
-        let nextL = data[activeMemberForAdmin].loans.filter(l => l.type === 'LOAN').length + 1;
         html += `
         <div class="card" style="border:2px solid #B08D57">
-            <h2>Admin Hub</h2>
+            <h2>Admin Entry Hub</h2>
             <div class="grid">
                 <div>
-                    <h3>Inflow Management</h3>
+                    <h3>Post Inflow</h3>
                     <select id="mI" onchange="lastSelectedMember=this.value; render()">
                         ${data.members.map(m => `<option value="${m}" ${m === activeMemberForAdmin ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
@@ -171,24 +162,17 @@ function render() {
                     <button class="gold" onclick="postInflow()">Post Inflow</button>
                 </div>
                 <div>
-                    <h3>Outflow Management</h3>
-                    <select id="tO"><option value="L">Loan (ID: ${nextL})</option><option value="E">Expense</option><option value="I">Investment</option></select>
+                    <h3>Post Outflow</h3>
+                    <select id="tO"><option value="L">Loan</option><option value="E">Expense</option><option value="I">Investment</option></select>
                     <input type="text" id="reO" placeholder="Description">
                     <input type="number" id="amO" placeholder="Amount">
                     <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
             </div>
-            <hr>
-            <h3>Reviewing Ledger for: ${activeMemberForAdmin}</h3>
-            <div class="grid">
-                <div class="stat-box">Arrears: ${calcArrears(activeMemberForAdmin).toLocaleString()}</div>
-                <button class="gold" onclick="exportPersonal('${activeMemberForAdmin}')">Export ${activeMemberForAdmin}'s Ledger</button>
-            </div>
         </div>`;
     }
 
-    // --- SHARED TABLES FOR ALL ---
-    let lCount = 0;
+    // --- SHARED TABLES ---
     html += `
         <div class="card">
             <h2>Personal Savings History</h2>
@@ -201,21 +185,34 @@ function render() {
             </table>
         </div>
         <div class="card">
-            <h2>Loan & Repayment Ledger</h2>
-            <table>
-                ${data[target].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan '+(++lCount):'Repay L'+l.loanId}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
-            </table>
-        </div>
-        <div class="card">
-            <h2>SACCO General Activity (Expenses & Investments)</h2>
+            <h2>General Activity (Expenses/Investments)</h2>
             <table>
                 <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr>
                 ${data.expenses.map(e => `<tr><td>${e.date}</td><td>Expense</td><td>${e.reason}</td><td>${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
                 ${data.investments.map(i => `<tr><td>${i.date}</td><td>Investment</td><td>${i.reason}</td><td>${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
             </table>
-        </div>
-        <button onclick="user=null;render()">Logout</button>`;
+        </div>`;
 
+    if(isAdmin) {
+        html += `
+        <div class="card">
+            <h2>Global Audit Ledger (Edit/Delete Anything)</h2>
+            <div style="overflow-x:auto">
+                <table>
+                    <tr><th>User/Cat</th><th>Type</th><th>Ref/Month</th><th>Amount</th><th>Actions</th></tr>
+                    ${data.members.map(m => {
+                        let innerL = 0;
+                        return data[m].contributions.map((c,i)=>`<tr><td>${m}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="edit" onclick="editRec('S','${m}',${i})">Edit</button> <button class="del" onclick="del('S','${m}',${i})">X</button></td></tr>`).join('') +
+                        data[m].loans.map((l,i)=>`<tr><td>${m}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan '+(++innerL):'Repay L'+l.loanId}</td><td>${l.amt}</td><td><button class="edit" onclick="editRec('L','${m}',${i})">Edit</button> <button class="del" onclick="del('L','${m}',${i})">X</button></td></tr>`).join('');
+                    }).join('')}
+                    ${data.expenses.map((e,i)=>`<tr><td>SACCO</td><td>Expense</td><td>${e.reason}</td><td>${e.amt}</td><td><button class="edit" onclick="editRec('E','',${i})">Edit</button> <button class="del" onclick="del('E','',${i})">X</button></td></tr>`).join('')}
+                    ${data.investments.map((inv,i)=>`<tr><td>SACCO</td><td>Investment</td><td>${inv.reason}</td><td>${inv.amt}</td><td><button class="edit" onclick="editRec('I','',${i})">Edit</button> <button class="del" onclick="del('I','',${i})">X</button></td></tr>`).join('')}
+                </table>
+            </div>
+        </div>`;
+    }
+
+    html += `<button onclick="user=null;render()" style="margin:20px 0">Logout</button>`;
     app.innerHTML = html;
 }
 
@@ -225,7 +222,7 @@ function postInflow() {
     if(t === 'S') data[m].contributions.push({amt, date, month:document.getElementById("moI").value});
     else {
         const sel = document.getElementById("lID");
-        if(sel && sel.value !== "none") data[m].loans.push({amt, date, type:'REPAYMENT', loanId: sel.options[sel.selectedIndex].text.replace('Repay Loan ','')});
+        if(sel && sel.value !== "none") data[m].loans.push({amt, date, type:'REPAYMENT', loanId: sel.value});
     }
     saveData();
 }
@@ -239,16 +236,24 @@ function postOutflow() {
     saveData();
 }
 
-function exportPersonal(name) {
-    let csv = "Date,Type,Ref,Amount\n";
-    data[name].contributions.forEach(c => csv += `${c.date},Savings,${c.month},${c.amt}\n`);
-    data[name].loans.forEach(l => csv += `${l.date},${l.type},${l.type==='LOAN'?'Loan':'Repay L'+l.loanId},${l.amt}\n`);
-    const blob = new Blob([csv], {type:'text/csv'});
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `${name}_Statement.csv`; a.click();
+function del(cat, mem, idx) { if(confirm("Delete record?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else if(cat==='L')data[mem].loans.splice(idx,1); else if(cat==='E')data.expenses.splice(idx,1); else if(cat==='I')data.investments.splice(idx,1); saveData(); } }
+
+function editRec(cat, mem, idx) {
+    let rec;
+    if(cat==='S') rec = data[mem].contributions[idx];
+    else if(cat==='L') rec = data[mem].loans[idx];
+    else if(cat==='E') rec = data.expenses[idx];
+    else if(cat==='I') rec = data.investments[idx];
+    
+    let newAmt = prompt("New Amount:", rec.amt || rec.amt);
+    if(newAmt) {
+        rec.amt = Number(newAmt);
+        if(cat==='E' || cat==='I') rec.reason = prompt("New Description:", rec.reason) || rec.reason;
+        saveData();
+    }
 }
 
-function checkLogin(n) { let p = prompt("PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Wrong PIN"); }
+function checkLogin(n) { let p = prompt("PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
 loadData();
 </script>
 </body>
