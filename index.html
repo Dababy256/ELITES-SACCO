@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Elites SACCO Master System</title>
+<title>Elites SACCO Final Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-    body{font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background:#F3E9D2; margin:0; color:#111}
+    body{font-family:'Segoe UI', sans-serif; background:#F3E9D2; margin:0; color:#111}
     header{background:#111; color:#fff; padding:15px; display:flex; align-items:center; gap:12px; border-bottom:4px solid #B08D57}
     #logoSlot img{height:50px; width:50px; border-radius:50%; border:2px solid #B08D57; background:#fff; object-fit:cover}
     .container{padding:16px; max-width:1150px; margin:auto}
@@ -25,20 +25,18 @@
     .badge-comp{background:#C8E6C9; color:#2E7D32}
     .badge-part{background:#FFF9C4; color:#F57F17}
     .badge-pend{background:#FFCDD2; color:#C62828}
-    hr { border: 0; border-top: 1px solid #ddd; margin: 20px 0; }
 </style>
 </head>
 <body>
 
 <header>
     <div id="logoSlot"></div>
-    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Management & Accountability Portal</small></div>
+    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Master System</small></div>
 </header>
 
 <div class="container" id="app"></div>
 
 <script>
-// --- CORE CONFIG ---
 const BIN_ID = "6971f3eb43b1c97be94154dc"; 
 const MASTER_KEY = "$2a$10$83AEiP9GsrLhSQIC8.nuW.6QtHG5XVzJElaL67zasDR0h8BYGLsQu";
 const PRIMARY_ADMIN = "Apule Gerald Humble";
@@ -69,7 +67,7 @@ async function saveData() {
     render();
 }
 
-// --- LOGIC HELPERS ---
+// --- LOGIC: TARGETS & FINES ---
 function getMonthlyTarget(monthStr) {
     const year = parseInt(monthStr.split('-')[0]);
     const month = parseInt(monthStr.split('-')[1]);
@@ -77,36 +75,35 @@ function getMonthlyTarget(monthStr) {
     return 100000;
 }
 
-function getMemberLoanDebt(mName) {
-    let debt = 0;
-    data[mName].loans.filter(l => l.type === 'LOAN').forEach((loan, idx) => {
-        let id = idx + 1;
-        let principal = Number(loan.amt);
-        let paid = data[mName].loans.filter(r => r.type === 'REPAYMENT' && r.loanId == id).reduce((a, b) => a + Number(b.amt), 0);
-        if (principal - paid > 0) debt += (principal - paid);
-    });
-    return debt;
-}
-
 function calcArrearsAndFines(mName) {
     let totalArrears = 0;
     const today = new Date();
-    const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2,'0')}`;
+    const currentMonthStr = today.toISOString().slice(0, 7);
     let checkY = 2024, checkM = 2;
 
     while (checkY < today.getFullYear() || (checkY === today.getFullYear() && checkM <= today.getMonth() + 1)) {
         let mStr = `${checkY}-${String(checkM).padStart(2,'0')}`;
         let target = getMonthlyTarget(mStr);
-        let paid = data[mName].contributions.filter(c => c.month === mStr).reduce((a,b)=>a+Number(b.amt), 0);
+        let contribs = data[mName].contributions.filter(c => c.month === mStr);
+        let paid = contribs.reduce((a,b)=>a+Number(b.amt), 0);
         
         if (paid < target) {
             let monthBalance = target - paid;
             let penalty = 0;
-            if (mStr !== currentMonthStr) {
-                penalty = 15000; // Passed month flat penalty
-            } else if (today.getDate() >= 10) {
-                let weeks = Math.floor((today.getDate() - 10) / 7) + 1;
-                penalty = Math.min(weeks * 5000, 15000);
+
+            // Check if ANY payment for this month was made on time (<= 10th)
+            let onTime = contribs.some(c => {
+                let day = parseInt(c.date.split('-')[2]);
+                return day <= 10;
+            });
+
+            if (!onTime) {
+                if (mStr !== currentMonthStr) {
+                    penalty = 15000;
+                } else if (today.getDate() >= 10) {
+                    let weeks = Math.floor((today.getDate() - 10) / 7) + 1;
+                    penalty = Math.min(weeks * 5000, 15000);
+                }
             }
             totalArrears += (monthBalance + penalty);
         }
@@ -115,10 +112,20 @@ function calcArrearsAndFines(mName) {
     return totalArrears;
 }
 
+function getMemberLoanDebt(mName) {
+    let debt = 0;
+    data[mName].loans.filter(l => l.type === 'LOAN').forEach((loan, idx) => {
+        let princ = Number(loan.amt);
+        let paid = data[mName].loans.filter(r => r.type === 'REPAYMENT' && r.loanId == (idx+1)).reduce((a, b) => a + Number(b.amt), 0);
+        if (princ - paid > 0) debt += (princ - paid);
+    });
+    return debt;
+}
+
 function render() {
     const app = document.getElementById("app");
     if(!user) {
-        let h = `<div class="card" style="text-align:center"><h2>Member Login</h2><div class="grid">`;
+        let h = `<div class="card" style="text-align:center"><h2>Login</h2><div class="grid">`;
         data.members.forEach(m => h += `<button onclick="checkLogin('${m}')">${m}</button>`);
         app.innerHTML = h + `</div></div>`;
         return;
@@ -127,40 +134,36 @@ function render() {
     const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN;
     const activeMember = (isAdmin && lastSelectedMember) ? lastSelectedMember : user.name;
 
-    // --- GROUP TOTALS ---
-    let grossSavings = 0, interestProfit = 0, activeLoans = 0, totalExpenses = 0, totalInvestments = 0;
+    // --- TREASURY DASHBOARD ---
+    let grossSavings = 0, interestProfit = 0, activeLoans = 0, totalOutflows = 0;
     data.members.forEach(m => {
         data[m].contributions.forEach(c => grossSavings += Number(c.amt));
         data[m].loans.filter(l => l.type === 'LOAN').forEach((loan, idx) => {
-            let id = idx + 1;
-            let princ = Number(loan.amt);
-            let paid = data[m].loans.filter(r => r.type === 'REPAYMENT' && r.loanId == id).reduce((a, b) => a + Number(b.amt), 0);
-            if (princ - paid > 0) activeLoans += (princ - paid);
-            if (paid > princ) interestProfit += (paid - princ);
+            let p = Number(loan.amt), paid = data[m].loans.filter(r => r.type === 'REPAYMENT' && r.loanId == (idx+1)).reduce((a, b) => a + Number(b.amt), 0);
+            if (p - paid > 0) activeLoans += (p - paid);
+            if (paid > p) interestProfit += (paid - p);
         });
     });
-    data.expenses.forEach(e => totalExpenses += Number(e.amt));
-    data.investments.forEach(i => totalInvestments += Number(i.amt));
-    let netCash = (grossSavings + interestProfit) - (activeLoans + totalExpenses + totalInvestments);
+    let sOut = data.expenses.reduce((a,b)=>a+Number(b.amt), 0) + data.investments.reduce((a,b)=>a+Number(b.amt), 0);
+    let netCash = (grossSavings + interestProfit) - (activeLoans + sOut);
 
     let html = `
         <div class="card" style="background:#111; color:#fff">
             <h1 style="margin:0; color:#B08D57">NET CASH: UGX ${netCash.toLocaleString()}</h1>
-            <div class="grid" style="margin-top:15px">
-                <div class="stat-box" style="background:#222; border:1px solid #444; color:#fff"><small>Gross Savings</small><br><strong>${grossSavings.toLocaleString()}</strong></div>
-                <div class="stat-box" style="background:#222; border:1px solid #B08D57; color:#fff"><small>Interest Profit</small><br><strong>${interestProfit.toLocaleString()}</strong></div>
-                <div class="stat-box" style="background:#222; border:1px solid #444; color:#fff"><small>Expenses/Inv</small><br><strong>${(totalExpenses + totalInvestments).toLocaleString()}</strong></div>
-                <div class="stat-box" style="background:#222; border:1px solid #444; color:#fff"><small>Active Loans</small><br><strong>${activeLoans.toLocaleString()}</strong></div>
+            <div class="grid" style="margin-top:10px">
+                <div class="stat-box" style="background:#222; border-color:#444; color:#fff"><small>Gross Savings</small><br><strong>${grossSavings.toLocaleString()}</strong></div>
+                <div class="stat-box" style="background:#222; border-color:#B08D57; color:#fff"><small>Interest Earned</small><br><strong>${interestProfit.toLocaleString()}</strong></div>
+                <div class="stat-box" style="background:#222; border-color:#444; color:#fff"><small>Active Loans</small><br><strong>${activeLoans.toLocaleString()}</strong></div>
             </div>
         </div>`;
 
     if(isAdmin) {
         html += `
         <div class="card" style="border:2px solid #B08D57">
-            <h2>Admin Hub</h2>
+            <h2>Admin Hub (Managing: ${activeMember})</h2>
             <div class="grid">
                 <div>
-                    <h3>Inflow (Savings/Repay)</h3>
+                    <h3>Inflow</h3>
                     <select id="mI" onchange="lastSelectedMember=this.value; render()">
                         ${data.members.map(m => `<option value="${m}" ${m === activeMember ? 'selected' : ''}>${m}</option>`).join('')}
                     </select>
@@ -169,94 +172,84 @@ function render() {
                         <option value="R" ${currentInflowType==='R'?'selected':''}>Loan Repayment</option>
                     </select>
                     ${currentInflowType === 'R' ? `<select id="lID">${data[activeMember].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Repay Loan ${i+1}</option>`).join('') || '<option disabled>No Loans</option>'}</select>` : `<input type="month" id="moI" value="${new Date().toISOString().slice(0,7)}">`}
+                    <input type="date" id="daMan" value="${new Date().toISOString().split('T')[0]}">
                     <input type="number" id="amI" placeholder="Amount (UGX)">
                     <button class="gold" onclick="postInflow()">Post Transaction</button>
                 </div>
                 <div>
-                    <h3>Outflow (Loan/Exp/Inv)</h3>
-                    <select id="tO"><option value="L">New Loan to ${activeMember}</option><option value="E">SACCO Expense</option><option value="I">External Investment</option></select>
-                    <input type="text" id="reO" placeholder="Description/Reference Note">
+                    <h3>Outflow</h3>
+                    <select id="tO"><option value="L">Loan to ${activeMember}</option><option value="E">Expense</option><option value="I">Investment</option></select>
+                    <input type="date" id="daOut" value="${new Date().toISOString().split('T')[0]}">
+                    <input type="text" id="reO" placeholder="Description">
                     <input type="number" id="amO" placeholder="Amount (UGX)">
-                    <button class="gold" onclick="postOutflow()">Release Funds</button>
+                    <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
             </div>
         </div>`;
     }
 
-    // --- DYNAMIC MEMBER LEDGER ---
+    // --- LEDGER ---
     let mySavings = data[activeMember].contributions.reduce((a,b)=>a+Number(b.amt), 0);
-    let myArrears = calcArrearsAndFines(activeMember);
     let myDebt = getMemberLoanDebt(activeMember);
+    let myArrears = calcArrearsAndFines(activeMember);
 
     html += `
         <div class="card">
-            <div style="display:flex; justify-content:space-between; align-items:center">
-                <h2>Ledger View: ${activeMember}</h2>
+            <div style="display:flex; justify-content:space-between">
+                <h2>Ledger: ${activeMember}</h2>
                 <button class="gold" onclick="exportCSV('${activeMember}')">Download Statement</button>
             </div>
             <div class="grid">
-                <div class="stat-box"><strong>Total Savings:</strong><br>${mySavings.toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFF9C4"><strong>Savings Arrears + Fines:</strong><br>UGX ${myArrears.toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFEBEE"><strong>Outstanding Loan Debt:</strong><br>UGX ${myDebt.toLocaleString()}</div>
+                <div class="stat-box"><strong>Savings:</strong> ${mySavings.toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFF9C4"><strong>Arrears + Fines:</strong> UGX ${myArrears.toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFEBEE"><strong>Loan Debt:</strong> UGX ${myDebt.toLocaleString()}</div>
             </div>
-
-            <h3 style="margin-top:20px">Monthly Savings Timeline</h3>
+            <h3 style="margin-top:20px">Chronological Timeline</h3>
             <table>
-                <tr><th>Month</th><th>Amount Paid</th><th>Target</th><th>Status</th></tr>`;
+                <tr><th>Month</th><th>Amount</th><th>Status</th></tr>`;
                 
     const now = new Date();
-    let y = 2024, m = 2;
-    while(y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
-        let mStr = `${y}-${String(m).padStart(2,'0')}`;
-        let target = getMonthlyTarget(mStr);
+    let cy = 2024, cm = 2;
+    while(cy < now.getFullYear() || (cy === now.getFullYear() && cm <= now.getMonth() + 1)) {
+        let mStr = `${cy}-${String(cm).padStart(2,'0')}`;
         let paid = data[activeMember].contributions.filter(c => c.month === mStr).reduce((a,b)=>a+Number(b.amt), 0);
-        let badge = paid >= target ? '<span class="badge badge-comp">COMPLETE</span>' : (paid > 0 ? '<span class="badge badge-part">PARTIAL</span>' : '<span class="badge badge-pend">PENDING</span>');
-        html += `<tr><td>${mStr}</td><td>${paid.toLocaleString()}</td><td>${target.toLocaleString()}</td><td>${badge}</td></tr>`;
-        m++; if(m > 12) { m = 1; y++; }
+        let badge = paid >= getMonthlyTarget(mStr) ? '<span class="badge badge-comp">COMPLETE</span>' : (paid > 0 ? '<span class="badge badge-part">PARTIAL</span>' : '<span class="badge badge-pend">PENDING</span>');
+        html += `<tr><td>${mStr}</td><td>${paid.toLocaleString()}</td><td>${badge}</td></tr>`;
+        cm++; if(cm > 12) { cm = 1; cy++; }
     }
-
-    let loanIdx = 0;
+    
     html += `</table>
-            <h3>Loan & Repayment History</h3>
+            <h3>Loan History</h3>
             <table>
-                <tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th></tr>
-                ${data[activeMember].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan '+(++loanIdx):'Repay L'+l.loanId}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
+                ${data[activeMember].loans.map((l, i) => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan '+(i+1):'Repay L'+l.loanId}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
             </table>
         </div>
-
         <div class="card">
-            <h2>SACCO General Activity</h2>
+            <h2>General Activity</h2>
             <table>
-                <tr><th>Date</th><th>Category</th><th>Description</th><th>Amount</th></tr>
                 ${data.expenses.map(e => `<tr><td>${e.date}</td><td>Expense</td><td>${e.reason}</td><td>${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
                 ${data.investments.map(i => `<tr><td>${i.date}</td><td>Investment</td><td>${i.reason}</td><td>${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
             </table>
         </div>`;
 
     if(isAdmin) {
-        html += `<div class="card"><h2>Global Audit Ledger (Edit/Delete)</h2>
-        <div style="overflow-x:auto"><table>
-            ${data.members.map(mem => {
-                let innerL = 0;
-                return data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="edit" onclick="editRec('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">X</button></td></tr>`).join('') +
-                data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan '+(++innerL):'Repay L'+l.loanId}</td><td>${l.amt}</td><td><button class="edit" onclick="editRec('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">X</button></td></tr>`).join('');
-            }).join('')}
-            ${data.expenses.map((e,i)=>`<tr><td>SACCO</td><td>EXP</td><td>${e.reason}</td><td>${e.amt}</td><td><button class="edit" onclick="editRec('E','',${i})">Edit</button><button class="del" onclick="del('E','',${i})">X</button></td></tr>`).join('')}
-            ${data.investments.map((inv,i)=>`<tr><td>SACCO</td><td>INV</td><td>${inv.reason}</td><td>${inv.amt}</td><td><button class="edit" onclick="editRec('I','',${i})">Edit</button><button class="del" onclick="del('I','',${i})">X</button></td></tr>`).join('')}
+        html += `<div class="card"><h2>Global Audit</h2><div style="overflow-x:auto"><table>
+            ${data.members.map(mem => 
+                data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="edit" onclick="editRec('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">X</button></td></tr>`).join('') +
+                data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="edit" onclick="editRec('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">X</button></td></tr>`).join('')
+            ).join('')}
         </table></div></div>`;
     }
 
-    html += `<button onclick="user=null;render()" style="margin:20px 0">Logout</button>`;
+    html += `<button onclick="user=null;render()">Logout</button>`;
     app.innerHTML = html;
 }
 
-// --- ACTIONS ---
 function postInflow() {
-    const m = document.getElementById("mI").value, t = currentInflowType, amt = Number(document.getElementById("amI").value);
-    const date = new Date().toISOString().split('T')[0];
+    const m = document.getElementById("mI").value, t = currentInflowType, amt = Number(document.getElementById("amI").value), date = document.getElementById("daMan").value;
     if(t === 'S') {
         let mStr = document.getElementById("moI").value;
-        if(data[m].contributions.some(c => c.month === mStr)) return alert("Duplicate Month: Member already has a payment for " + mStr);
+        if(data[m].contributions.some(c => c.month === mStr)) return alert("Month already exists!");
         data[m].contributions.push({amt, date, month: mStr});
     } else {
         const lid = document.getElementById("lID").value;
@@ -266,35 +259,24 @@ function postInflow() {
 }
 
 function postOutflow() {
-    const t = document.getElementById("tO").value, amt = Number(document.getElementById("amO").value), desc = document.getElementById("reO").value, m = (lastSelectedMember || user.name);
-    const date = new Date().toISOString().split('T')[0];
+    const t = document.getElementById("tO").value, amt = Number(document.getElementById("amO").value), desc = document.getElementById("reO").value, m = lastSelectedMember || user.name, date = document.getElementById("daOut").value;
     if(t==='L') data[m].loans.push({amt, date, type:'LOAN'});
     else if(t==='E') data.expenses.push({amt, reason:desc, date});
     else if(t==='I') data.investments.push({amt, reason:desc, date});
     saveData();
 }
 
-function del(cat, mem, idx) { if(confirm("Permanently delete this record?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else if(cat==='L')data[mem].loans.splice(idx,1); else if(cat==='E')data.expenses.splice(idx,1); else if(cat==='I')data.investments.splice(idx,1); saveData(); } }
-
+function del(cat, mem, idx) { if(confirm("Delete?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else if(cat==='L')data[mem].loans.splice(idx,1); saveData(); } }
 function editRec(cat, mem, idx) {
-    let rec = (cat==='S') ? data[mem].contributions[idx] : (cat==='L' ? data[mem].loans[idx] : (cat==='E' ? data.expenses[idx] : data.investments[idx]));
-    let newA = prompt("New Amount:", rec.amt);
-    if(newA) {
-        rec.amt = Number(newA);
-        if(cat==='E' || cat==='I') rec.reason = prompt("New Description:", rec.reason) || rec.reason;
-        saveData();
-    }
+    let rec = (cat==='S') ? data[mem].contributions[idx] : data[mem].loans[idx];
+    let n = prompt("New Amount:", rec.amt); if(n){ rec.amt=Number(n); saveData(); }
 }
-
 function exportCSV(name) {
-    let csv = "Date,Type,Ref,Amount\n";
-    data[name].contributions.forEach(c => csv += `${c.date},Savings,${c.month},${c.amt}\n`);
-    data[name].loans.forEach(l => csv += `${l.date},${l.type},${l.type==='LOAN'?'Loan':'Repay L'+l.loanId},${l.amt}\n`);
+    let csv = "Date,Type,Ref,Amount\n" + data[name].contributions.map(c => `${c.date},Savings,${c.month},${c.amt}`).join('\n') + "\n" + data[name].loans.map(l => `${l.date},${l.type},${l.loanId||'Loan'},${l.amt}`).join('\n');
     const blob = new Blob([csv], {type:'text/csv'});
-    const a = document.createElement('a'); a.href = window.URL.createObjectURL(blob); a.download = `${name}_Statement.csv`; a.click();
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}_Statement.csv`; a.click();
 }
-
-function checkLogin(n) { let p = prompt("Enter PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Wrong PIN"); }
+function checkLogin(n) { let p = prompt("PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
 loadData();
 </script>
 </body>
