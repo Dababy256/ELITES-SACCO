@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Elites SACCO Definitive Master</title>
+<title>Elites SACCO Final Master</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     body{font-family:'Segoe UI', sans-serif; background:#F3E9D2; margin:0; color:#111}
@@ -25,13 +25,14 @@
     .badge-comp{background:#C8E6C9; color:#2E7D32}
     .badge-part{background:#FFF9C4; color:#F57F17}
     .badge-pend{background:#FFCDD2; color:#C62828}
+    hr { border: 0; border-top: 1px solid #ddd; margin: 20px 0; }
 </style>
 </head>
 <body>
 
 <header>
     <div id="logoSlot"></div>
-    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Master System 2026</small></div>
+    <div style="flex-grow:1"><strong>ELITES SACCO</strong><br><small id="userLabel">Master System (Live 2026)</small></div>
 </header>
 
 <div class="container" id="app"></div>
@@ -52,21 +53,8 @@ async function loadData() {
         const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {headers:{'X-Master-Key':MASTER_KEY}});
         const json = await res.json();
         data = json.record;
-        
-        // Data Integrity Fixes
         if(!data.expenses) data.expenses = [];
         if(!data.investments) data.investments = [];
-        if(!data.cashIn) data.cashIn = []; 
-        
-        // Handle Name Change
-        const oldName = "OKULLO DAVID LAURENCE";
-        const newName = "OKULLU DAVID LAURANCE";
-        if(data.members.includes(oldName)){
-            data.members = data.members.map(m => m === oldName ? newName : m);
-            data[newName] = data[oldName];
-            delete data[oldName];
-        }
-
         if(data.logo) document.getElementById("logoSlot").innerHTML = `<img src="${data.logo}">`;
         render();
     } catch (e) { console.error("Sync Error"); }
@@ -83,7 +71,8 @@ async function saveData() {
 function getMonthlyTarget(monthStr) {
     const year = parseInt(monthStr.split('-')[0]);
     const month = parseInt(monthStr.split('-')[1]);
-    return (year === 2024 && month >= 2 && month <= 7) ? 80000 : 100000;
+    if (year === 2024 && month >= 2 && month <= 7) return 80000;
+    return 100000;
 }
 
 function calcArrearsAndFines(mName) {
@@ -120,9 +109,8 @@ function calcArrearsAndFines(mName) {
 
 function getMemberLoanDebt(mName) {
     let debt = 0;
-    data[mName].loans.filter(l => l.type === 'LOAN').forEach(loan => {
-        let p = Number(loan.amt);
-        let paid = data[mName].loans.filter(r => r.type === 'REPAYMENT' && r.loanUID === loan.loanUID).reduce((a, b) => a + Number(b.amt), 0);
+    data[mName].loans.filter(l => l.type === 'LOAN').forEach((loan, idx) => {
+        let p = Number(loan.amt), paid = data[mName].loans.filter(r => r.type === 'REPAYMENT' && r.loanId == (idx+1)).reduce((a, b) => a + Number(b.amt), 0);
         if (p - paid > 0) debt += (p - paid);
     });
     return debt;
@@ -144,22 +132,21 @@ function render() {
     let grossSavings = 0, interestProfit = 0, activeLoans = 0;
     data.members.forEach(m => {
         data[m].contributions.forEach(c => grossSavings += Number(c.amt));
-        data[m].loans.filter(l => l.type === 'LOAN').forEach(loan => {
-            let p = Number(loan.amt), paid = data[m].loans.filter(r => r.type === 'REPAYMENT' && r.loanUID === loan.loanUID).reduce((a, b) => a + Number(b.amt), 0);
+        data[m].loans.filter(l => l.type === 'LOAN').forEach((loan, idx) => {
+            let p = Number(loan.amt), paid = data[m].loans.filter(r => r.type === 'REPAYMENT' && r.loanId == (idx+1)).reduce((a, b) => a + Number(b.amt), 0);
             if (p - paid > 0) activeLoans += (p - paid);
             if (paid > p) interestProfit += (paid - p);
         });
     });
     let sOut = data.expenses.reduce((a,b)=>a+Number(b.amt), 0) + data.investments.reduce((a,b)=>a+Number(b.amt), 0);
-    let sIn = (data.cashIn || []).reduce((a,b)=>a+Number(b.amt), 0);
-    let netCash = (grossSavings + interestProfit + sIn) - (activeLoans + sOut);
+    let netCash = (grossSavings + interestProfit) - (activeLoans + sOut);
 
     let html = `
         <div class="card" style="background:#111; color:#fff">
             <h1 style="margin:0; color:#B08D57">NET CASH: UGX ${netCash.toLocaleString()}</h1>
             <div class="grid" style="margin-top:10px">
                 <div class="stat-box" style="background:#222; border-color:#444; color:#fff"><small>Gross Savings</small><br><strong>${grossSavings.toLocaleString()}</strong></div>
-                <div class="stat-box" style="background:#222; border-color:#B08D57; color:#fff"><small>Total Interest Profit</small><br><strong>${interestProfit.toLocaleString()}</strong></div>
+                <div class="stat-box" style="background:#222; border-color:#B08D57; color:#fff"><small>Interest Profit</small><br><strong>${interestProfit.toLocaleString()}</strong></div>
                 <div class="stat-box" style="background:#222; border-color:#444; color:#fff"><small>Active Loans</small><br><strong>${activeLoans.toLocaleString()}</strong></div>
             </div>
         </div>`;
@@ -167,7 +154,7 @@ function render() {
     if(isAdmin) {
         html += `
         <div class="card" style="border:2px solid #B08D57">
-            <h2>Admin Control: ${activeMember}</h2>
+            <h2>Admin Hub (Managing: ${activeMember})</h2>
             <div class="grid">
                 <div>
                     <h3>Inflow</h3>
@@ -177,44 +164,51 @@ function render() {
                     <select id="tI" onchange="currentInflowType=this.value; render()">
                         <option value="S" ${currentInflowType==='S'?'selected':''}>Savings</option>
                         <option value="R" ${currentInflowType==='R'?'selected':''}>Loan Repayment</option>
-                        <option value="C" ${currentInflowType==='C'?'selected':''}>Cash In / Donation</option>
                     </select>
-                    ${currentInflowType === 'R' ? `<select id="lUID">${data[activeMember].loans.filter(l=>l.type==='LOAN').map((l)=>`<option value="${l.loanUID}">Loan (${l.date} - UGX ${l.amt})</option>`).join('') || '<option disabled>No Loans</option>'}</select>` : (currentInflowType === 'S' ? `<input type="month" id="moI" value="${new Date().toISOString().slice(0,7)}">` : `<input type="text" id="descIn" placeholder="Donation/Source Description">`)}
+                    ${currentInflowType === 'R' ? `<select id="lID">${data[activeMember].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Repay Loan ${i+1}</option>`).join('') || '<option disabled>No Loans</option>'}</select>` : `<input type="month" id="moI" value="${new Date().toISOString().slice(0,7)}">`}
                     <input type="date" id="daMan" value="${new Date().toISOString().split('T')[0]}">
                     <input type="number" id="amI" placeholder="Amount (UGX)">
-                    <button class="gold" onclick="postInflow()">Post Inflow</button>
+                    <button class="gold" onclick="postInflow()">Post Transaction</button>
                 </div>
                 <div>
                     <h3>Outflow</h3>
                     <select id="tO"><option value="L">Loan to ${activeMember}</option><option value="E">Expense</option><option value="I">Investment</option></select>
                     <input type="date" id="daOut" value="${new Date().toISOString().split('T')[0]}">
-                    <input type="text" id="reO" placeholder="Reason/Description">
+                    <input type="text" id="reO" placeholder="Description">
                     <input type="number" id="amO" placeholder="Amount (UGX)">
                     <button class="gold" onclick="postOutflow()">Post Outflow</button>
                 </div>
             </div>
-            <button style="background:#2E7D32; color:white; width:100%; margin-top:10px" onclick="backupFullSystem()">📥 DOWNLOAD FULL SYSTEM BACKUP</button>
+            <hr>
+            <div style="text-align:center">
+                <small style="color:#666">Long-Term Safety Tool:</small><br>
+                <button style="background:#2E7D32; color:white; width:100%; margin-top:5px" onclick="backupFullSystem()">📥 DOWNLOAD FULL SYSTEM BACKUP (JSON)</button>
+            </div>
         </div>`;
     }
 
-    // --- MEMBER VIEW ---
+    // --- MEMBER LEDGER ---
     let mySavings = data[activeMember].contributions.reduce((a,b)=>a+Number(b.amt), 0);
     let myDebt = getMemberLoanDebt(activeMember);
     let myArrears = calcArrearsAndFines(activeMember);
 
     html += `
         <div class="card">
-            <h2>Ledger: ${activeMember}</h2>
-            <div class="grid">
-                <div class="stat-box"><strong>Total Savings:</strong> ${mySavings.toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFF9C4"><strong>Arrears + Fines:</strong> UGX ${myArrears.toLocaleString()}</div>
-                <div class="stat-box" style="background:#FFEBEE"><strong>Total Debt:</strong> UGX ${myDebt.toLocaleString()}</div>
+            <div style="display:flex; justify-content:space-between">
+                <h2>Ledger View: ${activeMember}</h2>
+                <button class="gold" onclick="exportCSV('${activeMember}')">Download Statement</button>
             </div>
-            <h3 style="margin-top:20px">Savings Timeline</h3>
+            <div class="grid">
+                <div class="stat-box"><strong>Total Savings:</strong><br>${mySavings.toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFF9C4"><strong>Arrears + Fines:</strong><br>UGX ${myArrears.toLocaleString()}</div>
+                <div class="stat-box" style="background:#FFEBEE"><strong>Outstanding Debt:</strong><br>UGX ${myDebt.toLocaleString()}</div>
+            </div>
+            <h3 style="margin-top:20px">Monthly Savings Timeline</h3>
             <table>
-                <tr><th>Month</th><th>Paid</th><th>Status</th></tr>`;
-    
-    let cy = 2024, cm = 2; const now = new Date();
+                <tr><th>Month</th><th>Amount Paid</th><th>Status</th></tr>`;
+                
+    const now = new Date();
+    let cy = 2024, cm = 2;
     while(cy < now.getFullYear() || (cy === now.getFullYear() && cm <= now.getMonth() + 1)) {
         let mStr = `${cy}-${String(cm).padStart(2,'0')}`;
         let paid = data[activeMember].contributions.filter(c => c.month === mStr).reduce((a,b)=>a+Number(b.amt), 0);
@@ -224,69 +218,73 @@ function render() {
     }
     
     html += `</table>
-            <h3>Member Transaction History</h3>
+            <h3>Loan & Repay History</h3>
             <table>
-                ${data[activeMember].loans.map(l => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan Disbursed':'Repayment'}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
+                ${data[activeMember].loans.map((l, i) => `<tr><td>${l.date}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan '+(i+1):'Repay L'+l.loanId}</td><td>${Number(l.amt).toLocaleString()}</td></tr>`).join('')}
+            </table>
+        </div>
+        <div class="card">
+            <h2>General Activity (Expenses/Investments)</h2>
+            <table>
+                ${data.expenses.map(e => `<tr><td>${e.date}</td><td>Expense</td><td>${e.reason}</td><td>${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
+                ${data.investments.map(i => `<tr><td>${i.date}</td><td>Investment</td><td>${i.reason}</td><td>${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
             </table>
         </div>`;
 
     if(isAdmin) {
-        html += `<div class="card"><h2>Global Audit Ledger</h2><div style="overflow-x:auto"><table>
-            <tr><th>Member/Source</th><th>Type</th><th>Ref</th><th>Amount</th><th>Action</th></tr>
+        html += `<div class="card"><h2>Global Audit (Edit/Delete)</h2><div style="overflow-x:auto"><table>
             ${data.members.map(mem => 
-                data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="del" onclick="del('S','${mem}',${i})">X</button></td></tr>`).join('') +
-                data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.date}</td><td>${l.amt}</td><td><button class="del" onclick="del('L','${mem}',${i})">X</button></td></tr>`).join('')
+                data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>${c.amt}</td><td><button class="edit" onclick="editRec('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">X</button></td></tr>`).join('') +
+                data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.amt}</td><td><button class="edit" onclick="editRec('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">X</button></td></tr>`).join('')
             ).join('')}
-            ${data.cashIn.map((c,i)=>`<tr><td>${c.source}</td><td>Cash In</td><td>${c.date}</td><td>${c.amt}</td><td><button class="del" onclick="del('C','',${i})">X</button></td></tr>`).join('')}
-            ${data.expenses.map((e,i)=>`<tr><td>Admin</td><td>Expense</td><td>${e.reason}</td><td>${e.amt}</td><td><button class="del" onclick="del('E','',${i})">X</button></td></tr>`).join('')}
         </table></div></div>`;
     }
 
-    html += `<button onclick="user=null;render()">Logout</button>`;
+    html += `<button onclick="user=null;render()" style="margin-top:20px">Logout</button>`;
     app.innerHTML = html;
 }
 
+// --- CORE ACTIONS ---
 function postInflow() {
     const m = document.getElementById("mI").value, t = currentInflowType, amt = Number(document.getElementById("amI").value), date = document.getElementById("daMan").value;
     if(t === 'S') {
         let mStr = document.getElementById("moI").value;
-        if(data[m].contributions.some(c => c.month === mStr)) return alert("Entry exists!");
+        if(data[m].contributions.some(c => c.month === mStr)) return alert("Duplicate Month: Entry already exists!");
         data[m].contributions.push({amt, date, month: mStr});
-    } else if(t === 'R') {
-        const uid = document.getElementById("lUID").value;
-        data[m].loans.push({amt, date, type:'REPAYMENT', loanUID: uid});
-    } else if(t === 'C') {
-        const source = document.getElementById("descIn").value || "Donation";
-        data.cashIn.push({amt, date, source});
+    } else {
+        const lid = document.getElementById("lID").value;
+        data[m].loans.push({amt, date, type:'REPAYMENT', loanId: lid});
     }
     saveData();
 }
 
 function postOutflow() {
     const t = document.getElementById("tO").value, amt = Number(document.getElementById("amO").value), desc = document.getElementById("reO").value, m = lastSelectedMember || user.name, date = document.getElementById("daOut").value;
-    if(t==='L') data[m].loans.push({amt, date, type:'LOAN', loanUID: "L-" + Date.now()});
+    if(t==='L') data[m].loans.push({amt, date, type:'LOAN'});
     else if(t==='E') data.expenses.push({amt, reason:desc, date});
     else if(t==='I') data.investments.push({amt, reason:desc, date});
     saveData();
 }
 
-function del(cat, mem, idx) {
-    if(confirm("Delete this record permanently?")){
-        if(cat==='S') data[mem].contributions.splice(idx,1);
-        else if(cat==='L') data[mem].loans.splice(idx,1);
-        else if(cat==='C') data.cashIn.splice(idx,1);
-        else if(cat==='E') data.expenses.splice(idx,1);
-        saveData();
-    }
+function del(cat, mem, idx) { if(confirm("Delete record?")){ if(cat==='S')data[mem].contributions.splice(idx,1); else if(cat==='L')data[mem].loans.splice(idx,1); saveData(); } }
+function editRec(cat, mem, idx) {
+    let rec = (cat==='S') ? data[mem].contributions[idx] : data[mem].loans[idx];
+    let n = prompt("New Amount:", rec.amt); if(n){ rec.amt=Number(n); saveData(); }
 }
 
 function backupFullSystem() {
     const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
     a.download = `ELITES_SACCO_BACKUP_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
 }
 
+function exportCSV(name) {
+    let csv = "Date,Type,Ref,Amount\n" + data[name].contributions.map(c => `${c.date},Savings,${c.month},${c.amt}`).join('\n') + "\n" + data[name].loans.map(l => `${l.date},${l.type},${l.loanId||'Loan'},${l.amt}`).join('\n');
+    const blob = new Blob([csv], {type:'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}_Statement.csv`; a.click();
+}
 function checkLogin(n) { let p = prompt("PIN:"); if(p===data[n].pin){user={name:n};render();}else alert("Error"); }
 loadData();
 </script>
