@@ -22,70 +22,40 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); min-height: 100vh; }
 
-  /* HEADER */
   header {
-    background: var(--dark);
-    color: #fff;
-    padding: 14px 24px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
+    background: var(--dark); color: #fff; padding: 14px 24px;
+    display: flex; align-items: center; gap: 14px;
     border-bottom: 3px solid var(--gold);
     position: sticky; top: 0; z-index: 100;
     box-shadow: 0 2px 16px rgba(0,0,0,0.3);
   }
-  #logoSlot img { height: 46px; width: 46px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; }
   .logo-placeholder { height: 46px; width: 46px; border-radius: 50%; border: 2px solid var(--gold); background: #222; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .logo-img { height: 46px; width: 46px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; }
   .header-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--gold); letter-spacing: 1px; }
   .header-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
   .header-right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 
-  /* TABS */
-  .tab-bar {
-    background: var(--dark);
-    display: flex;
-    gap: 0;
-    border-bottom: 2px solid var(--gold);
-    overflow-x: auto;
-  }
+  .tab-bar { background: var(--dark); display: flex; border-bottom: 2px solid var(--gold); overflow-x: auto; }
   .tab-bar::-webkit-scrollbar { height: 0; }
-  .tab-btn {
-    padding: 11px 18px;
-    border: none;
-    background: transparent;
-    color: #888;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
+  .tab-btn { padding: 11px 18px; border: none; background: transparent; color: #888; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
   .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); background: #1a1a1a; }
   .tab-btn:hover:not(.active) { color: #ccc; background: #181818; }
 
-  /* LAYOUT */
   .container { padding: 20px 16px; max-width: 1100px; margin: auto; }
   .card { background: var(--white); padding: 22px; border-radius: 14px; margin-bottom: 18px; box-shadow: var(--shadow); }
-  .card-dark { background: var(--dark); color: #fff; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
   .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-  /* STAT BOXES */
   .stat-box { padding: 16px; border-radius: 10px; background: #f8f8f8; border: 1px solid #e5e5e5; }
   .stat-box.gold-border { border-color: var(--gold); }
   .stat-label { font-size: 11px; color: #888; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-  .stat-value { font-size: 1.15rem; font-weight: 700; color: var(--dark); }
+  .stat-value { font-size: 1.1rem; font-weight: 700; color: var(--dark); }
   .stat-box-dark { background: #1e1e1e; border: 1px solid #333; border-radius: 10px; padding: 14px; }
 
-  /* TYPOGRAPHY */
   h2 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--dark); border-bottom: 2px solid var(--gold); padding-bottom: 8px; margin-bottom: 16px; }
   h3 { font-size: 0.95rem; font-weight: 600; color: #444; margin-bottom: 10px; margin-top: 18px; }
   h3:first-child { margin-top: 0; }
 
-  /* TABLES */
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   th, td { border: 1px solid #eee; padding: 9px 10px; text-align: left; }
@@ -93,23 +63,10 @@
   tr:nth-child(even) { background: #fafafa; }
   tr:hover { background: #f5f0e8; }
 
-  /* FORMS */
-  input, select, textarea {
-    padding: 10px 13px;
-    width: 100%;
-    margin-bottom: 10px;
-    border: 1.5px solid #ddd;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 13px;
-    background: #fff;
-    transition: border 0.2s;
-    outline: none;
-  }
+  input, select, textarea { padding: 10px 13px; width: 100%; margin-bottom: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #fff; transition: border 0.2s; outline: none; }
   input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(176,141,87,0.12); }
   label { font-size: 11px; font-weight: 600; color: #666; display: block; margin-bottom: 4px; letter-spacing: 0.3px; }
 
-  /* BUTTONS */
   button { padding: 9px 16px; border: none; border-radius: 8px; background: var(--dark); color: #fff; cursor: pointer; font-weight: 600; font-size: 12px; font-family: 'DM Sans', sans-serif; transition: all 0.15s; margin: 2px; }
   button:hover { opacity: 0.88; transform: translateY(-1px); }
   button:active { transform: translateY(0); }
@@ -119,60 +76,53 @@
   button.edit-btn { background: #1976D2; color: white; padding: 4px 9px; font-size: 10px; border-radius: 5px; }
   button.sm { padding: 6px 11px; font-size: 11px; }
   button.full { width: 100%; margin: 4px 0; }
-  button.outline { background: transparent; color: var(--dark); border: 1.5px solid var(--dark); }
-  button.outline:hover { background: var(--dark); color: #fff; }
+  button.outline { background: transparent; color: #fff; border: 1.5px solid #555; }
+  button.outline:hover { background: #333; }
 
-  /* BADGES */
   .badge { padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; display: inline-block; }
   .badge-comp { background: #C8E6C9; color: #2E7D32; }
   .badge-part { background: #FFF9C4; color: #F57F17; }
   .badge-pend { background: #FFCDD2; color: #C62828; }
   .badge-overdue { background: #FF1744; color: #fff; animation: pulse 1.5s infinite; }
   .badge-active { background: #E3F2FD; color: #1565C0; }
+  .badge-paid { background: #C8E6C9; color: #2E7D32; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
 
-  /* ALERTS */
   .alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; font-weight: 500; display: flex; align-items: flex-start; gap: 10px; }
-  .alert-warn { background: #FFF8E1; border: 1px solid #FFD54F; color: #5D4037; }
-  .alert-danger { background: #FFEBEE; border: 1px solid #EF9A9A; color: #B71C1C; }
-  .alert-info { background: #E3F2FD; border: 1px solid #90CAF9; color: #1A237E; }
+  .alert-warn    { background: #FFF8E1; border: 1px solid #FFD54F; color: #5D4037; }
+  .alert-danger  { background: #FFEBEE; border: 1px solid #EF9A9A; color: #B71C1C; }
+  .alert-info    { background: #E3F2FD; border: 1px solid #90CAF9; color: #1A237E; }
   .alert-success { background: #E8F5E9; border: 1px solid #A5D6A7; color: #1B5E20; }
 
-  /* MODAL */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 16px; }
   .modal { background: #fff; border-radius: 16px; padding: 28px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative; }
   .modal h2 { font-size: 1.1rem; }
   .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: #666; padding: 0; margin: 0; }
 
-  /* LOGIN */
-  .login-wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-  .login-card { background: var(--white); padding: 36px 28px; border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.13); max-width: 480px; width: 100%; }
+  .login-wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background: var(--cream); }
+  .login-card { background: var(--white); padding: 36px 28px; border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.13); max-width: 500px; width: 100%; }
   .login-logo { text-align: center; margin-bottom: 24px; }
   .login-logo-icon { width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--gold); background: var(--dark); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 12px; }
   .login-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--dark); }
   .login-sub { font-size: 12px; color: #999; margin-top: 4px; }
   .member-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
   .member-btn { background: #f8f8f8; color: var(--dark); border: 1.5px solid #e5e5e5; font-size: 12px; padding: 10px; border-radius: 8px; text-align: left; font-weight: 500; }
-  .member-btn:hover { border-color: var(--gold); background: #faf6ee; }
+  .member-btn:hover { border-color: var(--gold); background: #faf6ee; transform: none; }
 
-  /* PROGRESS BAR */
   .progress-wrap { background: #eee; border-radius: 99px; height: 8px; overflow: hidden; margin-top: 6px; }
-  .progress-bar { height: 8px; border-radius: 99px; background: linear-gradient(90deg, var(--gold), #e6b96a); transition: width 0.6s ease; }
+  .progress-bar { height: 8px; border-radius: 99px; background: linear-gradient(90deg, var(--gold), #e6b96a); }
 
-  /* DIVIDER */
   .divider { border: none; border-top: 1px solid #eee; margin: 16px 0; }
 
-  /* NET CASH HERO */
   .hero-card { background: var(--dark); color: #fff; padding: 24px; border-radius: 16px; margin-bottom: 18px; border: 1px solid #333; }
   .hero-amount { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--gold); font-weight: 900; }
   .hero-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
 
-  /* LOAN STATUS */
   .loan-card { border: 1px solid #eee; border-radius: 10px; padding: 14px; margin-bottom: 10px; background: #fafafa; }
-  .loan-card.overdue { border-color: #ff4d4d; background: #fff5f5; }
-  .loan-card.active { border-color: #90CAF9; background: #f5faff; }
+  .loan-card.overdue    { border-color: #ff4d4d; background: #fff5f5; }
+  .loan-card.active-loan { border-color: #90CAF9; background: #f5faff; }
+  .loan-card.paid-loan  { border-color: #A5D6A7; background: #f5fff7; opacity: 0.85; }
 
-  /* RESPONSIVE */
   @media(max-width: 600px) {
     .grid-2 { grid-template-columns: 1fr; }
     .member-grid { grid-template-columns: 1fr; }
@@ -181,60 +131,46 @@
 </style>
 </head>
 <body>
-
 <div id="root"></div>
-
 <script>
-// ============================================================
+// ─────────────────────────────────────────────
 // CONFIG
-// ============================================================
-const BIN_ID = "6971f3eb43b1c97be94154dc";
-const MASTER_KEY = "$2a$10$83AEiP9GsrLhSQIC8.nuW.6QtHG5XVzJElaL67zasDR0h8BYGLsQu";
-const PRIMARY_ADMIN = "Apule Gerald Humble";
+// ─────────────────────────────────────────────
+const BIN_ID          = "6971f3eb43b1c97be94154dc";
+const MASTER_KEY      = "$2a$10$83AEiP9GsrLhSQIC8.nuW.6QtHG5XVzJElaL67zasDR0h8BYGLsQu";
+const PRIMARY_ADMIN   = "Apule Gerald Humble";
 const SECONDARY_ADMIN = "Ameny Ronald";
-const LOAN_INTEREST_RATE = 0.05; // 5% per month compounded
 
-// ============================================================
+// ─────────────────────────────────────────────
 // STATE
-// ============================================================
-let user = null;
-let data = {};
+// ─────────────────────────────────────────────
+let user               = null;
+let data               = {};
 let lastSelectedMember = null;
-let currentInflowType = "S";
-let activeTab = "dashboard";
-let editModalData = null;
+let currentInflowType  = "S";
+let activeTab          = "dashboard";
+let editModalData      = null;
 
-// ============================================================
+// ─────────────────────────────────────────────
 // DATA LAYER
-// ============================================================
+// ─────────────────────────────────────────────
 async function loadData() {
   try {
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-      headers: { 'X-Master-Key': MASTER_KEY }
-    });
+    const res  = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': MASTER_KEY } });
     const json = await res.json();
     data = json.record;
 
-    // Name migration
-    const oldName = "OKULLO DAVID LAURENCE";
-    const newName = "OKULLU DAVID LAURANCE";
+    // legacy name migration
+    const oldName = "OKULLO DAVID LAURENCE", newName = "OKULLU DAVID LAURANCE";
     if (data[oldName]) {
-      data[newName] = data[oldName];
-      delete data[oldName];
-      data.members = data.members.map(m => m === oldName ? newName : m);
+      data[newName] = data[oldName]; delete data[oldName];
+      data.members  = data.members.map(m => m === oldName ? newName : m);
     }
-
-    if (!data.expenses) data.expenses = [];
+    if (!data.expenses)    data.expenses    = [];
     if (!data.investments) data.investments = [];
-    if (!data.cashIn) data.cashIn = [];
-
-    if (data.logo) {
-      document.querySelectorAll('.logo-img').forEach(el => el.src = data.logo);
-    }
+    if (!data.cashIn)      data.cashIn      = [];
     render();
-  } catch (e) {
-    showToast("⚠️ Sync failed — check connection", "danger");
-  }
+  } catch (e) { showToast("⚠️ Sync failed — check connection", "danger"); }
 }
 
 async function saveData() {
@@ -246,231 +182,217 @@ async function saveData() {
     });
     showToast("✅ Saved successfully", "success");
     render();
-  } catch (e) {
-    showToast("❌ Save failed", "danger");
-  }
+  } catch (e) { showToast("❌ Save failed", "danger"); }
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // FINANCIAL CALCULATIONS
-// ============================================================
+// ─────────────────────────────────────────────
 function getMonthlyTarget(monthStr) {
-  const year = parseInt(monthStr.split('-')[0]);
-  const month = parseInt(monthStr.split('-')[1]);
-  return (year === 2024 && month >= 2 && month <= 7) ? 80000 : 100000;
+  const y = parseInt(monthStr.split('-')[0]);
+  const m = parseInt(monthStr.split('-')[1]);
+  return (y === 2024 && m >= 2 && m <= 7) ? 80000 : 100000;
 }
 
 function calcArrearsAndFines(mName) {
-  let totalArrears = 0;
+  let total = 0;
   const today = new Date();
-  const currentMonthStr = today.toISOString().slice(0, 7);
-  let checkY = 2024, checkM = 2;
-  while (checkY < today.getFullYear() || (checkY === today.getFullYear() && checkM <= today.getMonth() + 1)) {
-    let mStr = `${checkY}-${String(checkM).padStart(2, '0')}`;
-    let target = getMonthlyTarget(mStr);
-    let contribs = data[mName].contributions.filter(c => c.month === mStr);
-    let paid = contribs.reduce((a, b) => a + Number(b.amt), 0);
+  const curMonthStr = today.toISOString().slice(0, 7);
+  let cy = 2024, cm = 2;
+  while (cy < today.getFullYear() || (cy === today.getFullYear() && cm <= today.getMonth() + 1)) {
+    const mStr   = `${cy}-${String(cm).padStart(2,'0')}`;
+    const target = getMonthlyTarget(mStr);
+    const contribs = data[mName].contributions.filter(c => c.month === mStr);
+    const paid   = contribs.reduce((a,b) => a + Number(b.amt), 0);
     if (paid < target) {
-      let monthBalance = target - paid;
       let penalty = 0;
-      let onTime = contribs.some(c => parseInt(c.date.split('-')[2]) <= 10);
+      const onTime = contribs.some(c => parseInt(c.date.split('-')[2]) <= 10);
       if (!onTime) {
-        if (mStr !== currentMonthStr) penalty = 15000;
-        else if (today.getDate() >= 10) penalty = Math.min((Math.floor((today.getDate() - 10) / 7) + 1) * 5000, 15000);
+        if (mStr !== curMonthStr) penalty = 15000;
+        else if (today.getDate() >= 10) penalty = Math.min((Math.floor((today.getDate()-10)/7)+1)*5000, 15000);
       }
-      totalArrears += (monthBalance + penalty);
+      total += (target - paid) + penalty;
     }
-    checkM++; if (checkM > 12) { checkM = 1; checkY++; }
+    cm++; if (cm > 12) { cm = 1; cy++; }
   }
-  return totalArrears;
+  return total;
 }
 
-// Compute compounded balance for a specific loan
-// 5% monthly compounded from issue date
+/*
+  LOAN INTEREST RULES:
+  ─ A loan is interest-free within the calendar month it is issued.
+  ─ If still outstanding when a NEW calendar month begins, 5% is applied to the balance.
+  ─ Each subsequent month crossing continues to compound on the remaining balance.
+  ─ Repayments reduce the balance in the month they are made (before interest for that month is applied next month).
+  ─ A loan is FULLY PAID when outstanding rounds to 0.
+  ─ OVERDUE = active (not fully paid), older than 1 full calendar month, and zero repayments.
+*/
 function calcLoanBalance(loan, loanId, mName) {
-  const principal = Number(loan.amt);
-  const issueDate = new Date(loan.date);
-  const today = new Date();
+  const principal  = Number(loan.amt);
+  const issueDate  = new Date(loan.date);
+  const issueY     = issueDate.getFullYear();
+  const issueM     = issueDate.getMonth(); // 0-based
 
-  // Months elapsed since issue
-  const monthsElapsed = (today.getFullYear() - issueDate.getFullYear()) * 12
-    + (today.getMonth() - issueDate.getMonth())
-    + (today.getDate() >= issueDate.getDate() ? 0 : -1);
+  const today      = new Date();
+  const todayY     = today.getFullYear();
+  const todayM     = today.getMonth();
 
-  // Compounded total owed
-  const totalOwed = principal * Math.pow(1 + LOAN_INTEREST_RATE, Math.max(0, monthsElapsed));
-
-  // Total repaid
-  const totalRepaid = (data[mName].loans || [])
+  // All repayments for this specific loan
+  const repayments = (data[mName].loans || [])
     .filter(r => r.type === 'REPAYMENT' && String(r.loanId) === String(loanId))
-    .reduce((a, b) => a + Number(b.amt), 0);
+    .map(r => ({ y: new Date(r.date).getFullYear(), m: new Date(r.date).getMonth(), amt: Number(r.amt) }));
 
-  const outstanding = Math.max(0, totalOwed - totalRepaid);
-  const interestAccrued = totalOwed - principal;
+  const totalRepaid = repayments.reduce((a, r) => a + r.amt, 0);
 
-  return {
-    principal,
-    monthsElapsed: Math.max(0, monthsElapsed),
-    totalOwed: Math.round(totalOwed),
-    totalRepaid,
-    outstanding: Math.round(outstanding),
-    interestAccrued: Math.round(interestAccrued),
-    isOverdue: monthsElapsed >= 3 && totalRepaid === 0,
-    isFullyPaid: outstanding <= 0
-  };
+  // Walk calendar month by month starting from issue month
+  let balance    = principal;
+  let cy = issueY, cm = issueM;
+  let firstMonth = true;
+
+  while (cy < todayY || (cy === todayY && cm <= todayM)) {
+    // Apply compounding at start of every month AFTER the issue month
+    if (!firstMonth && balance > 0) {
+      balance *= 1.05;
+    }
+
+    // Subtract any repayments that fall in this calendar month
+    repayments
+      .filter(r => r.y === cy && r.m === cm)
+      .forEach(r => { balance -= r.amt; });
+
+    if (balance <= 0) { balance = 0; break; }
+
+    // Advance to next month
+    firstMonth = false;
+    cm++; if (cm > 11) { cm = 0; cy++; }
+  }
+
+  const outstanding   = Math.max(0, Math.round(balance));
+  const isFullyPaid   = outstanding === 0 && totalRepaid > 0;
+  const monthsElapsed = (todayY - issueY) * 12 + (todayM - issueM);
+  // Overdue: not paid off, at least 1 full month old, zero repayments at all
+  const isOverdue     = !isFullyPaid && monthsElapsed >= 1 && totalRepaid === 0;
+  // Interest accrued = what was added by compounding = outstanding+totalRepaid - principal
+  const interestAccrued = Math.max(0, Math.round(outstanding + totalRepaid - principal));
+
+  return { principal, monthsElapsed, outstanding, totalRepaid, interestAccrued, isFullyPaid, isOverdue };
 }
 
 function getMemberLoanDebt(mName) {
-  let debt = 0;
-  data[mName].loans.filter(l => l.type === 'LOAN').forEach((loan, idx) => {
-    const bal = calcLoanBalance(loan, idx + 1, mName);
-    debt += bal.outstanding;
-  });
-  return debt;
+  return data[mName].loans
+    .filter(l => l.type === 'LOAN')
+    .reduce((sum, loan, idx) => sum + calcLoanBalance(loan, idx+1, mName).outstanding, 0);
 }
 
 function getGlobalStats() {
-  let grossSavings = 0, interestProfit = 0, activeLoans = 0;
+  let grossSavings = 0, activeLoans = 0;
   data.members.forEach(m => {
     data[m].contributions.forEach(c => grossSavings += Number(c.amt));
-    data[m].loans.filter(l => l.type === 'LOAN').forEach((loan, idx) => {
-      const bal = calcLoanBalance(loan, idx + 1, m);
-      activeLoans += bal.outstanding;
-      interestProfit += bal.interestAccrued - bal.outstanding; // net interest collected
-    });
+    activeLoans += getMemberLoanDebt(m);
   });
-  let sIn = data.cashIn.reduce((a, b) => a + Number(b.amt), 0);
-  let sOut = data.expenses.reduce((a, b) => a + Number(b.amt), 0)
-    + data.investments.reduce((a, b) => a + Number(b.amt), 0);
-  let netCash = (grossSavings + sIn) - (activeLoans + sOut);
-  return { grossSavings, interestProfit, activeLoans, netCash, sIn, sOut };
+  const sIn  = data.cashIn.reduce((a,b) => a+Number(b.amt), 0);
+  const sOut = data.expenses.reduce((a,b) => a+Number(b.amt), 0) + data.investments.reduce((a,b) => a+Number(b.amt), 0);
+  return { grossSavings, activeLoans, sIn, sOut, netCash: (grossSavings + sIn) - (activeLoans + sOut) };
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // RENDER ENGINE
-// ============================================================
+// ─────────────────────────────────────────────
 function render() {
   const root = document.getElementById("root");
   if (!user) { root.innerHTML = renderLogin(); return; }
 
-  const isAdmin = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN;
+  const isAdmin      = user.name === PRIMARY_ADMIN || user.name === SECONDARY_ADMIN;
   const activeMember = (isAdmin && lastSelectedMember) ? lastSelectedMember : user.name;
 
-  // Build tabs
   const tabs = [
-    { id: 'dashboard', label: '📊 Dashboard' },
-    { id: 'ledger', label: '📒 My Ledger' },
+    { id:'dashboard', label:'📊 Dashboard' },
+    { id:'ledger',    label:'📒 Ledger' },
+    { id:'activity',  label:'🏦 SACCO Activity' },
     ...(isAdmin ? [
-      { id: 'admin', label: '⚙️ Admin Hub' },
-      { id: 'audit', label: '🔍 Global Audit' },
-      { id: 'monthly', label: '📅 Monthly Report' }
+      { id:'admin',   label:'⚙️ Admin Hub' },
+      { id:'audit',   label:'🔍 Global Audit' },
+      { id:'monthly', label:'📅 Monthly Report' }
     ] : []),
-    { id: 'settings', label: '🔐 Settings' }
+    { id:'settings',  label:'🔐 Settings' }
   ];
 
   let html = `
     <header>
-      <div id="logoSlot">
-        ${data.logo ? `<img class="logo-img" src="${data.logo}">` : `<div class="logo-placeholder">🏦</div>`}
-      </div>
+      <div>${data.logo ? `<img class="logo-img" src="${data.logo}">` : `<div class="logo-placeholder">🏦</div>`}</div>
       <div>
         <div class="header-title">ELITES SACCO</div>
-        <div class="header-sub" id="userLabel">${user.name}</div>
+        <div class="header-sub">${user.name}${isAdmin ? ' · Admin' : ''}</div>
       </div>
-      <div class="header-right">
-        <button class="outline sm" onclick="logout()">Logout</button>
-      </div>
+      <div class="header-right"><button class="outline sm" onclick="logout()">Logout</button></div>
     </header>
     <div class="tab-bar">
-      ${tabs.map(t => `<button class="tab-btn ${activeTab === t.id ? 'active' : ''}" onclick="switchTab('${t.id}')">${t.label}</button>`).join('')}
+      ${tabs.map(t => `<button class="tab-btn ${activeTab===t.id?'active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`).join('')}
     </div>
-    <div class="container">
-  `;
+    <div class="container">`;
 
-  if (activeTab === 'dashboard') html += renderDashboard(isAdmin, activeMember);
-  else if (activeTab === 'ledger') html += renderLedger(activeMember);
-  else if (activeTab === 'admin' && isAdmin) html += renderAdmin(activeMember);
-  else if (activeTab === 'audit' && isAdmin) html += renderAudit();
-  else if (activeTab === 'monthly' && isAdmin) html += renderMonthlyReport();
-  else if (activeTab === 'settings') html += renderSettings();
+  if      (activeTab==='dashboard')           html += renderDashboard(isAdmin, activeMember);
+  else if (activeTab==='ledger')              html += renderLedger(isAdmin, activeMember);
+  else if (activeTab==='activity')            html += renderActivity();
+  else if (activeTab==='admin'   && isAdmin)  html += renderAdmin(activeMember);
+  else if (activeTab==='audit'   && isAdmin)  html += renderAudit();
+  else if (activeTab==='monthly' && isAdmin)  html += renderMonthlyReport();
+  else if (activeTab==='settings')            html += renderSettings();
 
   html += `</div>`;
-
-  // Edit modal
   if (editModalData) html += renderEditModal();
-
   root.innerHTML = html;
 }
 
-// ============================================================
-// TABS & NAV
-// ============================================================
-function switchTab(tab) {
-  activeTab = tab;
-  render();
-}
+function switchTab(tab) { activeTab = tab; render(); }
+function logout() { user = null; activeTab = 'dashboard'; lastSelectedMember = null; render(); }
 
-function logout() {
-  user = null;
-  activeTab = 'dashboard';
-  lastSelectedMember = null;
-  render();
-}
-
-// ============================================================
+// ─────────────────────────────────────────────
 // LOGIN
-// ============================================================
+// ─────────────────────────────────────────────
 function renderLogin() {
   return `
-    <div class="login-wrap" style="background:var(--cream)">
+    <div class="login-wrap">
       <div class="login-card">
         <div class="login-logo">
           <div class="login-logo-icon">🏦</div>
           <div class="login-title">ELITES SACCO</div>
-          <div class="login-sub">Master Audit System</div>
+          <div class="login-sub">Master Audit System — Select your name</div>
         </div>
         <hr class="divider">
-        <label>Select your name to continue</label>
         <div class="member-grid">
-          ${(data.members || []).map(m => `<button class="member-btn" onclick="checkLogin('${m}')">${m}</button>`).join('')}
+          ${(data.members||[]).map(m => `<button class="member-btn" onclick="checkLogin('${m}')">${m}</button>`).join('')}
         </div>
       </div>
     </div>`;
 }
 
 function checkLogin(n) {
-  const p = prompt(`Enter PIN for ${n}:`);
+  const p = prompt(`PIN for ${n}:`);
   if (p === null) return;
-  if (p === data[n].pin) {
-    user = { name: n };
-    activeTab = 'dashboard';
-    render();
-  } else {
-    alert("Incorrect PIN. Please try again.");
-  }
+  if (p === data[n].pin) { user = { name: n }; activeTab = 'dashboard'; render(); }
+  else alert("Incorrect PIN. Please try again.");
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // DASHBOARD
-// ============================================================
+// ─────────────────────────────────────────────
 function renderDashboard(isAdmin, activeMember) {
-  const stats = getGlobalStats();
-  const mySavings = data[activeMember].contributions.reduce((a, b) => a + Number(b.amt), 0);
-  const myDebt = getMemberLoanDebt(activeMember);
+  const stats     = getGlobalStats();
+  const mySavings = data[activeMember].contributions.reduce((a,b) => a+Number(b.amt), 0);
+  const myDebt    = getMemberLoanDebt(activeMember);
   const myArrears = calcArrearsAndFines(activeMember);
 
-  // Alerts for member
   let alerts = '';
-  if (myArrears > 0) alerts += `<div class="alert alert-warn">⚠️ You have arrears & fines of <strong>UGX ${myArrears.toLocaleString()}</strong>. Please clear to stay in good standing.</div>`;
-  if (myDebt > 0) alerts += `<div class="alert alert-danger">🔴 You have an outstanding loan balance of <strong>UGX ${myDebt.toLocaleString()}</strong> (including compounded interest).</div>`;
-  if (myArrears === 0 && myDebt === 0) alerts += `<div class="alert alert-success">✅ You're fully up to date! No arrears or outstanding loans.</div>`;
+  if (myArrears > 0)                       alerts += `<div class="alert alert-warn">⚠️ You have arrears &amp; fines of <strong>UGX ${myArrears.toLocaleString()}</strong>. Please clear to stay in good standing.</div>`;
+  if (myDebt    > 0)                        alerts += `<div class="alert alert-danger">🔴 Outstanding loan balance: <strong>UGX ${myDebt.toLocaleString()}</strong> (includes compounded interest).</div>`;
+  if (myArrears === 0 && myDebt === 0)      alerts += `<div class="alert alert-success">✅ You're fully up to date — no arrears or outstanding loans.</div>`;
 
-  // Savings progress this month
-  const now = new Date();
-  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const now             = new Date();
+  const thisMonth       = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const thisMonthTarget = getMonthlyTarget(thisMonth);
-  const thisMonthPaid = data[activeMember].contributions.filter(c => c.month === thisMonth).reduce((a, b) => a + Number(b.amt), 0);
-  const pct = Math.min(100, Math.round((thisMonthPaid / thisMonthTarget) * 100));
+  const thisMonthPaid   = data[activeMember].contributions.filter(c => c.month===thisMonth).reduce((a,b)=>a+Number(b.amt),0);
+  const pct             = Math.min(100, Math.round((thisMonthPaid/thisMonthTarget)*100));
 
   return `
     ${alerts}
@@ -480,14 +402,14 @@ function renderDashboard(isAdmin, activeMember) {
       <div class="grid" style="margin-top:14px; gap:10px">
         <div class="stat-box-dark">
           <div class="stat-label" style="color:#888">Gross Savings</div>
-          <div style="color:#fff; font-weight:700; font-size:1rem">${stats.grossSavings.toLocaleString()}</div>
+          <div style="color:#fff; font-weight:700; font-size:1rem">UGX ${stats.grossSavings.toLocaleString()}</div>
         </div>
         <div class="stat-box-dark" style="border-color:var(--gold)">
           <div class="stat-label" style="color:#888">Active Loan Portfolio</div>
-          <div style="color:var(--gold); font-weight:700; font-size:1rem">${stats.activeLoans.toLocaleString()}</div>
+          <div style="color:var(--gold); font-weight:700; font-size:1rem">UGX ${stats.activeLoans.toLocaleString()}</div>
         </div>
         <div class="stat-box-dark">
-          <div class="stat-label" style="color:#888">Cash In / Expenses</div>
+          <div class="stat-label" style="color:#888">Cash In / Total Outflow</div>
           <div style="color:#fff; font-weight:700; font-size:1rem">+${stats.sIn.toLocaleString()} / -${stats.sOut.toLocaleString()}</div>
         </div>
       </div>
@@ -509,75 +431,90 @@ function renderDashboard(isAdmin, activeMember) {
           <div class="stat-value" style="color:var(--red)">UGX ${myDebt.toLocaleString()}</div>
         </div>
       </div>
-
-      <h3 style="margin-top:18px">This Month's Savings (${thisMonth})</h3>
+      <h3 style="margin-top:18px">This Month's Savings — ${thisMonth}</h3>
       <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:4px">
         <span>UGX ${thisMonthPaid.toLocaleString()} paid</span>
         <span>Target: UGX ${thisMonthTarget.toLocaleString()} (${pct}%)</span>
       </div>
-      <div class="progress-wrap">
-        <div class="progress-bar" style="width:${pct}%"></div>
-      </div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
     </div>
 
-    ${renderLoanCards(activeMember)}
-  `;
+    ${renderLoanCards(activeMember)}`;
 }
 
 function renderLoanCards(mName) {
-  const loans = data[mName].loans.filter(l => l.type === 'LOAN');
-  if (loans.length === 0) return '';
-
+  const loans = data[mName].loans.filter(l => l.type==='LOAN');
+  if (!loans.length) return '';
   let html = `<div class="card"><h2>My Loans</h2>`;
   loans.forEach((loan, idx) => {
     const loanId = idx + 1;
-    const bal = calcLoanBalance(loan, loanId, mName);
-    const cls = bal.isOverdue ? 'overdue' : (bal.isFullyPaid ? '' : 'active');
-
+    const bal    = calcLoanBalance(loan, loanId, mName);
+    const cls    = bal.isFullyPaid ? 'paid-loan' : bal.isOverdue ? 'overdue' : 'active-loan';
+    const badge  = bal.isFullyPaid
+      ? '<span class="badge badge-paid">✅ FULLY PAID</span>'
+      : bal.isOverdue
+        ? '<span class="badge badge-overdue">⚠️ OVERDUE</span>'
+        : '<span class="badge badge-active">Active</span>';
     html += `
       <div class="loan-card ${cls}">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
-          <strong>Loan #${loanId}</strong>
-          ${bal.isOverdue ? '<span class="badge badge-overdue">⚠️ OVERDUE</span>' : bal.isFullyPaid ? '<span class="badge badge-comp">✅ PAID</span>' : '<span class="badge badge-active">Active</span>'}
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+          <strong>Loan #${loanId} &nbsp;<small style="color:#888; font-weight:400">Issued: ${loan.date}</small></strong>
+          ${badge}
         </div>
         <div class="grid" style="gap:8px">
           <div><div class="stat-label">Principal</div><div style="font-weight:600">UGX ${bal.principal.toLocaleString()}</div></div>
           <div><div class="stat-label">Months Elapsed</div><div style="font-weight:600">${bal.monthsElapsed}</div></div>
-          <div><div class="stat-label">Total Owed (5% compounded)</div><div style="font-weight:600; color:var(--red)">UGX ${bal.totalOwed.toLocaleString()}</div></div>
           <div><div class="stat-label">Total Repaid</div><div style="font-weight:600; color:var(--green)">UGX ${bal.totalRepaid.toLocaleString()}</div></div>
-          <div><div class="stat-label">Outstanding Balance</div><div style="font-weight:700; font-size:1rem; color:${bal.isFullyPaid ? 'var(--green)' : 'var(--red)'}">UGX ${bal.outstanding.toLocaleString()}</div></div>
-          <div><div class="stat-label">Interest Accrued</div><div style="font-weight:600; color:#777">UGX ${bal.interestAccrued.toLocaleString()}</div></div>
+          <div><div class="stat-label">Interest Accrued</div><div style="font-weight:600; color:#888">UGX ${bal.interestAccrued.toLocaleString()}</div></div>
         </div>
-        ${bal.isOverdue ? `<div class="alert alert-danger" style="margin-top:10px; padding:8px 12px; font-size:12px">⚠️ This loan is overdue — no repayments made in 3+ months. Please contact admin.</div>` : ''}
+        <div style="margin-top:10px; padding-top:10px; border-top:1px solid #eee">
+          <div class="stat-label">Outstanding Balance (Principal + Compounded Interest)</div>
+          <div style="font-weight:800; font-size:1.15rem; color:${bal.isFullyPaid?'var(--green)':'var(--red)'}">
+            UGX ${bal.outstanding.toLocaleString()}
+          </div>
+        </div>
+        ${bal.isOverdue ? `<div class="alert alert-danger" style="margin-top:10px; padding:8px 12px; font-size:12px">⚠️ No repayments recorded. This loan has been active for ${bal.monthsElapsed} month(s). Please contact an admin.</div>` : ''}
       </div>`;
   });
-  html += `</div>`;
-  return html;
+  return html + `</div>`;
 }
 
-// ============================================================
-// LEDGER
-// ============================================================
-function renderLedger(mName) {
+// ─────────────────────────────────────────────
+// LEDGER — admin can pick any member
+// ─────────────────────────────────────────────
+function renderLedger(isAdmin, activeMember) {
   const now = new Date();
   let monthRows = '';
   let cy = 2024, cm = 2;
-  while (cy < now.getFullYear() || (cy === now.getFullYear() && cm <= now.getMonth() + 1)) {
-    let mStr = `${cy}-${String(cm).padStart(2, '0')}`;
-    let paid = data[mName].contributions.filter(c => c.month === mStr).reduce((a, b) => a + Number(b.amt), 0);
-    let target = getMonthlyTarget(mStr);
-    let badge = paid >= target ? '<span class="badge badge-comp">COMPLETE</span>' : (paid > 0 ? '<span class="badge badge-part">PARTIAL</span>' : '<span class="badge badge-pend">PENDING</span>');
+  while (cy < now.getFullYear() || (cy === now.getFullYear() && cm <= now.getMonth()+1)) {
+    const mStr  = `${cy}-${String(cm).padStart(2,'0')}`;
+    const paid  = data[activeMember].contributions.filter(c=>c.month===mStr).reduce((a,b)=>a+Number(b.amt),0);
+    const target = getMonthlyTarget(mStr);
+    const badge  = paid >= target ? '<span class="badge badge-comp">COMPLETE</span>' : paid > 0 ? '<span class="badge badge-part">PARTIAL</span>' : '<span class="badge badge-pend">PENDING</span>';
     monthRows += `<tr><td>${mStr}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${target.toLocaleString()}</td><td>${badge}</td></tr>`;
     cm++; if (cm > 12) { cm = 1; cy++; }
   }
 
-  const loans = data[mName].loans.filter(l => l.type === 'LOAN');
+  const loans = data[activeMember].loans.filter(l => l.type==='LOAN');
+
+  // Admin gets a member picker at the top so they can view any member's full ledger
+  let picker = '';
+  if (isAdmin) {
+    picker = `
+      <div class="card" style="border:2px solid var(--gold); padding:14px; margin-bottom:18px">
+        <label style="font-size:13px; font-weight:700; color:var(--dark)">👤 Admin: View Any Member's Ledger</label>
+        <select style="margin-top:6px" onchange="lastSelectedMember=this.value; render()">
+          ${data.members.map(m => `<option value="${m}" ${m===activeMember?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </div>`;
+  }
 
   return `
+    ${picker}
     <div class="card">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px">
-        <h2 style="border:none; padding:0; margin:0">Savings Timeline — ${mName}</h2>
-        <button class="gold sm" onclick="exportMemberCSV('${mName}')">📥 Download Statement</button>
+        <h2 style="border:none; padding:0; margin:0">📒 Savings Timeline — ${activeMember}</h2>
+        <button class="gold sm" onclick="exportMemberCSV('${activeMember}')">📥 Download Statement</button>
       </div>
       <div class="table-wrap" style="margin-top:14px">
         <table>
@@ -588,59 +525,144 @@ function renderLedger(mName) {
     </div>
 
     <div class="card">
-      <h2>Loan & Repayment History</h2>
+      <h2>Loan & Repayment History — ${activeMember}</h2>
+      ${!loans.length ? '<p style="color:#999; font-size:13px">No loan records.</p>' : ''}
       <div class="table-wrap">
         <table>
-          <tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th><th>Balance (Compounded)</th></tr>
-          ${loans.map((l, i) => {
-            const loanId = i + 1;
-            const bal = calcLoanBalance(l, loanId, mName);
-            return `<tr style="background:#E3F2FD"><td>${l.date}</td><td><strong>LOAN #${loanId}</strong></td><td>Disbursed</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td style="color:var(--red); font-weight:700">UGX ${bal.outstanding.toLocaleString()} outstanding</td></tr>` +
-              data[mName].loans.filter(r => r.type === 'REPAYMENT' && String(r.loanId) === String(loanId))
-                .map(r => `<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${loanId}</td><td style="color:var(--green)">UGX ${Number(r.amt).toLocaleString()}</td><td></td></tr>`).join('');
+          ${loans.length ? '<tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th><th>Outstanding (w/ interest)</th></tr>' : ''}
+          ${loans.map((l,i) => {
+            const loanId = i+1;
+            const bal    = calcLoanBalance(l, loanId, activeMember);
+            return `<tr style="background:#E3F2FD; font-weight:600">
+              <td>${l.date}</td><td>LOAN #${loanId} — Disbursed</td><td>—</td>
+              <td>UGX ${Number(l.amt).toLocaleString()}</td>
+              <td style="color:${bal.isFullyPaid?'var(--green)':'var(--red)'}; font-weight:700">
+                ${bal.isFullyPaid ? '✅ CLEARED' : 'UGX '+bal.outstanding.toLocaleString()+' remaining'}
+              </td>
+            </tr>` +
+            data[activeMember].loans
+              .filter(r => r.type==='REPAYMENT' && String(r.loanId)===String(loanId))
+              .map(r => `<tr>
+                <td>${r.date}</td><td>REPAYMENT</td><td>Loan #${loanId}</td>
+                <td style="color:var(--green)">UGX ${Number(r.amt).toLocaleString()}</td><td>—</td>
+              </tr>`).join('');
           }).join('')}
         </table>
       </div>
     </div>`;
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
+// SACCO ACTIVITY — all members can see this
+// ─────────────────────────────────────────────
+function renderActivity() {
+  const stats           = getGlobalStats();
+  const totalExpenses   = data.expenses.reduce((a,b)=>a+Number(b.amt),0);
+  const totalInvestments= data.investments.reduce((a,b)=>a+Number(b.amt),0);
+  const totalCashIn     = data.cashIn.reduce((a,b)=>a+Number(b.amt),0);
+
+  return `
+    <div class="card">
+      <h2>🏦 SACCO-Wide Totals</h2>
+      <div class="grid">
+        <div class="stat-box">
+          <div class="stat-label">Net Cash Position</div>
+          <div class="stat-value">UGX ${stats.netCash.toLocaleString()}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Gross Savings (All Members)</div>
+          <div class="stat-value">UGX ${stats.grossSavings.toLocaleString()}</div>
+        </div>
+        <div class="stat-box gold-border">
+          <div class="stat-label">Cash In / Donations</div>
+          <div class="stat-value" style="color:var(--green)">UGX ${totalCashIn.toLocaleString()}</div>
+        </div>
+        <div class="stat-box" style="background:#FFEBEE">
+          <div class="stat-label">Total Expenses</div>
+          <div class="stat-value" style="color:var(--red)">UGX ${totalExpenses.toLocaleString()}</div>
+        </div>
+        <div class="stat-box" style="background:#E3F2FD">
+          <div class="stat-label">Total Investments</div>
+          <div class="stat-value" style="color:#1565C0">UGX ${totalInvestments.toLocaleString()}</div>
+        </div>
+        <div class="stat-box" style="background:#FFF9C4">
+          <div class="stat-label">Active Loan Portfolio</div>
+          <div class="stat-value" style="color:var(--yellow)">UGX ${stats.activeLoans.toLocaleString()}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📥 Cash In / Donations</h2>
+      ${!data.cashIn.length ? '<p style="color:#999;font-size:13px">No records yet.</p>' : ''}
+      <div class="table-wrap">
+        <table>
+          ${data.cashIn.length ? '<tr><th>Date</th><th>Source / Description</th><th>Amount</th></tr>' : ''}
+          ${data.cashIn.map(c=>`<tr><td>${c.date}</td><td>${c.source}</td><td style="color:var(--green); font-weight:600">UGX ${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>💸 Expenses</h2>
+      ${!data.expenses.length ? '<p style="color:#999;font-size:13px">No expenses recorded.</p>' : ''}
+      <div class="table-wrap">
+        <table>
+          ${data.expenses.length ? '<tr><th>Date</th><th>Description</th><th>Amount</th></tr>' : ''}
+          ${data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td style="color:var(--red); font-weight:600">UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📈 Investments</h2>
+      ${!data.investments.length ? '<p style="color:#999;font-size:13px">No investments recorded.</p>' : ''}
+      <div class="table-wrap">
+        <table>
+          ${data.investments.length ? '<tr><th>Date</th><th>Description</th><th>Amount</th></tr>' : ''}
+          ${data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td style="color:#1565C0; font-weight:600">UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
+        </table>
+      </div>
+    </div>`;
+}
+
+// ─────────────────────────────────────────────
 // ADMIN HUB
-// ============================================================
+// ─────────────────────────────────────────────
 function renderAdmin(activeMember) {
-  const nextLoanId = data[activeMember].loans.filter(l => l.type === 'LOAN').length + 1;
+  const nextLoanId = data[activeMember].loans.filter(l=>l.type==='LOAN').length + 1;
   return `
     <div class="card" style="border:2px solid var(--gold)">
-      <h2>Admin Hub</h2>
+      <h2>⚙️ Admin Hub</h2>
       <div class="grid-2">
-        <!-- INFLOW -->
         <div>
           <h3>📥 Post Inflow</h3>
           <label>Member</label>
           <select id="mI" onchange="lastSelectedMember=this.value; render()">
-            ${data.members.map(m => `<option value="${m}" ${m === activeMember ? 'selected' : ''}>${m}</option>`).join('')}
+            ${data.members.map(m=>`<option value="${m}" ${m===activeMember?'selected':''}>${m}</option>`).join('')}
           </select>
           <label>Type</label>
           <select id="tI" onchange="currentInflowType=this.value; render()">
-            <option value="S" ${currentInflowType === 'S' ? 'selected' : ''}>Savings</option>
-            <option value="R" ${currentInflowType === 'R' ? 'selected' : ''}>Loan Repayment</option>
-            <option value="C" ${currentInflowType === 'C' ? 'selected' : ''}>Cash In / Donation</option>
+            <option value="S" ${currentInflowType==='S'?'selected':''}>Savings</option>
+            <option value="R" ${currentInflowType==='R'?'selected':''}>Loan Repayment</option>
+            <option value="C" ${currentInflowType==='C'?'selected':''}>Cash In / Donation</option>
           </select>
-          ${currentInflowType === 'R'
-            ? `<label>Select Loan</label><select id="lID">${data[activeMember].loans.filter(l => l.type === 'LOAN').map((l, i) => `<option value="${i + 1}">Repay Loan #${i + 1} (${l.date})</option>`).join('') || '<option disabled>No Loans</option>'}</select>`
-            : currentInflowType === 'S'
-            ? `<label>Month</label><input type="month" id="moI" value="${new Date().toISOString().slice(0, 7)}">`
-            : `<label>Description</label><input type="text" id="descIn" placeholder="e.g. Donation from sponsor">`}
+          ${currentInflowType==='R'
+            ? `<label>Select Loan</label>
+               <select id="lID">
+                 ${data[activeMember].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Repay Loan #${i+1} (${l.date})</option>`).join('') || '<option disabled>No Loans</option>'}
+               </select>`
+            : currentInflowType==='S'
+              ? `<label>Month</label><input type="month" id="moI" value="${new Date().toISOString().slice(0,7)}">`
+              : `<label>Description</label><input type="text" id="descIn" placeholder="e.g. Donation from sponsor">`}
           <label>Date</label>
           <input type="date" id="daMan" value="${new Date().toISOString().split('T')[0]}">
           <label>Amount (UGX)</label>
           <input type="number" id="amI" placeholder="Enter amount">
           <button class="gold full" onclick="postInflow()">Post Inflow ↗</button>
         </div>
-
-        <!-- OUTFLOW -->
         <div>
-          <h3>📤 Post Outflow <span style="float:right; font-size:11px; color:var(--gold); font-weight:400">Next ID: Loan #${nextLoanId}</span></h3>
+          <h3>📤 Post Outflow <span style="float:right; font-size:11px; color:var(--gold); font-weight:400">Next: Loan #${nextLoanId}</span></h3>
           <label>Type</label>
           <select id="tO">
             <option value="L">Issue Loan #${nextLoanId} to ${activeMember}</option>
@@ -658,65 +680,54 @@ function renderAdmin(activeMember) {
       </div>
       <hr class="divider">
       <button class="gold full" onclick="exportMasterAudit()">📥 DOWNLOAD MASTER SACCO AUDIT (CSV)</button>
-    </div>
-  `;
+    </div>`;
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // GLOBAL AUDIT
-// ============================================================
+// ─────────────────────────────────────────────
 function renderAudit() {
-  // All members arrears overview
-  let arrearsRows = data.members.map(m => {
-    const savings = data[m].contributions.reduce((a, b) => a + Number(b.amt), 0);
+  const arrearsRows = data.members.map(m => {
+    const savings = data[m].contributions.reduce((a,b)=>a+Number(b.amt),0);
     const arrears = calcArrearsAndFines(m);
-    const debt = getMemberLoanDebt(m);
+    const debt    = getMemberLoanDebt(m);
     return `<tr>
       <td>${m}</td>
       <td>UGX ${savings.toLocaleString()}</td>
-      <td style="color:${arrears > 0 ? 'var(--yellow)' : 'var(--green)'}; font-weight:600">UGX ${arrears.toLocaleString()}</td>
-      <td style="color:${debt > 0 ? 'var(--red)' : 'var(--green)'}; font-weight:600">UGX ${debt.toLocaleString()}</td>
+      <td style="color:${arrears>0?'var(--yellow)':'var(--green)'}; font-weight:600">UGX ${arrears.toLocaleString()}</td>
+      <td style="color:${debt>0?'var(--red)':'var(--green)'}; font-weight:600">UGX ${debt.toLocaleString()}</td>
     </tr>`;
   }).join('');
 
-  let txRows = data.members.map(mem =>
-    data[mem].contributions.map((c, i) => `<tr>
+  const txRows = data.members.map(mem =>
+    data[mem].contributions.map((c,i) => `<tr>
       <td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td>
-      <td>
-        <button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button>
-        <button class="del" onclick="del('S','${mem}',${i})">✕</button>
-      </td>
+      <td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button>
+          <button class="del" onclick="del('S','${mem}',${i})">✕</button></td>
     </tr>`).join('') +
-    data[mem].loans.map((l, i) => `<tr>
-      <td>${mem}</td><td>${l.type}</td><td>${l.type === 'LOAN' ? 'Issued' : 'Loan #' + l.loanId}</td><td>UGX ${Number(l.amt).toLocaleString()}</td>
-      <td>
-        <button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button>
-        <button class="del" onclick="del('L','${mem}',${i})">✕</button>
-      </td>
+    data[mem].loans.map((l,i) => `<tr>
+      <td>${mem}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan Disbursed':'Repay Loan #'+l.loanId}</td><td>UGX ${Number(l.amt).toLocaleString()}</td>
+      <td><button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button>
+          <button class="del" onclick="del('L','${mem}',${i})">✕</button></td>
     </tr>`).join('')
   ).join('');
 
-  let sysRows = data.cashIn.map((c, i) => `<tr>
-    <td>SYSTEM</td><td>Cash In</td><td>${c.source}</td><td>UGX ${Number(c.amt).toLocaleString()}</td>
-    <td>
-      <button class="edit-btn" onclick="openEdit('C','',${i})">Edit</button>
-      <button class="del" onclick="del('C','',${i})">✕</button>
-    </td>
-  </tr>`).join('') +
-  data.expenses.map((e, i) => `<tr>
-    <td>SYSTEM</td><td>Expense</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td>
-    <td>
-      <button class="edit-btn" onclick="openEdit('E','',${i})">Edit</button>
-      <button class="del" onclick="del('E','',${i})">✕</button>
-    </td>
-  </tr>`).join('') +
-  data.investments.map((inv, i) => `<tr>
-    <td>SYSTEM</td><td>Investment</td><td>${inv.reason}</td><td>UGX ${Number(inv.amt).toLocaleString()}</td>
-    <td>
-      <button class="edit-btn" onclick="openEdit('I','',${i})">Edit</button>
-      <button class="del" onclick="del('I','',${i})">✕</button>
-    </td>
-  </tr>`).join('');
+  const sysRows =
+    data.cashIn.map((c,i) => `<tr>
+      <td>SYSTEM</td><td>Cash In</td><td>${c.source}</td><td>UGX ${Number(c.amt).toLocaleString()}</td>
+      <td><button class="edit-btn" onclick="openEdit('C','',${i})">Edit</button>
+          <button class="del" onclick="del('C','',${i})">✕</button></td>
+    </tr>`).join('') +
+    data.expenses.map((e,i) => `<tr>
+      <td>SYSTEM</td><td>Expense</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td>
+      <td><button class="edit-btn" onclick="openEdit('E','',${i})">Edit</button>
+          <button class="del" onclick="del('E','',${i})">✕</button></td>
+    </tr>`).join('') +
+    data.investments.map((inv,i) => `<tr>
+      <td>SYSTEM</td><td>Investment</td><td>${inv.reason}</td><td>UGX ${Number(inv.amt).toLocaleString()}</td>
+      <td><button class="edit-btn" onclick="openEdit('I','',${i})">Edit</button>
+          <button class="del" onclick="del('I','',${i})">✕</button></td>
+    </tr>`).join('');
 
   return `
     <div class="card">
@@ -729,66 +740,50 @@ function renderAudit() {
       </div>
     </div>
     <div class="card">
-      <h2>Transaction Audit Log</h2>
+      <h2>Full Transaction Audit Log</h2>
       <div class="table-wrap">
         <table>
-          <tr><th>Member</th><th>Type</th><th>Ref/Month</th><th>Amount</th><th>Actions</th></tr>
-          ${txRows}
-          ${sysRows}
+          <tr><th>Member</th><th>Type</th><th>Ref / Month</th><th>Amount</th><th>Actions</th></tr>
+          ${txRows}${sysRows}
         </table>
       </div>
     </div>`;
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // MONTHLY REPORT
-// ============================================================
+// ─────────────────────────────────────────────
 function renderMonthlyReport() {
-  const now = new Date();
-  const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const selMonth = window._reportMonth || defaultMonth;
+  const now    = new Date();
+  const defMon = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const selMon = window._reportMonth || defMon;
+  const target = getMonthlyTarget(selMon);
 
-  const target = getMonthlyTarget(selMonth);
   let totalCollected = 0;
-  let rows = data.members.map(m => {
-    const paid = data[m].contributions.filter(c => c.month === selMonth).reduce((a, b) => a + Number(b.amt), 0);
+  const rows = data.members.map(m => {
+    const paid = data[m].contributions.filter(c=>c.month===selMon).reduce((a,b)=>a+Number(b.amt),0);
     totalCollected += paid;
-    const status = paid >= target ? '<span class="badge badge-comp">COMPLETE</span>' : paid > 0 ? '<span class="badge badge-part">PARTIAL</span>' : '<span class="badge badge-pend">PENDING</span>';
-    const gap = Math.max(0, target - paid);
-    return `<tr>
-      <td>${m}</td>
-      <td>UGX ${paid.toLocaleString()}</td>
-      <td>UGX ${gap.toLocaleString()}</td>
-      <td>${status}</td>
-    </tr>`;
+    const gap   = Math.max(0, target - paid);
+    const badge = paid >= target ? '<span class="badge badge-comp">COMPLETE</span>' : paid > 0 ? '<span class="badge badge-part">PARTIAL</span>' : '<span class="badge badge-pend">PENDING</span>';
+    return `<tr><td>${m}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${gap.toLocaleString()}</td><td>${badge}</td></tr>`;
   }).join('');
 
-  const paidCount = data.members.filter(m => data[m].contributions.filter(c => c.month === selMonth).reduce((a, b) => a + Number(b.amt), 0) >= target).length;
+  const paidCount = data.members.filter(m =>
+    data[m].contributions.filter(c=>c.month===selMon).reduce((a,b)=>a+Number(b.amt),0) >= target
+  ).length;
 
   return `
     <div class="card">
-      <h2>Monthly Summary Report</h2>
+      <h2>📅 Monthly Summary Report</h2>
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px">
         <label style="margin:0">Select Month:</label>
-        <input type="month" style="width:auto; margin:0" value="${selMonth}" onchange="window._reportMonth=this.value; render()">
+        <input type="month" style="width:auto; margin:0" value="${selMon}" onchange="window._reportMonth=this.value; render()">
       </div>
       <div class="grid" style="margin-bottom:16px">
-        <div class="stat-box">
-          <div class="stat-label">Month Target (per member)</div>
-          <div class="stat-value">UGX ${target.toLocaleString()}</div>
-        </div>
-        <div class="stat-box gold-border">
-          <div class="stat-label">Total Collected</div>
-          <div class="stat-value" style="color:var(--green)">UGX ${totalCollected.toLocaleString()}</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">Fully Paid Members</div>
-          <div class="stat-value">${paidCount} / ${data.members.length}</div>
-        </div>
-        <div class="stat-box" style="background:#FFEBEE">
-          <div class="stat-label">Collection Gap</div>
-          <div class="stat-value" style="color:var(--red)">UGX ${(target * data.members.length - totalCollected).toLocaleString()}</div>
-        </div>
+        <div class="stat-box"><div class="stat-label">Target per Member</div><div class="stat-value">UGX ${target.toLocaleString()}</div></div>
+        <div class="stat-box gold-border"><div class="stat-label">Total Collected</div><div class="stat-value" style="color:var(--green)">UGX ${totalCollected.toLocaleString()}</div></div>
+        <div class="stat-box"><div class="stat-label">Fully Paid Members</div><div class="stat-value">${paidCount} / ${data.members.length}</div></div>
+        <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Collection Gap</div><div class="stat-value" style="color:var(--red)">UGX ${(target*data.members.length - totalCollected).toLocaleString()}</div></div>
       </div>
       <div class="table-wrap">
         <table>
@@ -799,18 +794,18 @@ function renderMonthlyReport() {
     </div>`;
 }
 
-// ============================================================
-// SETTINGS (PIN CHANGE)
-// ============================================================
+// ─────────────────────────────────────────────
+// SETTINGS — any member can change their PIN
+// ─────────────────────────────────────────────
 function renderSettings() {
   return `
     <div class="card" style="max-width:420px; margin:auto">
-      <h2>🔐 Change PIN</h2>
-      <p style="font-size:13px; color:#666; margin-bottom:16px">You can change your own PIN. Choose a PIN you'll remember.</p>
+      <h2>🔐 Change My PIN</h2>
+      <p style="font-size:13px; color:#666; margin-bottom:16px">Enter your current PIN, then set a new one (minimum 4 characters).</p>
       <label>Current PIN</label>
-      <input type="password" id="oldPin" placeholder="Enter your current PIN" maxlength="20">
+      <input type="password" id="oldPin" placeholder="Your current PIN" maxlength="20">
       <label>New PIN</label>
-      <input type="password" id="newPin" placeholder="Enter new PIN" maxlength="20">
+      <input type="password" id="newPin" placeholder="New PIN (min 4 chars)" maxlength="20">
       <label>Confirm New PIN</label>
       <input type="password" id="confPin" placeholder="Re-enter new PIN" maxlength="20">
       <button class="gold full" onclick="changePin()" style="margin-top:4px">Update PIN</button>
@@ -818,203 +813,175 @@ function renderSettings() {
 }
 
 function changePin() {
-  const oldPin = document.getElementById('oldPin').value;
-  const newPin = document.getElementById('newPin').value;
-  const confPin = document.getElementById('confPin').value;
-  if (oldPin !== data[user.name].pin) { showToast("❌ Current PIN is incorrect", "danger"); return; }
-  if (!newPin || newPin.length < 4) { showToast("⚠️ New PIN must be at least 4 characters", "warn"); return; }
-  if (newPin !== confPin) { showToast("❌ New PINs do not match", "danger"); return; }
-  data[user.name].pin = newPin;
+  const o = document.getElementById('oldPin').value;
+  const n = document.getElementById('newPin').value;
+  const c = document.getElementById('confPin').value;
+  if (o !== data[user.name].pin)  { showToast("❌ Current PIN is incorrect", "danger"); return; }
+  if (!n || n.length < 4)         { showToast("⚠️ New PIN must be at least 4 characters", "warn"); return; }
+  if (n !== c)                    { showToast("❌ New PINs do not match", "danger"); return; }
+  data[user.name].pin = n;
   saveData();
-  showToast("✅ PIN updated successfully", "success");
-  document.getElementById('oldPin').value = '';
-  document.getElementById('newPin').value = '';
-  document.getElementById('confPin').value = '';
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // EDIT MODAL
-// ============================================================
+// ─────────────────────────────────────────────
 function openEdit(cat, mem, idx) {
   let entry;
-  if (cat === 'S') entry = { ...data[mem].contributions[idx] };
-  else if (cat === 'L') entry = { ...data[mem].loans[idx] };
-  else if (cat === 'C') entry = { ...data.cashIn[idx] };
-  else if (cat === 'E') entry = { ...data.expenses[idx] };
-  else if (cat === 'I') entry = { ...data.investments[idx] };
+  if      (cat==='S') entry = {...data[mem].contributions[idx]};
+  else if (cat==='L') entry = {...data[mem].loans[idx]};
+  else if (cat==='C') entry = {...data.cashIn[idx]};
+  else if (cat==='E') entry = {...data.expenses[idx]};
+  else if (cat==='I') entry = {...data.investments[idx]};
   editModalData = { cat, mem, idx, entry };
   render();
 }
 
 function renderEditModal() {
-  const { cat, mem, idx, entry } = editModalData;
+  const {cat, mem, idx, entry} = editModalData;
+  const labels = {S:'Savings',L:'Loan/Repayment',C:'Cash In',E:'Expense',I:'Investment'};
   let fields = '';
-  if (cat === 'S') {
-    fields = `
-      <label>Amount</label><input type="number" id="eAmt" value="${entry.amt}">
-      <label>Date</label><input type="date" id="eDate" value="${entry.date}">
-      <label>Month</label><input type="month" id="eMon" value="${entry.month}">`;
-  } else if (cat === 'L') {
-    fields = `
-      <label>Amount</label><input type="number" id="eAmt" value="${entry.amt}">
-      <label>Date</label><input type="date" id="eDate" value="${entry.date}">`;
-  } else if (cat === 'C') {
-    fields = `
-      <label>Amount</label><input type="number" id="eAmt" value="${entry.amt}">
-      <label>Date</label><input type="date" id="eDate" value="${entry.date}">
-      <label>Source</label><input type="text" id="eDesc" value="${entry.source || ''}">`;
-  } else if (cat === 'E' || cat === 'I') {
-    fields = `
-      <label>Amount</label><input type="number" id="eAmt" value="${entry.amt}">
-      <label>Date</label><input type="date" id="eDate" value="${entry.date}">
-      <label>Description</label><input type="text" id="eDesc" value="${entry.reason || ''}">`;
-  }
+  if (cat==='S') fields = `
+    <label>Amount</label><input type="number" id="eAmt" value="${entry.amt}">
+    <label>Date</label><input type="date" id="eDate" value="${entry.date}">
+    <label>Month</label><input type="month" id="eMon" value="${entry.month}">`;
+  else if (cat==='L') fields = `
+    <label>Amount</label><input type="number" id="eAmt" value="${entry.amt}">
+    <label>Date</label><input type="date" id="eDate" value="${entry.date}">`;
+  else if (cat==='C') fields = `
+    <label>Amount</label><input type="number" id="eAmt" value="${entry.amt}">
+    <label>Date</label><input type="date" id="eDate" value="${entry.date}">
+    <label>Source</label><input type="text" id="eDesc" value="${entry.source||''}">`;
+  else fields = `
+    <label>Amount</label><input type="number" id="eAmt" value="${entry.amt}">
+    <label>Date</label><input type="date" id="eDate" value="${entry.date}">
+    <label>Description</label><input type="text" id="eDesc" value="${entry.reason||''}">`;
 
   return `
     <div class="modal-overlay" onclick="closeEdit(event)">
       <div class="modal">
         <button class="modal-close" onclick="editModalData=null; render()">✕</button>
         <h2>Edit Entry</h2>
-        <p style="font-size:12px; color:#666; margin-bottom:14px">Editing: <strong>${cat === 'S' ? 'Savings' : cat === 'L' ? 'Loan/Repayment' : cat === 'C' ? 'Cash In' : cat === 'E' ? 'Expense' : 'Investment'}</strong>${mem ? ` — ${mem}` : ''}</p>
+        <p style="font-size:12px; color:#666; margin-bottom:14px"><strong>${labels[cat]}</strong>${mem?' — '+mem:''}</p>
         ${fields}
-        <button class="gold full" onclick="saveEdit()" style="margin-top:8px">Save Changes</button>
+        <button class="gold full" onclick="saveEdit()" style="margin-top:8px">💾 Save Changes</button>
       </div>
     </div>`;
 }
 
-function closeEdit(e) {
-  if (e.target.classList.contains('modal-overlay')) { editModalData = null; render(); }
-}
+function closeEdit(e) { if (e.target.classList.contains('modal-overlay')) { editModalData=null; render(); } }
 
 function saveEdit() {
-  const { cat, mem, idx, entry } = editModalData;
-  const amt = Number(document.getElementById('eAmt').value);
+  const {cat,mem,idx,entry} = editModalData;
+  const amt  = Number(document.getElementById('eAmt').value);
   const date = document.getElementById('eDate').value;
-  if (!amt || !date) { showToast("⚠️ Please fill in all fields", "warn"); return; }
-
-  if (cat === 'S') {
-    const mon = document.getElementById('eMon').value;
-    data[mem].contributions[idx] = { ...entry, amt, date, month: mon };
-  } else if (cat === 'L') {
-    data[mem].loans[idx] = { ...entry, amt, date };
-  } else if (cat === 'C') {
-    const src = document.getElementById('eDesc').value;
-    data.cashIn[idx] = { ...entry, amt, date, source: src };
-  } else if (cat === 'E') {
-    const reason = document.getElementById('eDesc').value;
-    data.expenses[idx] = { ...entry, amt, date, reason };
-  } else if (cat === 'I') {
-    const reason = document.getElementById('eDesc').value;
-    data.investments[idx] = { ...entry, amt, date, reason };
-  }
-
-  editModalData = null;
+  if (!amt||!date) { showToast("⚠️ Fill in all required fields","warn"); return; }
+  if      (cat==='S') { const mon=document.getElementById('eMon').value; data[mem].contributions[idx]={...entry,amt,date,month:mon}; }
+  else if (cat==='L') { data[mem].loans[idx]={...entry,amt,date}; }
+  else if (cat==='C') { data.cashIn[idx]={...entry,amt,date,source:document.getElementById('eDesc').value}; }
+  else if (cat==='E') { data.expenses[idx]={...entry,amt,date,reason:document.getElementById('eDesc').value}; }
+  else if (cat==='I') { data.investments[idx]={...entry,amt,date,reason:document.getElementById('eDesc').value}; }
+  editModalData=null;
   saveData();
 }
 
-// ============================================================
-// POST INFLOW / OUTFLOW (same logic, preserved)
-// ============================================================
+// ─────────────────────────────────────────────
+// POST INFLOW / OUTFLOW (preserved)
+// ─────────────────────────────────────────────
 function postInflow() {
-  const m = document.getElementById("mI").value;
-  const t = currentInflowType;
-  const amt = Number(document.getElementById("amI").value);
+  const m    = document.getElementById("mI").value;
+  const t    = currentInflowType;
+  const amt  = Number(document.getElementById("amI").value);
   const date = document.getElementById("daMan").value;
-  if (!amt || amt <= 0) { showToast("⚠️ Enter a valid amount", "warn"); return; }
-  if (!date) { showToast("⚠️ Enter a valid date", "warn"); return; }
-
-  if (t === 'S') {
-    let mStr = document.getElementById("moI").value;
-    if (data[m].contributions.some(c => c.month === mStr)) { showToast("⚠️ This month already has an entry!", "warn"); return; }
-    data[m].contributions.push({ amt, date, month: mStr });
-  } else if (t === 'R') {
-    const lID = document.getElementById("lID").value;
-    if (!lID) { showToast("⚠️ No loan selected", "warn"); return; }
-    data[m].loans.push({ amt, date, type: 'REPAYMENT', loanId: lID });
-  } else if (t === 'C') {
-    const src = document.getElementById("descIn").value || "Donation";
-    data.cashIn.push({ amt, date, source: src });
+  if (!amt||amt<=0) { showToast("⚠️ Enter a valid amount","warn"); return; }
+  if (!date)        { showToast("⚠️ Enter a valid date","warn"); return; }
+  if (t==='S') {
+    const mStr = document.getElementById("moI").value;
+    if (data[m].contributions.some(c=>c.month===mStr)) { showToast("⚠️ Month already has an entry!","warn"); return; }
+    data[m].contributions.push({amt,date,month:mStr});
+  } else if (t==='R') {
+    const lID = document.getElementById("lID")?document.getElementById("lID").value:null;
+    if (!lID) { showToast("⚠️ No loan selected","warn"); return; }
+    data[m].loans.push({amt,date,type:'REPAYMENT',loanId:lID});
+  } else if (t==='C') {
+    const src = document.getElementById("descIn")?document.getElementById("descIn").value||"Donation":"Donation";
+    data.cashIn.push({amt,date,source:src});
   }
   saveData();
 }
 
 function postOutflow() {
-  const t = document.getElementById("tO").value;
-  const amt = Number(document.getElementById("amO").value);
+  const t    = document.getElementById("tO").value;
+  const amt  = Number(document.getElementById("amO").value);
   const desc = document.getElementById("reO").value;
-  const m = lastSelectedMember || user.name;
+  const m    = lastSelectedMember||user.name;
   const date = document.getElementById("daOut").value;
-  if (!amt || amt <= 0) { showToast("⚠️ Enter a valid amount", "warn"); return; }
-
-  if (t === 'L') data[m].loans.push({ amt, date, type: 'LOAN' });
-  else if (t === 'E') data.expenses.push({ amt, reason: desc, date });
-  else if (t === 'I') data.investments.push({ amt, reason: desc, date });
+  if (!amt||amt<=0) { showToast("⚠️ Enter a valid amount","warn"); return; }
+  if (t==='L')      data[m].loans.push({amt,date,type:'LOAN'});
+  else if (t==='E') data.expenses.push({amt,reason:desc,date});
+  else if (t==='I') data.investments.push({amt,reason:desc,date});
   saveData();
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // DELETE
-// ============================================================
-function del(cat, mem, idx) {
-  if (!confirm("Are you sure you want to delete this entry?")) return;
-  if (cat === 'S') data[mem].contributions.splice(idx, 1);
-  else if (cat === 'L') data[mem].loans.splice(idx, 1);
-  else if (cat === 'C') data.cashIn.splice(idx, 1);
-  else if (cat === 'E') data.expenses.splice(idx, 1);
-  else if (cat === 'I') data.investments.splice(idx, 1);
+// ─────────────────────────────────────────────
+function del(cat,mem,idx) {
+  if (!confirm("Delete this entry?")) return;
+  if      (cat==='S') data[mem].contributions.splice(idx,1);
+  else if (cat==='L') data[mem].loans.splice(idx,1);
+  else if (cat==='C') data.cashIn.splice(idx,1);
+  else if (cat==='E') data.expenses.splice(idx,1);
+  else if (cat==='I') data.investments.splice(idx,1);
   saveData();
 }
 
-// ============================================================
-// EXPORTS (preserved)
-// ============================================================
+// ─────────────────────────────────────────────
+// CSV EXPORTS (preserved)
+// ─────────────────────────────────────────────
 function exportMemberCSV(name) {
-  let rows = [["Date", "Type", "Reference", "Amount"]];
-  data[name].contributions.forEach(c => rows.push([c.date, "Savings", c.month, c.amt]));
-  data[name].loans.forEach(l => rows.push([l.date, l.type, l.loanId ? 'Loan ' + l.loanId : 'Principal', l.amt]));
-  downloadCSV(`${name}_Statement.csv`, rows);
+  const rows=[["Date","Type","Reference","Amount"]];
+  data[name].contributions.forEach(c=>rows.push([c.date,"Savings",c.month,c.amt]));
+  data[name].loans.forEach(l=>rows.push([l.date,l.type,l.loanId?'Loan '+l.loanId:'Principal',l.amt]));
+  downloadCSV(`${name}_Statement.csv`,rows);
 }
 
 function exportMasterAudit() {
-  let rows = [["Member/Entity", "Date", "Transaction Type", "Reference/Desc", "Amount"]];
-  data.members.forEach(m => {
-    data[m].contributions.forEach(c => rows.push([m, c.date, "Savings", c.month, c.amt]));
-    data[m].loans.forEach(l => rows.push([m, l.date, l.type, l.loanId ? 'Loan ' + l.loanId : 'Principal', l.amt]));
+  const rows=[["Member/Entity","Date","Transaction Type","Reference/Desc","Amount"]];
+  data.members.forEach(m=>{
+    data[m].contributions.forEach(c=>rows.push([m,c.date,"Savings",c.month,c.amt]));
+    data[m].loans.forEach(l=>rows.push([m,l.date,l.type,l.loanId?'Loan '+l.loanId:'Principal',l.amt]));
   });
-  data.cashIn.forEach(c => rows.push(["SYSTEM", c.date, "Cash In", c.source, c.amt]));
-  data.expenses.forEach(e => rows.push(["SYSTEM", e.date, "Expense", e.reason, e.amt]));
-  data.investments.forEach(i => rows.push(["SYSTEM", i.date, "Investment", i.reason, i.amt]));
-  downloadCSV(`SACCO_MASTER_AUDIT_${new Date().toISOString().split('T')[0]}.csv`, rows);
+  data.cashIn.forEach(c=>rows.push(["SYSTEM",c.date,"Cash In",c.source,c.amt]));
+  data.expenses.forEach(e=>rows.push(["SYSTEM",e.date,"Expense",e.reason,e.amt]));
+  data.investments.forEach(i=>rows.push(["SYSTEM",i.date,"Investment",i.reason,i.amt]));
+  downloadCSV(`SACCO_MASTER_AUDIT_${new Date().toISOString().split('T')[0]}.csv`,rows);
 }
 
-function downloadCSV(filename, rows) {
-  let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
-  let link = document.createElement("a");
-  link.setAttribute("href", encodeURI(csvContent));
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+function downloadCSV(filename,rows) {
+  const link=document.createElement("a");
+  link.setAttribute("href",encodeURI("data:text/csv;charset=utf-8,"+rows.map(e=>e.join(",")).join("\n")));
+  link.setAttribute("download",filename);
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
 }
 
-// ============================================================
-// TOAST NOTIFICATIONS
-// ============================================================
-function showToast(msg, type = "success") {
-  const existing = document.getElementById('toast');
-  if (existing) existing.remove();
-  const colors = { success: '#2E7D32', danger: '#C62828', warn: '#F57F17', info: '#1565C0' };
-  const t = document.createElement('div');
-  t.id = 'toast';
-  t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${colors[type]};color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.2);font-family:'DM Sans',sans-serif;transition:opacity 0.4s`;
-  t.textContent = msg;
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+function showToast(msg, type="success") {
+  const existing=document.getElementById('toast'); if(existing)existing.remove();
+  const colors={success:'#2E7D32',danger:'#C62828',warn:'#E65100',info:'#1565C0'};
+  const t=document.createElement('div');
+  t.id='toast';
+  t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${colors[type]};color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.25);font-family:'DM Sans',sans-serif`;
+  t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3000);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.4s';setTimeout(()=>t.remove(),400);},3000);
 }
 
-// ============================================================
+// ─────────────────────────────────────────────
 // BOOT
-// ============================================================
+// ─────────────────────────────────────────────
 loadData();
 </script>
 </body>
