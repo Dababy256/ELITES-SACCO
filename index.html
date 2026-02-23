@@ -10,165 +10,146 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --gold: #B08D57;
-    --dark: #111111;
-    --cream: #F3E9D2;
-    --white: #ffffff;
-    --red: #C62828;
-    --green: #2E7D32;
-    --yellow: #F57F17;
-    --blue: #1565C0;
-    --shadow: 0 4px 24px rgba(0,0,0,0.10);
+    --gold:#B08D57; --dark:#111111; --cream:#F3E9D2; --white:#ffffff;
+    --red:#C62828; --green:#2E7D32; --yellow:#F57F17; --blue:#1565C0;
+    --shadow:0 4px 24px rgba(0,0,0,0.10);
   }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); min-height: 100vh; }
-
-  header { background: var(--dark); color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 14px; border-bottom: 3px solid var(--gold); position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 16px rgba(0,0,0,0.3); }
-  .logo-placeholder { height: 46px; width: 46px; border-radius: 50%; border: 2px solid var(--gold); background: #222; display: flex; align-items: center; justify-content: center; font-size: 20px; }
-  .logo-img { height: 46px; width: 46px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; }
-  .header-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--gold); letter-spacing: 1px; }
-  .header-sub { font-size: 11px; color: #aaa; margin-top: 2px; }
-  .header-right { margin-left: auto; }
-
-  .tab-bar { background: var(--dark); display: flex; border-bottom: 2px solid var(--gold); overflow-x: auto; }
-  .tab-bar::-webkit-scrollbar { height: 0; }
-  .tab-btn { padding: 11px 18px; border: none; background: transparent; color: #888; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
-  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); background: #1a1a1a; }
-  .tab-btn:hover:not(.active) { color: #ccc; background: #181818; }
-
-  .container { padding: 20px 16px; max-width: 1100px; margin: auto; }
-  .card { background: var(--white); padding: 22px; border-radius: 14px; margin-bottom: 18px; box-shadow: var(--shadow); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-
-  .stat-box { padding: 14px 16px; border-radius: 10px; background: #f8f8f8; border: 1px solid #e5e5e5; }
-  .stat-box.gold-border { border-color: var(--gold); }
-  .stat-label { font-size: 10px; color: #888; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
-  .stat-value { font-size: 1rem; font-weight: 700; color: var(--dark); }
-  .stat-box-dark { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 14px; }
-
-  h2 { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--dark); border-bottom: 2px solid var(--gold); padding-bottom: 8px; margin-bottom: 16px; }
-  h3 { font-size: 0.9rem; font-weight: 600; color: #555; margin-bottom: 8px; margin-top: 16px; }
-  h3:first-child { margin-top: 0; }
-
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th, td { border: 1px solid #eee; padding: 8px 10px; text-align: left; }
-  th { background: var(--dark); color: var(--gold); font-weight: 600; font-size: 11px; }
-  tr:nth-child(even) td { background: #fafafa; }
-  tr:hover td { background: #f5f0e8; }
-
-  input, select { padding: 10px 13px; width: 100%; margin-bottom: 10px; border: 1.5px solid #ddd; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; background: #fff; outline: none; transition: border 0.2s; }
-  input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(176,141,87,0.12); }
-  label { font-size: 11px; font-weight: 600; color: #666; display: block; margin-bottom: 4px; }
-
-  button { padding: 9px 16px; border: none; border-radius: 8px; background: var(--dark); color: #fff; cursor: pointer; font-weight: 600; font-size: 12px; font-family: 'DM Sans', sans-serif; transition: all 0.15s; margin: 2px; }
-  button:hover { opacity: 0.88; transform: translateY(-1px); }
-  button:active { transform: translateY(0); }
-  button.gold { background: var(--gold); color: var(--dark); }
-  button.del { background: #ff4d4d; color: #fff; padding: 4px 9px; font-size: 10px; border-radius: 5px; }
-  button.edit-btn { background: #1976D2; color: #fff; padding: 4px 9px; font-size: 10px; border-radius: 5px; }
-  button.sm { padding: 6px 11px; font-size: 11px; }
-  button.full { width: 100%; margin: 4px 0; }
-  button.outline { background: transparent; color: #fff; border: 1.5px solid #555; }
-  button.outline:hover { background: #333; }
-  button.print-btn { background: #1B5E20; color: #fff; padding: 10px 18px; font-size: 13px; }
-  button.print-btn:hover { background: #2E7D32; }
-
-  .badge { padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; display: inline-block; }
-  .badge-comp    { background: #C8E6C9; color: #2E7D32; }
-  .badge-part    { background: #FFF9C4; color: #F57F17; }
-  .badge-pend    { background: #FFCDD2; color: #C62828; }
-  .badge-overdue { background: #FF1744; color: #fff; animation: pulse 1.5s infinite; }
-  .badge-active  { background: #E3F2FD; color: #1565C0; }
-  .badge-paid    { background: #C8E6C9; color: #2E7D32; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.65} }
-
-  .alert { padding: 11px 15px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; font-weight: 500; }
-  .alert-warn    { background: #FFF8E1; border: 1px solid #FFD54F; color: #5D4037; }
-  .alert-danger  { background: #FFEBEE; border: 1px solid #EF9A9A; color: #B71C1C; }
-  .alert-success { background: #E8F5E9; border: 1px solid #A5D6A7; color: #1B5E20; }
-
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 999; display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .modal { background: #fff; border-radius: 16px; padding: 28px; max-width: 420px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); position: relative; }
-  .modal-close { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: #666; }
-
-  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--cream); }
-  .login-card { background: #fff; padding: 36px 28px; border-radius: 20px; box-shadow: 0 8px 40px rgba(0,0,0,0.13); max-width: 500px; width: 100%; }
-  .login-logo { text-align: center; margin-bottom: 20px; }
-  .login-icon { width: 64px; height: 64px; border-radius: 50%; border: 3px solid var(--gold); background: var(--dark); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 12px; }
-  .login-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; }
-  .login-sub { font-size: 12px; color: #999; margin-top: 4px; }
-  .member-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
-  .member-btn { background: #f8f8f8; color: var(--dark); border: 1.5px solid #e5e5e5; font-size: 12px; padding: 10px; border-radius: 8px; text-align: left; font-weight: 500; }
-  .member-btn:hover { border-color: var(--gold); background: #faf6ee; transform: none; }
-
-  .progress-wrap { background: #eee; border-radius: 99px; height: 7px; overflow: hidden; margin-top: 5px; }
-  .progress-bar  { height: 7px; border-radius: 99px; background: linear-gradient(90deg, var(--gold), #e6b96a); }
-  .divider { border: none; border-top: 1px solid #eee; margin: 14px 0; }
-
-  .hero-card { background: var(--dark); color: #fff; padding: 22px 24px; border-radius: 16px; margin-bottom: 18px; }
-  .hero-amount { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--gold); font-weight: 900; line-height: 1.1; }
-  .hero-label  { font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
-  .formula-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 14px; font-size: 11px; }
-  .f-pill { padding: 5px 10px; border-radius: 20px; font-weight: 700; font-size: 11px; }
-  .f-op    { color: #666; font-size: 13px; font-weight: 700; }
-
-  .loan-card { border: 1px solid #eee; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-  .loan-card.paid-loan    { border-color: #A5D6A7; background: #f5fff7; opacity: 0.85; }
-  .loan-card.overdue      { border-color: #ff4d4d; background: #fff5f5; }
-  .loan-card.active-loan  { border-color: #90CAF9; background: #f5faff; }
-
-  /* ── REPORT MODE SELECTOR ── */
-  .report-mode-bar { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-  .mode-btn { padding: 9px 18px; border-radius: 8px; border: 2px solid #ddd; background: #fff; color: #555; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.15s; }
-  .mode-btn.active { border-color: var(--gold); background: var(--gold); color: var(--dark); }
-  .mode-btn:hover:not(.active) { border-color: #aaa; }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);min-height:100vh;}
+  header{background:var(--dark);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.3);}
+  .logo-placeholder{height:46px;width:46px;border-radius:50%;border:2px solid var(--gold);background:#222;display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .logo-img{height:46px;width:46px;border-radius:50%;border:2px solid var(--gold);object-fit:cover;}
+  .header-title{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--gold);letter-spacing:1px;}
+  .header-sub{font-size:11px;color:#aaa;margin-top:2px;}
+  .header-right{margin-left:auto;}
+  .tab-bar{background:var(--dark);display:flex;border-bottom:2px solid var(--gold);overflow-x:auto;}
+  .tab-bar::-webkit-scrollbar{height:0;}
+  .tab-btn{padding:11px 18px;border:none;background:transparent;color:#888;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap;}
+  .tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);background:#1a1a1a;}
+  .tab-btn:hover:not(.active){color:#ccc;background:#181818;}
+  .container{padding:20px 16px;max-width:1100px;margin:auto;}
+  .card{background:var(--white);padding:22px;border-radius:14px;margin-bottom:18px;box-shadow:var(--shadow);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .stat-box{padding:14px 16px;border-radius:10px;background:#f8f8f8;border:1px solid #e5e5e5;}
+  .stat-box.gold-border{border-color:var(--gold);}
+  .stat-label{font-size:10px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+  .stat-value{font-size:1rem;font-weight:700;color:var(--dark);}
+  .stat-box-dark{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px;}
+  h2{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--dark);border-bottom:2px solid var(--gold);padding-bottom:8px;margin-bottom:16px;}
+  h3{font-size:0.9rem;font-weight:600;color:#555;margin-bottom:8px;margin-top:16px;}
+  h3:first-child{margin-top:0;}
+  .table-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th,td{border:1px solid #eee;padding:8px 10px;text-align:left;}
+  th{background:var(--dark);color:var(--gold);font-weight:600;font-size:11px;}
+  tr:nth-child(even) td{background:#fafafa;}
+  tr:hover td{background:#f5f0e8;}
+  input,select{padding:10px 13px;width:100%;margin-bottom:10px;border:1.5px solid #ddd;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fff;outline:none;transition:border 0.2s;}
+  input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(176,141,87,0.12);}
+  label{font-size:11px;font-weight:600;color:#666;display:block;margin-bottom:4px;}
+  button{padding:9px 16px;border:none;border-radius:8px;background:var(--dark);color:#fff;cursor:pointer;font-weight:600;font-size:12px;font-family:'DM Sans',sans-serif;transition:all 0.15s;margin:2px;}
+  button:hover{opacity:0.88;transform:translateY(-1px);}
+  button:active{transform:translateY(0);}
+  button.gold{background:var(--gold);color:var(--dark);}
+  button.del{background:#ff4d4d;color:#fff;padding:4px 9px;font-size:10px;border-radius:5px;}
+  button.edit-btn{background:#1976D2;color:#fff;padding:4px 9px;font-size:10px;border-radius:5px;}
+  button.sm{padding:6px 11px;font-size:11px;}
+  button.full{width:100%;margin:4px 0;}
+  button.outline{background:transparent;color:#fff;border:1.5px solid #555;}
+  button.outline:hover{background:#333;}
+  button.print-btn{background:#1B5E20;color:#fff;padding:10px 18px;font-size:13px;}
+  button.print-btn:hover{background:#2E7D32;}
+  .badge{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;display:inline-block;}
+  .badge-comp{background:#C8E6C9;color:#2E7D32;}
+  .badge-part{background:#FFF9C4;color:#F57F17;}
+  .badge-pend{background:#FFCDD2;color:#C62828;}
+  .badge-overdue{background:#FF1744;color:#fff;animation:pulse 1.5s infinite;}
+  .badge-active{background:#E3F2FD;color:#1565C0;}
+  .badge-paid{background:#C8E6C9;color:#2E7D32;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.65}}
+  .alert{padding:11px 15px;border-radius:10px;margin-bottom:12px;font-size:13px;font-weight:500;}
+  .alert-warn{background:#FFF8E1;border:1px solid #FFD54F;color:#5D4037;}
+  .alert-danger{background:#FFEBEE;border:1px solid #EF9A9A;color:#B71C1C;}
+  .alert-success{background:#E8F5E9;border:1px solid #A5D6A7;color:#1B5E20;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px;}
+  .modal{background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;}
+  .modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#666;}
+  .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--cream);}
+  .login-card{background:#fff;padding:36px 28px;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,0.13);max-width:500px;width:100%;}
+  .login-logo{text-align:center;margin-bottom:20px;}
+  .login-icon{width:64px;height:64px;border-radius:50%;border:3px solid var(--gold);background:var(--dark);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px;}
+  .login-title{font-family:'Playfair Display',serif;font-size:1.5rem;}
+  .login-sub{font-size:12px;color:#999;margin-top:4px;}
+  .member-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;}
+  .member-btn{background:#f8f8f8;color:var(--dark);border:1.5px solid #e5e5e5;font-size:12px;padding:10px;border-radius:8px;text-align:left;font-weight:500;}
+  .member-btn:hover{border-color:var(--gold);background:#faf6ee;transform:none;}
+  .progress-wrap{background:#eee;border-radius:99px;height:7px;overflow:hidden;margin-top:5px;}
+  .progress-bar{height:7px;border-radius:99px;background:linear-gradient(90deg,var(--gold),#e6b96a);}
+  .divider{border:none;border-top:1px solid #eee;margin:14px 0;}
+  .hero-card{background:var(--dark);color:#fff;padding:22px 24px;border-radius:16px;margin-bottom:18px;}
+  .hero-amount{font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold);font-weight:900;line-height:1.1;}
+  .hero-label{font-size:10px;color:#777;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}
+  .formula-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;font-size:11px;}
+  .f-pill{padding:5px 10px;border-radius:20px;font-weight:700;font-size:11px;}
+  .f-op{color:#666;font-size:13px;font-weight:700;}
+  .loan-card{border:1px solid #eee;border-radius:10px;padding:14px;margin-bottom:10px;}
+  .loan-card.paid-loan{border-color:#A5D6A7;background:#f5fff7;opacity:0.85;}
+  .loan-card.overdue{border-color:#ff4d4d;background:#fff5f5;}
+  .loan-card.active-loan{border-color:#90CAF9;background:#f5faff;}
+  .report-mode-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .mode-btn{padding:9px 18px;border-radius:8px;border:2px solid #ddd;background:#fff;color:#555;font-weight:600;font-size:12px;cursor:pointer;transition:all 0.15s;}
+  .mode-btn.active{border-color:var(--gold);background:var(--gold);color:var(--dark);}
+  .mode-btn:hover:not(.active){border-color:#aaa;}
 
   /* ── PRINT STYLES ── */
   @media print {
-    body { background: #fff !important; font-family: Arial, sans-serif; font-size: 11pt; }
-    header, .tab-bar, .container > *:not(#printArea), #printControls { display: none !important; }
-    #printArea { display: block !important; padding: 0; margin: 0; }
-    .print-page { page-break-after: always; padding: 20mm 18mm; }
-    .print-page:last-child { page-break-after: avoid; }
-    .print-header { text-align: center; margin-bottom: 24px; border-bottom: 3px solid #B08D57; padding-bottom: 14px; }
-    .print-header h1 { font-size: 22pt; color: #111; margin-bottom: 4px; }
-    .print-header .ph-sub { font-size: 10pt; color: #666; }
-    .print-section { margin-bottom: 20px; }
-    .print-section h2 { font-size: 13pt; color: #111; border-bottom: 1.5px solid #B08D57; padding-bottom: 5px; margin-bottom: 10px; }
-    .print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-    .print-stat { border: 1px solid #ddd; border-radius: 6px; padding: 10px; background: #fafafa; }
-    .print-stat .ps-label { font-size: 8pt; color: #888; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
-    .print-stat .ps-value { font-size: 12pt; font-weight: 700; color: #111; }
-    .print-net { background: #111; color: #fff; padding: 14px 18px; border-radius: 8px; margin-bottom: 14px; }
-    .print-net .pn-label { font-size: 9pt; color: #aaa; text-transform: uppercase; margin-bottom: 4px; }
-    .print-net .pn-value { font-size: 20pt; font-weight: 900; color: #B08D57; }
-    .print-formula { font-size: 9pt; color: #888; margin-top: 6px; }
-    table { width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 12px; }
-    th { background: #111 !important; color: #B08D57 !important; padding: 7px 8px; font-size: 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    td { padding: 6px 8px; border: 1px solid #ddd; }
-    tr:nth-child(even) td { background: #f8f8f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .badge { padding: 2px 7px; border-radius: 10px; font-size: 8pt; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .badge-comp { background: #C8E6C9 !important; color: #2E7D32 !important; }
-    .badge-part { background: #FFF9C4 !important; color: #F57F17 !important; }
-    .badge-pend { background: #FFCDD2 !important; color: #C62828 !important; }
-    .print-footer { text-align: center; font-size: 8pt; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; margin-top: 20px; }
-    .no-print { display: none !important; }
+    body{background:#fff!important;font-family:Arial,sans-serif;font-size:11pt;}
+    header,.tab-bar,#appContainer{display:none!important;}
+    #printArea{display:block!important;padding:0;margin:0;}
+    .print-page{page-break-after:always;padding:16mm 15mm;}
+    .print-page:last-child{page-break-after:avoid;}
+    .print-header{text-align:center;margin-bottom:20px;border-bottom:3px solid #B08D57;padding-bottom:12px;}
+    .print-header h1{font-size:20pt;color:#111;margin-bottom:3px;}
+    .print-header .ph-sub{font-size:10pt;color:#555;}
+    .print-header .ph-title{font-size:13pt;font-weight:700;color:#B08D57;margin:4px 0;}
+    .print-section{margin-bottom:18px;}
+    .print-section h2{font-size:12pt;color:#111;border-bottom:1.5px solid #B08D57;padding-bottom:4px;margin-bottom:8px;}
+    .print-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px;}
+    .print-stat{border:1px solid #ddd;border-radius:5px;padding:8px 10px;background:#fafafa;}
+    .print-stat .ps-label{font-size:7.5pt;color:#888;text-transform:uppercase;font-weight:700;margin-bottom:2px;}
+    .print-stat .ps-value{font-size:11pt;font-weight:700;color:#111;}
+    .print-net{background:#111;color:#fff;padding:12px 16px;border-radius:6px;margin-bottom:12px;}
+    .print-net .pn-label{font-size:8pt;color:#aaa;text-transform:uppercase;margin-bottom:3px;}
+    .print-net .pn-value{font-size:18pt;font-weight:900;color:#B08D57;}
+    .print-formula{font-size:8pt;color:#aaa;margin-top:4px;}
+    table{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:10px;}
+    th{background:#111!important;color:#B08D57!important;padding:6px 7px;font-size:8.5pt;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    td{padding:5px 7px;border:1px solid #ddd;}
+    tr:nth-child(even) td{background:#f8f8f8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .badge{padding:2px 6px;border-radius:10px;font-size:7.5pt;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .badge-comp{background:#C8E6C9!important;color:#2E7D32!important;}
+    .badge-part{background:#FFF9C4!important;color:#F57F17!important;}
+    .badge-pend{background:#FFCDD2!important;color:#C62828!important;}
+    .print-footer{text-align:center;font-size:7.5pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;margin-top:16px;}
+    .no-print{display:none!important;}
+    .print-member-stat{display:inline-block;border:1px solid #ddd;border-radius:5px;padding:8px 12px;margin:4px;background:#fafafa;min-width:140px;}
+    .print-member-stat .ps-label{font-size:7.5pt;color:#888;text-transform:uppercase;font-weight:700;}
+    .print-member-stat .ps-value{font-size:11pt;font-weight:700;}
   }
   @media(max-width:600px){
-    .grid-2 { grid-template-columns: 1fr; }
-    .member-grid { grid-template-columns: 1fr; }
-    .hero-amount { font-size: 1.4rem; }
-    .formula-row { font-size: 10px; }
+    .grid-2{grid-template-columns:1fr;}
+    .member-grid{grid-template-columns:1fr;}
+    .hero-amount{font-size:1.4rem;}
+    .formula-row{font-size:10px;}
   }
 </style>
 </head>
 <body>
-<div id="root"></div>
-
-<!-- Hidden print area — populated dynamically -->
 <div id="printArea" style="display:none"></div>
+<div id="appContainer">
+  <div id="root"></div>
+</div>
 
 <script>
 // ─────────────────────────────────────────────
@@ -188,8 +169,7 @@ let lastSelectedMember = null;
 let currentInflowType  = "S";
 let activeTab          = "dashboard";
 let editModalData      = null;
-// report state
-let reportMode         = "single";   // "single" | "range" | "overall"
+let reportMode         = "single";
 let reportMonth        = "";
 let reportStart        = "";
 let reportEnd          = "";
@@ -197,47 +177,48 @@ let reportEnd          = "";
 // ─────────────────────────────────────────────
 // DATA LAYER
 // ─────────────────────────────────────────────
-async function loadData() {
-  try {
-    const res  = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers:{'X-Master-Key':MASTER_KEY} });
-    const json = await res.json();
-    data = json.record;
-    const oN="OKULLO DAVID LAURENCE", nN="OKULLU DAVID LAURANCE";
+async function loadData(){
+  try{
+    const res=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':MASTER_KEY}});
+    const json=await res.json();
+    data=json.record;
+    const oN="OKULLO DAVID LAURENCE",nN="OKULLU DAVID LAURANCE";
     if(data[oN]){data[nN]=data[oN];delete data[oN];data.members=data.members.map(m=>m===oN?nN:m);}
-    if(!data.expenses)    data.expenses    = [];
-    if(!data.investments) data.investments = [];
-    if(!data.cashIn)      data.cashIn      = [];
-    // default report month to current
+    if(!data.expenses)    data.expenses=[];
+    if(!data.investments) data.investments=[];
+    if(!data.cashIn)      data.cashIn=[];
     const now=new Date();
-    reportMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    reportStart = "2024-02";
-    reportEnd   = reportMonth;
+    reportMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    reportStart="2024-02";
+    reportEnd=reportMonth;
     render();
-  } catch(e){ showToast("⚠️ Sync failed","danger"); }
+  }catch(e){showToast("⚠️ Sync failed","danger");}
 }
-
-async function saveData() {
-  try {
+async function saveData(){
+  try{
     await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`,{
-      method:'PUT', headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},
-      body: JSON.stringify(data)
+      method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},
+      body:JSON.stringify(data)
     });
     showToast("✅ Saved successfully","success");
     render();
-  } catch(e){ showToast("❌ Save failed","danger"); }
+  }catch(e){showToast("❌ Save failed","danger");}
 }
 
 // ─────────────────────────────────────────────
 // FINANCIAL CALCULATIONS
 // ─────────────────────────────────────────────
 function getMonthlyTarget(ms){
-  const y=parseInt(ms.split('-')[0]), m=parseInt(ms.split('-')[1]);
-  return (y===2024&&m>=2&&m<=7)?80000:100000;
+  const y=parseInt(ms.split('-')[0]),m=parseInt(ms.split('-')[1]);
+  return(y===2024&&m>=2&&m<=7)?80000:100000;
 }
 
-function calcArrearsAndFines(mName){
+// Returns arrears + fines for a specific member up to today
+// Also can return per-month breakdown for reporting
+function calcArrearsAndFines(mName,returnBreakdown=false){
+  const breakdown=[];
   let total=0;
-  const today=new Date(), curMs=today.toISOString().slice(0,7);
+  const today=new Date(),curMs=today.toISOString().slice(0,7);
   let cy=2024,cm=2;
   while(cy<today.getFullYear()||(cy===today.getFullYear()&&cm<=today.getMonth()+1)){
     const ms=`${cy}-${String(cm).padStart(2,'0')}`;
@@ -245,48 +226,111 @@ function calcArrearsAndFines(mName){
     const contribs=data[mName].contributions.filter(c=>c.month===ms);
     const paid=contribs.reduce((a,b)=>a+Number(b.amt),0);
     if(paid<target){
+      const gap=target-paid;
       let penalty=0;
       const onTime=contribs.some(c=>parseInt(c.date.split('-')[2])<=10);
       if(!onTime){
         if(ms!==curMs) penalty=15000;
         else if(today.getDate()>=10) penalty=Math.min((Math.floor((today.getDate()-10)/7)+1)*5000,15000);
       }
-      total+=(target-paid)+penalty;
+      const monthTotal=gap+penalty;
+      total+=monthTotal;
+      if(returnBreakdown) breakdown.push({ms,paid,target,gap,penalty,monthTotal});
     }
-    cm++; if(cm>12){cm=1;cy++;}
+    cm++;if(cm>12){cm=1;cy++;}
   }
-  return total;
+  return returnBreakdown?{total,breakdown}:total;
 }
 
-function calcLoanBalance(loan, loanId, mName){
+/*
+  LOAN INTEREST — REVISED RULES:
+  ─ 5% is applied IMMEDIATELY on the day the loan is issued (principal × 1.05 from day one).
+  ─ On each exact monthly anniversary of the issue date (e.g. issued Feb 10 → compounds Mar 10, Apr 10...), 
+    the running balance × 1.05 again — as long as the loan is still not fully paid.
+  ─ Repayments reduce the running balance on the day they're made.
+  ─ We compute by stepping through each anniversary date up to today.
+*/
+function calcLoanBalance(loan,loanId,mName){
+  if(!loan||loan.type!=='LOAN') return null;
   const principal=Number(loan.amt);
   const issueDate=new Date(loan.date);
-  const issueY=issueDate.getFullYear(), issueM=issueDate.getMonth();
-  const today=new Date(), todayY=today.getFullYear(), todayM=today.getMonth();
+
+  // All repayments for this loan, sorted by date
   const repayments=(data[mName].loans||[])
     .filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(loanId))
-    .map(r=>({y:new Date(r.date).getFullYear(),m:new Date(r.date).getMonth(),amt:Number(r.amt)}));
+    .map(r=>({date:new Date(r.date),amt:Number(r.amt)}))
+    .sort((a,b)=>a.date-b.date);
+
   const totalRepaid=repayments.reduce((a,r)=>a+r.amt,0);
-  let balance=principal,cy=issueY,cm=issueM,firstMonth=true;
-  while(cy<todayY||(cy===todayY&&cm<=todayM)){
-    if(!firstMonth&&balance>0) balance*=1.05;
-    repayments.filter(r=>r.y===cy&&r.m===cm).forEach(r=>{balance-=r.amt;});
-    if(balance<=0){balance=0;break;}
-    firstMonth=false; cm++; if(cm>11){cm=0;cy++;}
+  const today=new Date();
+  today.setHours(23,59,59,999); // include today fully
+
+  // Step 1: apply immediate 5% on day of issue
+  let balance=principal*1.05;
+
+  // Step 2: subtract any repayments made ON the issue date itself
+  repayments.filter(r=>r.date<=issueDate).forEach(r=>{balance-=r.amt;});
+  if(balance<=0){
+    return{principal,outstanding:0,totalRepaid,interestCollected:Math.max(0,totalRepaid-principal),
+           interestAccrued:Math.max(0,totalRepaid-principal),isFullyPaid:true,isOverdue:false,monthsElapsed:0,loanId};
   }
+
+  // Step 3: walk through exact monthly anniversaries
+  // anniversary 1 = issueDate + 1 month, anniversary 2 = +2 months, etc.
+  let anniversaryNum=1;
+  while(true){
+    // compute next anniversary date
+    const anniv=new Date(issueDate);
+    anniv.setMonth(anniv.getMonth()+anniversaryNum);
+    // handle end-of-month overflow (e.g. Jan 31 + 1 month → Feb 28)
+    if(anniv.getDate()!==issueDate.getDate()){
+      // overflowed — set to last day of that month
+      anniv.setDate(0);
+    }
+
+    if(anniv>today) break; // haven't reached this anniversary yet
+
+    // subtract repayments that occurred BETWEEN previous anniversary and this one (exclusive prev, inclusive this)
+    const prevAnniv=new Date(issueDate);
+    prevAnniv.setMonth(prevAnniv.getMonth()+(anniversaryNum-1));
+    if(prevAnniv.getDate()!==issueDate.getDate()) prevAnniv.setDate(0);
+
+    repayments
+      .filter(r=>r.date>prevAnniv&&r.date<=anniv)
+      .forEach(r=>{balance-=r.amt;});
+
+    if(balance<=0){balance=0;break;}
+
+    // compound on this anniversary
+    balance*=1.05;
+    anniversaryNum++;
+  }
+
+  // subtract any repayments made after the last anniversary up to today
+  const lastAnniv=new Date(issueDate);
+  lastAnniv.setMonth(lastAnniv.getMonth()+(anniversaryNum-1));
+  if(lastAnniv.getDate()!==issueDate.getDate()) lastAnniv.setDate(0);
+  repayments.filter(r=>r.date>lastAnniv&&r.date<=today).forEach(r=>{balance-=r.amt;});
+  if(balance<0) balance=0;
+
   const outstanding=Math.max(0,Math.round(balance));
   const isFullyPaid=outstanding===0&&totalRepaid>0;
-  const monthsElapsed=(todayY-issueY)*12+(todayM-issueM);
+  const monthsElapsed=anniversaryNum-1; // number of full month anniversaries passed
   const isOverdue=!isFullyPaid&&monthsElapsed>=1&&totalRepaid===0;
   const principalRepaid=Math.min(totalRepaid,principal);
   const interestCollected=Math.max(0,totalRepaid-principalRepaid);
+  // interest accrued = (outstanding + totalRepaid) - principal — what compounding added total
   const interestAccrued=Math.max(0,Math.round(outstanding+totalRepaid-principal));
-  return {principal,monthsElapsed,outstanding,totalRepaid,interestCollected,interestAccrued,isFullyPaid,isOverdue};
+
+  return{principal,outstanding,totalRepaid,interestCollected,interestAccrued,isFullyPaid,isOverdue,monthsElapsed,loanId};
 }
 
 function getMemberLoanDebt(mName){
   return data[mName].loans.filter(l=>l.type==='LOAN')
-    .reduce((s,loan,idx)=>s+calcLoanBalance(loan,idx+1,mName).outstanding,0);
+    .reduce((s,loan,idx)=>{
+      const bal=calcLoanBalance(loan,idx+1,mName);
+      return s+(bal?bal.outstanding:0);
+    },0);
 }
 
 function getGlobalStats(){
@@ -295,6 +339,7 @@ function getGlobalStats(){
     data[m].contributions.forEach(c=>grossSavings+=Number(c.amt));
     data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{
       const bal=calcLoanBalance(loan,idx+1,m);
+      if(!bal)return;
       const principalRepaid=Math.min(bal.totalRepaid,bal.principal);
       interestCollected+=Math.max(0,bal.totalRepaid-principalRepaid);
       activeLoanPrincipal+=Math.max(0,bal.principal-principalRepaid);
@@ -304,236 +349,290 @@ function getGlobalStats(){
   const expenses=data.expenses.reduce((a,b)=>a+Number(b.amt),0);
   const investments=data.investments.reduce((a,b)=>a+Number(b.amt),0);
   const netCash=(grossSavings+interestCollected+cashIn)-(expenses+activeLoanPrincipal+investments);
-  return {grossSavings,interestCollected,cashIn,expenses,investments,activeLoanPrincipal,netCash};
+  return{grossSavings,interestCollected,cashIn,expenses,investments,activeLoanPrincipal,netCash};
 }
 
 // ─────────────────────────────────────────────
-// REPORT DATA BUILDER
-// Computes stats scoped to a list of monthStrings
+// SHORTFALL = savings gap + penalty for that member
+// Used in report and ledger print
 // ─────────────────────────────────────────────
-function getMonthRange(startMs, endMs){
+function getMemberShortfallWithPenalty(mName){
+  return calcArrearsAndFines(mName); // already includes gap + penalty
+}
+
+// ─────────────────────────────────────────────
+// MONTH RANGE HELPER
+// ─────────────────────────────────────────────
+function getMonthRange(startMs,endMs){
   const months=[];
-  let [sy,sm]=[parseInt(startMs.split('-')[0]),parseInt(startMs.split('-')[1])-1];
-  const [ey,em]=[parseInt(endMs.split('-')[0]),parseInt(endMs.split('-')[1])-1];
+  let[sy,sm]=[parseInt(startMs.split('-')[0]),parseInt(startMs.split('-')[1])-1];
+  const[ey,em]=[parseInt(endMs.split('-')[0]),parseInt(endMs.split('-')[1])-1];
   while(sy<ey||(sy===ey&&sm<=em)){
     months.push(`${sy}-${String(sm+1).padStart(2,'0')}`);
-    sm++; if(sm>11){sm=0;sy++;}
+    sm++;if(sm>11){sm=0;sy++;}
   }
   return months;
 }
 
+// ─────────────────────────────────────────────
+// REPORT DATA BUILDER
+// ─────────────────────────────────────────────
 function buildReportData(months){
-  // savings for these months only
   let savingsInRange=0;
   const memberRows=data.members.map(m=>{
     const paid=months.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
     savingsInRange+=paid;
     const expected=months.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
-    const gap=Math.max(0,expected-paid);
+    // shortfall = savings gap for this period + ALL penalties/arrears up to today
+    const savingsGap=Math.max(0,expected-paid);
+    const penalties=getMemberShortfallWithPenalty(m);
+    // trueShortfall: savings gap in period + any outstanding fines
+    // We use the total arrears figure (which includes both gap and penalty for all months)
+    const trueShortfall=getMemberShortfallWithPenalty(m);
     const status=paid>=expected?'COMPLETE':paid>0?'PARTIAL':'PENDING';
-    return {name:m, paid, expected, gap, status};
+    return{name:m,paid,expected,savingsGap,trueShortfall,status};
   });
-
-  // global stats (all-time — always show full SACCO position)
   const S=getGlobalStats();
-
-  // loan portfolio (all active loans)
   const loanRows=[];
   data.members.forEach(m=>{
     data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{
       const bal=calcLoanBalance(loan,idx+1,m);
-      if(!bal.isFullyPaid){
-        loanRows.push({member:m, loanId:idx+1, date:loan.date, principal:bal.principal, outstanding:bal.outstanding, monthsElapsed:bal.monthsElapsed, isOverdue:bal.isOverdue, totalRepaid:bal.totalRepaid, interestAccrued:bal.interestAccrued});
+      if(bal&&!bal.isFullyPaid){
+        loanRows.push({member:m,loanId:idx+1,date:loan.date,principal:bal.principal,outstanding:bal.outstanding,monthsElapsed:bal.monthsElapsed,isOverdue:bal.isOverdue,totalRepaid:bal.totalRepaid,interestAccrued:bal.interestAccrued});
       }
     });
   });
-
-  // expenses & investments (all-time for overall context)
-  return {S, memberRows, loanRows, savingsInRange, months};
+  return{S,memberRows,loanRows,savingsInRange,months};
 }
 
 // ─────────────────────────────────────────────
-// PRINT ENGINE
+// PRINT ENGINE — SACCO REPORT
 // ─────────────────────────────────────────────
-function buildPrintHTML(title, subtitle, rd){
-  const {S,memberRows,loanRows,savingsInRange}=rd;
+function buildSaccoPrintHTML(title,subtitle,rd){
+  const{S,memberRows,loanRows,savingsInRange}=rd;
   const generated=new Date().toLocaleString('en-UG',{dateStyle:'full',timeStyle:'short'});
-
-  // member table rows
   const mRows=memberRows.map(r=>{
-    const badgeCls=r.status==='COMPLETE'?'badge-comp':r.status==='PARTIAL'?'badge-part':'badge-pend';
-    return `<tr>
-      <td>${r.name}</td>
-      <td>UGX ${r.paid.toLocaleString()}</td>
-      <td>UGX ${r.expected.toLocaleString()}</td>
-      <td>UGX ${r.gap.toLocaleString()}</td>
-      <td><span class="badge ${badgeCls}">${r.status}</span></td>
-    </tr>`;
+    const bc=r.status==='COMPLETE'?'badge-comp':r.status==='PARTIAL'?'badge-part':'badge-pend';
+    return`<tr><td>${r.name}</td><td>UGX ${r.paid.toLocaleString()}</td><td>UGX ${r.expected.toLocaleString()}</td><td style="color:#C62828;font-weight:700">UGX ${r.trueShortfall.toLocaleString()}</td><td><span class="badge ${bc}">${r.status}</span></td></tr>`;
   }).join('');
-
-  // loan table rows
-  const lRows=loanRows.length?loanRows.map(r=>`<tr>
-    <td>${r.member}</td>
-    <td>#${r.loanId}</td>
-    <td>${r.date}</td>
-    <td>UGX ${r.principal.toLocaleString()}</td>
-    <td>UGX ${r.totalRepaid.toLocaleString()}</td>
-    <td>UGX ${r.interestAccrued.toLocaleString()}</td>
-    <td style="font-weight:700; color:#C62828">UGX ${r.outstanding.toLocaleString()}</td>
-    <td>${r.isOverdue?'<span class="badge badge-pend">OVERDUE</span>':'<span class="badge badge-comp">Active</span>'}</td>
-  </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:#999">No active loans</td></tr>';
-
-  // expenses rows
-  const eRows=data.expenses.length?data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join('')
-    :'<tr><td colspan="3" style="text-align:center;color:#999">No expenses recorded</td></tr>';
-
-  // investments rows
-  const iRows=data.investments.length?data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td>UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join('')
-    :'<tr><td colspan="3" style="text-align:center;color:#999">No investments recorded</td></tr>';
-
-  const totalExpenses=data.expenses.reduce((a,b)=>a+Number(b.amt),0);
-  const totalInvestments=data.investments.reduce((a,b)=>a+Number(b.amt),0);
-  const totalLoansOut=loanRows.reduce((a,r)=>a+r.outstanding,0);
-
-  return `
-    <!-- PAGE 1: Cover + Financial Summary -->
+  const lRows=loanRows.length?loanRows.map(r=>`<tr><td>${r.member}</td><td>#${r.loanId}</td><td>${r.date}</td><td>UGX ${r.principal.toLocaleString()}</td><td>UGX ${r.totalRepaid.toLocaleString()}</td><td>UGX ${r.interestAccrued.toLocaleString()}</td><td style="font-weight:700;color:#C62828">UGX ${r.outstanding.toLocaleString()}</td><td>${r.isOverdue?'<span class="badge badge-pend">OVERDUE</span>':'<span class="badge badge-comp">Active</span>'}</td></tr>`).join('')
+    :'<tr><td colspan="8" style="text-align:center;color:#999">No active loans</td></tr>';
+  const eRows=data.expenses.length?data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#999">No expenses</td></tr>';
+  const iRows=data.investments.length?data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td>UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#999">No investments</td></tr>';
+  const totalExp=data.expenses.reduce((a,b)=>a+Number(b.amt),0);
+  const totalInv=data.investments.reduce((a,b)=>a+Number(b.amt),0);
+  const totalOut=loanRows.reduce((a,r)=>a+r.outstanding,0);
+  return`
     <div class="print-page">
       <div class="print-header">
         <h1>ELITES SACCO</h1>
-        <div class="ph-sub" style="font-size:14pt; font-weight:700; color:#B08D57; margin:4px 0">${title}</div>
+        <div class="ph-title">${title}</div>
         <div class="ph-sub">${subtitle}</div>
-        <div class="ph-sub" style="margin-top:6px">Generated: ${generated}</div>
+        <div class="ph-sub" style="margin-top:5px">Generated: ${generated}</div>
       </div>
-
-      <!-- Net Cash -->
       <div class="print-net">
         <div class="pn-label">SACCO Net Cash Position</div>
         <div class="pn-value">UGX ${S.netCash.toLocaleString()}</div>
         <div class="print-formula">(Gross Savings + Interest Earned + Cash In) − (Expenses + Active Loan Principal + Investments)</div>
       </div>
-
-      <!-- Financial Summary Grid -->
       <div class="print-section">
         <h2>Financial Summary (All-Time)</h2>
         <div class="print-grid">
-          <div class="print-stat">
-            <div class="ps-label">Gross Savings</div>
-            <div class="ps-value">UGX ${S.grossSavings.toLocaleString()}</div>
-          </div>
-          <div class="print-stat">
-            <div class="ps-label">Interest Earned (Collected)</div>
-            <div class="ps-value" style="color:#2E7D32">UGX ${S.interestCollected.toLocaleString()}</div>
-          </div>
-          <div class="print-stat">
-            <div class="ps-label">Cash In / Donations</div>
-            <div class="ps-value" style="color:#1565C0">UGX ${S.cashIn.toLocaleString()}</div>
-          </div>
-          <div class="print-stat">
-            <div class="ps-label">Total Expenses</div>
-            <div class="ps-value" style="color:#C62828">UGX ${S.expenses.toLocaleString()}</div>
-          </div>
-          <div class="print-stat">
-            <div class="ps-label">Active Loan Principal Out</div>
-            <div class="ps-value" style="color:#B08D57">UGX ${S.activeLoanPrincipal.toLocaleString()}</div>
-          </div>
-          <div class="print-stat">
-            <div class="ps-label">Total Investments</div>
-            <div class="ps-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div>
-          </div>
+          <div class="print-stat"><div class="ps-label">Gross Savings</div><div class="ps-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
+          <div class="print-stat"><div class="ps-label">Interest Earned</div><div class="ps-value" style="color:#2E7D32">UGX ${S.interestCollected.toLocaleString()}</div></div>
+          <div class="print-stat"><div class="ps-label">Cash In / Donations</div><div class="ps-value" style="color:#1565C0">UGX ${S.cashIn.toLocaleString()}</div></div>
+          <div class="print-stat"><div class="ps-label">Total Expenses</div><div class="ps-value" style="color:#C62828">UGX ${S.expenses.toLocaleString()}</div></div>
+          <div class="print-stat"><div class="ps-label">Active Loan Principal</div><div class="ps-value" style="color:#B08D57">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
+          <div class="print-stat"><div class="ps-label">Total Investments</div><div class="ps-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
         </div>
       </div>
-
-      <!-- Member Savings for Period -->
       <div class="print-section">
         <h2>Member Savings — ${title}</h2>
-        <p style="font-size:9pt; color:#666; margin-bottom:8px">
-          Savings collected within the selected period. Expected = monthly target × number of months selected.
-          Period total collected: <strong>UGX ${savingsInRange.toLocaleString()}</strong>
-        </p>
+        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Period savings collected: <strong>UGX ${savingsInRange.toLocaleString()}</strong>. Shortfall = unpaid savings gap + penalty charges as of today.</p>
         <table>
-          <tr><th>Member</th><th>Amount Paid</th><th>Expected</th><th>Shortfall</th><th>Status</th></tr>
+          <tr><th>Member</th><th>Amount Paid</th><th>Expected</th><th>Total Shortfall (incl. penalties)</th><th>Status</th></tr>
           ${mRows}
         </table>
       </div>
-
-      <div class="print-footer">ELITES SACCO — Confidential — Page 1</div>
+      <div class="print-footer">ELITES SACCO — Confidential — Page 1 of 2</div>
     </div>
-
-    <!-- PAGE 2: Loans + Expenses + Investments -->
     <div class="print-page">
       <div class="print-header">
         <h1>ELITES SACCO</h1>
-        <div class="ph-sub" style="font-size:12pt; font-weight:700; color:#B08D57">${title} — Loans, Expenses & Investments</div>
+        <div class="ph-title">${title} — Loans, Expenses & Investments</div>
       </div>
-
-      <!-- Active Loan Portfolio -->
       <div class="print-section">
         <h2>Active Loan Portfolio</h2>
-        <p style="font-size:9pt; color:#666; margin-bottom:8px">
-          Total outstanding across all active loans: <strong>UGX ${totalLoansOut.toLocaleString()}</strong>
-        </p>
+        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Total outstanding: <strong>UGX ${totalOut.toLocaleString()}</strong>. Interest = 5% applied on issue date, then compounds on each monthly anniversary.</p>
         <table>
           <tr><th>Member</th><th>Loan</th><th>Issued</th><th>Principal</th><th>Repaid</th><th>Interest</th><th>Outstanding</th><th>Status</th></tr>
           ${lRows}
         </table>
       </div>
-
-      <!-- Expenses Breakdown -->
       <div class="print-section">
         <h2>Expenses Breakdown</h2>
-        <p style="font-size:9pt; color:#666; margin-bottom:8px">Total expenses: <strong>UGX ${totalExpenses.toLocaleString()}</strong></p>
-        <table>
-          <tr><th>Date</th><th>Description</th><th>Amount</th></tr>
-          ${eRows}
-        </table>
+        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Total: <strong>UGX ${totalExp.toLocaleString()}</strong></p>
+        <table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${eRows}</table>
       </div>
-
-      <!-- Investments Breakdown -->
       <div class="print-section">
         <h2>Investments Breakdown</h2>
-        <p style="font-size:9pt; color:#666; margin-bottom:8px">Total investments: <strong>UGX ${totalInvestments.toLocaleString()}</strong></p>
-        <table>
-          <tr><th>Date</th><th>Description</th><th>Amount</th></tr>
-          ${iRows}
-        </table>
+        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Total: <strong>UGX ${totalInv.toLocaleString()}</strong></p>
+        <table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${iRows}</table>
       </div>
-
-      <div class="print-footer">ELITES SACCO — Confidential — Page 2 | Printed: ${generated}</div>
+      <div class="print-footer">ELITES SACCO — Confidential — Page 2 of 2 | Printed: ${generated}</div>
     </div>`;
 }
 
-function triggerPrint(title, subtitle, months){
+// ─────────────────────────────────────────────
+// PRINT ENGINE — INDIVIDUAL MEMBER LEDGER
+// ─────────────────────────────────────────────
+function buildMemberPrintHTML(mName){
+  const generated=new Date().toLocaleString('en-UG',{dateStyle:'full',timeStyle:'short'});
+  const mySavings=data[mName].contributions.reduce((a,b)=>a+Number(b.amt),0);
+  const myDebt=getMemberLoanDebt(mName);
+  const myArrears=calcArrearsAndFines(mName);
+
+  // savings timeline with per-month shortfall
+  const now=new Date();
+  let timelineRows='';
+  let cy=2024,cm=2;
+  while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth()+1)){
+    const ms=`${cy}-${String(cm).padStart(2,'0')}`;
+    const paid=data[mName].contributions.filter(c=>c.month===ms).reduce((a,b)=>a+Number(b.amt),0);
+    const target=getMonthlyTarget(ms);
+    const gap=Math.max(0,target-paid);
+    // per-month penalty
+    const today2=new Date();
+    const curMs=today2.toISOString().slice(0,7);
+    const contribs=data[mName].contributions.filter(c=>c.month===ms);
+    let penalty=0;
+    if(gap>0){
+      const onTime=contribs.some(c=>parseInt(c.date.split('-')[2])<=10);
+      if(!onTime){
+        if(ms!==curMs) penalty=15000;
+        else if(today2.getDate()>=10) penalty=Math.min((Math.floor((today2.getDate()-10)/7)+1)*5000,15000);
+      }
+    }
+    const monthShortfall=gap+penalty;
+    const badge=paid>=target?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
+    timelineRows+=`<tr>
+      <td>${ms}</td>
+      <td>UGX ${paid.toLocaleString()}</td>
+      <td>UGX ${target.toLocaleString()}</td>
+      <td>${badge}</td>
+      <td style="${monthShortfall>0?'color:#C62828;font-weight:700':'color:#2E7D32'}">UGX ${monthShortfall.toLocaleString()}</td>
+    </tr>`;
+    cm++;if(cm>12){cm=1;cy++;}
+  }
+
+  // loan section
+  const loans=data[mName].loans.filter(l=>l.type==='LOAN');
+  let loanHTML='<p style="font-size:9pt;color:#999">No loan records.</p>';
+  if(loans.length){
+    loanHTML=loans.map((loan,idx)=>{
+      const lid=idx+1;
+      const bal=calcLoanBalance(loan,lid,mName);
+      if(!bal)return'';
+      const repayRows=data[mName].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid))
+        .map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:#2E7D32">UGX ${Number(r.amt).toLocaleString()}</td></tr>`).join('');
+      return`
+        <p style="font-size:9.5pt;font-weight:700;margin:10px 0 5px">Loan #${lid} — Issued: ${loan.date} &nbsp; Status: ${bal.isFullyPaid?'✅ FULLY PAID':bal.isOverdue?'⚠️ OVERDUE':'Active'}</p>
+        <table>
+          <tr><th>Principal</th><th>Total Repaid</th><th>Interest Accrued</th><th>Outstanding Balance</th><th>Months Elapsed</th></tr>
+          <tr>
+            <td>UGX ${bal.principal.toLocaleString()}</td>
+            <td style="color:#2E7D32">UGX ${bal.totalRepaid.toLocaleString()}</td>
+            <td>UGX ${bal.interestAccrued.toLocaleString()}</td>
+            <td style="font-weight:700;color:${bal.isFullyPaid?'#2E7D32':'#C62828'}">UGX ${bal.outstanding.toLocaleString()}</td>
+            <td>${bal.monthsElapsed}</td>
+          </tr>
+        </table>
+        ${repayRows?`<table><tr><th>Date</th><th>Type</th><th>Reference</th><th>Amount</th></tr>${repayRows}</table>`:''}`;
+    }).join('');
+  }
+
+  return`
+    <div class="print-page">
+      <div class="print-header">
+        <h1>ELITES SACCO</h1>
+        <div class="ph-title">Member Statement — ${mName}</div>
+        <div class="ph-sub">Generated: ${generated}</div>
+      </div>
+      <div class="print-section">
+        <h2>Personal Summary</h2>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+          <div class="print-member-stat"><div class="ps-label">Total Savings</div><div class="ps-value">UGX ${mySavings.toLocaleString()}</div></div>
+          <div class="print-member-stat"><div class="ps-label">Total Arrears + Fines</div><div class="ps-value" style="color:#C62828">UGX ${myArrears.toLocaleString()}</div></div>
+          <div class="print-member-stat"><div class="ps-label">Loan Balance (incl. interest)</div><div class="ps-value" style="color:#C62828">UGX ${myDebt.toLocaleString()}</div></div>
+        </div>
+      </div>
+      <div class="print-section">
+        <h2>Savings Timeline</h2>
+        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Shortfall = unpaid savings gap + penalty charges for that month as of today's date.</p>
+        <table>
+          <tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th><th>Shortfall (incl. penalty)</th></tr>
+          ${timelineRows}
+        </table>
+      </div>
+      <div class="print-footer">ELITES SACCO — Personal Statement — ${mName} — Page 1 of 2</div>
+    </div>
+    <div class="print-page">
+      <div class="print-header">
+        <h1>ELITES SACCO</h1>
+        <div class="ph-title">Member Statement — ${mName} — Loan History</div>
+      </div>
+      <div class="print-section">
+        <h2>Loan Records</h2>
+        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Interest: 5% applied immediately on issue, then compounds on each exact monthly anniversary date.</p>
+        ${loanHTML}
+      </div>
+      <div class="print-footer">ELITES SACCO — Personal Statement — ${mName} — Page 2 of 2 | Printed: ${generated}</div>
+    </div>`;
+}
+
+function triggerSaccoPrint(title,subtitle,months){
   const rd=buildReportData(months);
-  const html=buildPrintHTML(title, subtitle, rd);
-  document.getElementById('printArea').innerHTML=html;
+  document.getElementById('printArea').innerHTML=buildSaccoPrintHTML(title,subtitle,rd);
+  document.getElementById('appContainer').style.display='none';
   setTimeout(()=>{
     window.print();
-    // clean up after print dialog closes
-    setTimeout(()=>{ document.getElementById('printArea').innerHTML=''; }, 2000);
-  }, 300);
+    setTimeout(()=>{
+      document.getElementById('printArea').innerHTML='';
+      document.getElementById('appContainer').style.display='block';
+    },1500);
+  },300);
+}
+
+function triggerMemberPrint(mName){
+  document.getElementById('printArea').innerHTML=buildMemberPrintHTML(mName);
+  document.getElementById('appContainer').style.display='none';
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=>{
+      document.getElementById('printArea').innerHTML='';
+      document.getElementById('appContainer').style.display='block';
+    },1500);
+  },300);
 }
 
 function printSingleMonth(){
-  const ms=reportMonth;
-  if(!ms){showToast("⚠️ Select a month first","warn");return;}
-  const label=new Date(ms+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
-  triggerPrint(`Monthly Report — ${label}`, `Single month: ${ms}`, [ms]);
+  if(!reportMonth){showToast("⚠️ Select a month first","warn");return;}
+  const label=new Date(reportMonth+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
+  triggerSaccoPrint(`Monthly Report — ${label}`,`Single month: ${reportMonth}`,[reportMonth]);
 }
-
 function printRange(){
-  if(!reportStart||!reportEnd){showToast("⚠️ Select both start and end months","warn");return;}
-  if(reportStart>reportEnd){showToast("⚠️ Start month must be before end month","warn");return;}
+  if(!reportStart||!reportEnd){showToast("⚠️ Select both months","warn");return;}
+  if(reportStart>reportEnd){showToast("⚠️ Start must be before end","warn");return;}
   const months=getMonthRange(reportStart,reportEnd);
-  const sLabel=new Date(reportStart+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
-  const eLabel=new Date(reportEnd+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
-  triggerPrint(`Report: ${sLabel} to ${eLabel}`, `Date range: ${reportStart} → ${reportEnd} (${months.length} months)`, months);
+  const sL=new Date(reportStart+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
+  const eL=new Date(reportEnd+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
+  triggerSaccoPrint(`Report: ${sL} to ${eL}`,`Date range: ${reportStart} → ${reportEnd} (${months.length} months)`,months);
 }
-
 function printOverall(){
   const now=new Date();
   const endMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const months=getMonthRange("2024-02", endMs);
-  triggerPrint("Overall SACCO Report", `All-time: February 2024 to present (${months.length} months)`, months);
+  const months=getMonthRange("2024-02",endMs);
+  triggerSaccoPrint("Overall SACCO Report",`All-time: February 2024 to present (${months.length} months)`,months);
 }
 
 // ─────────────────────────────────────────────
@@ -565,15 +664,15 @@ function render(){
       ${tabs.map(t=>`<button class="tab-btn ${activeTab===t.id?'active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`).join('')}
     </div>
     <div class="container">`;
-  if      (activeTab==='dashboard')          html+=renderDashboard(isAdmin,activeMember);
-  else if (activeTab==='ledger')             html+=renderLedger(isAdmin,activeMember);
-  else if (activeTab==='activity')           html+=renderActivity();
-  else if (activeTab==='admin'  &&isAdmin)   html+=renderAdmin(activeMember);
-  else if (activeTab==='audit'  &&isAdmin)   html+=renderAudit();
-  else if (activeTab==='monthly'&&isAdmin)   html+=renderMonthlyReport();
-  else if (activeTab==='settings')           html+=renderSettings();
+  if      (activeTab==='dashboard')         html+=renderDashboard(isAdmin,activeMember);
+  else if (activeTab==='ledger')            html+=renderLedger(isAdmin,activeMember);
+  else if (activeTab==='activity')          html+=renderActivity();
+  else if (activeTab==='admin'  &&isAdmin)  html+=renderAdmin(activeMember);
+  else if (activeTab==='audit'  &&isAdmin)  html+=renderAudit();
+  else if (activeTab==='monthly'&&isAdmin)  html+=renderMonthlyReport();
+  else if (activeTab==='settings')          html+=renderSettings();
   html+=`</div>`;
-  if(editModalData) html+=renderEditModal();
+  if(editModalData)html+=renderEditModal();
   root.innerHTML=html;
 }
 function switchTab(t){activeTab=t;render();}
@@ -583,7 +682,7 @@ function logout(){user=null;activeTab='dashboard';lastSelectedMember=null;render
 // LOGIN
 // ─────────────────────────────────────────────
 function renderLogin(){
-  return `<div class="login-wrap"><div class="login-card">
+  return`<div class="login-wrap"><div class="login-card">
     <div class="login-logo">
       <div class="login-icon">🏦</div>
       <div class="login-title">ELITES SACCO</div>
@@ -612,7 +711,7 @@ function renderDashboard(isAdmin,activeMember){
   let alerts='';
   if(myArrears>0) alerts+=`<div class="alert alert-warn">⚠️ You have arrears &amp; fines of <strong>UGX ${myArrears.toLocaleString()}</strong>.</div>`;
   if(myDebt>0)    alerts+=`<div class="alert alert-danger">🔴 Outstanding loan balance: <strong>UGX ${myDebt.toLocaleString()}</strong> (includes compounded interest).</div>`;
-  if(!myArrears&&!myDebt) alerts+=`<div class="alert alert-success">✅ Fully up to date — no arrears or outstanding loans.</div>`;
+  if(!myArrears&&!myDebt)alerts+=`<div class="alert alert-success">✅ Fully up to date — no arrears or outstanding loans.</div>`;
   const now=new Date();
   const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const thisTarget=getMonthlyTarget(thisMonth);
@@ -628,7 +727,7 @@ function renderDashboard(isAdmin,activeMember){
     timelineRows+=`<tr><td>${ms}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${target.toLocaleString()}</td><td>${badge}</td></tr>`;
     cm++;if(cm>12){cm=1;cy++;}
   }
-  return `
+  return`
     ${alerts}
     <div class="hero-card">
       <div class="hero-label">SACCO Net Cash Position</div>
@@ -684,7 +783,8 @@ function renderLoanCards(mName){
   if(!loans.length)return'';
   let html=`<div class="card"><h2>My Loans</h2>`;
   loans.forEach((loan,idx)=>{
-    const loanId=idx+1, bal=calcLoanBalance(loan,loanId,mName);
+    const loanId=idx+1,bal=calcLoanBalance(loan,loanId,mName);
+    if(!bal)return;
     const cls=bal.isFullyPaid?'paid-loan':bal.isOverdue?'overdue':'active-loan';
     const badge=bal.isFullyPaid?'<span class="badge badge-paid">✅ FULLY PAID</span>':bal.isOverdue?'<span class="badge badge-overdue">⚠️ OVERDUE</span>':'<span class="badge badge-active">Active</span>';
     html+=`<div class="loan-card ${cls}">
@@ -693,31 +793,51 @@ function renderLoanCards(mName){
       </div>
       <div class="grid" style="gap:8px">
         <div><div class="stat-label">Principal</div><div style="font-weight:600">UGX ${bal.principal.toLocaleString()}</div></div>
-        <div><div class="stat-label">Months Elapsed</div><div style="font-weight:600">${bal.monthsElapsed}</div></div>
+        <div><div class="stat-label">Monthly Anniversaries Passed</div><div style="font-weight:600">${bal.monthsElapsed}</div></div>
         <div><div class="stat-label">Total Repaid</div><div style="font-weight:600;color:var(--green)">UGX ${bal.totalRepaid.toLocaleString()}</div></div>
         <div><div class="stat-label">Interest Accrued</div><div style="font-weight:600;color:#888">UGX ${bal.interestAccrued.toLocaleString()}</div></div>
       </div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee">
-        <div class="stat-label">Outstanding Balance</div>
+        <div class="stat-label">Outstanding Balance (Principal + Compounded Interest)</div>
         <div style="font-weight:800;font-size:1.1rem;color:${bal.isFullyPaid?'var(--green)':'var(--red)'}">UGX ${bal.outstanding.toLocaleString()}</div>
       </div>
-      ${bal.isOverdue?`<div class="alert alert-danger" style="margin-top:10px;padding:8px 12px;font-size:12px">⚠️ No repayments recorded. Active for ${bal.monthsElapsed} month(s).</div>`:''}
+      ${bal.isOverdue?`<div class="alert alert-danger" style="margin-top:10px;padding:8px 12px;font-size:12px">⚠️ No repayments recorded. ${bal.monthsElapsed} monthly anniversary(ies) passed.</div>`:''}
     </div>`;
   });
   return html+`</div>`;
 }
 
 // ─────────────────────────────────────────────
-// LEDGER
+// LEDGER — with print button
 // ─────────────────────────────────────────────
 function renderLedger(isAdmin,activeMember){
-  const now=new Date();let rows='';let cy=2024,cm=2;
+  const now=new Date();
+  let rows='';let cy=2024,cm=2;
   while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth()+1)){
     const ms=`${cy}-${String(cm).padStart(2,'0')}`;
     const paid=data[activeMember].contributions.filter(c=>c.month===ms).reduce((a,b)=>a+Number(b.amt),0);
     const target=getMonthlyTarget(ms);
+    const gap=Math.max(0,target-paid);
+    // per-month penalty
+    const today2=new Date(),curMs2=today2.toISOString().slice(0,7);
+    const contribs=data[activeMember].contributions.filter(c=>c.month===ms);
+    let penalty=0;
+    if(gap>0){
+      const onTime=contribs.some(c=>parseInt(c.date.split('-')[2])<=10);
+      if(!onTime){
+        if(ms!==curMs2) penalty=15000;
+        else if(today2.getDate()>=10) penalty=Math.min((Math.floor((today2.getDate()-10)/7)+1)*5000,15000);
+      }
+    }
+    const shortfall=gap+penalty;
     const badge=paid>=target?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
-    rows+=`<tr><td>${ms}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${target.toLocaleString()}</td><td>${badge}</td></tr>`;
+    rows+=`<tr>
+      <td>${ms}</td>
+      <td>UGX ${paid.toLocaleString()}</td>
+      <td>UGX ${target.toLocaleString()}</td>
+      <td>${badge}</td>
+      <td style="${shortfall>0?'color:var(--red);font-weight:700':'color:var(--green)'}">UGX ${shortfall.toLocaleString()}</td>
+    </tr>`;
     cm++;if(cm>12){cm=1;cy++;}
   }
   const loans=data[activeMember].loans.filter(l=>l.type==='LOAN');
@@ -727,14 +847,21 @@ function renderLedger(isAdmin,activeMember){
     <select style="margin-top:6px" onchange="lastSelectedMember=this.value;render()">
       ${data.members.map(m=>`<option value="${m}" ${m===activeMember?'selected':''}>${m}</option>`).join('')}
     </select></div>`;
-  return `${picker}
+  return`${picker}
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <h2 style="border:none;padding:0;margin:0">📒 Savings Timeline — ${activeMember}</h2>
-        <button class="gold sm" onclick="exportMemberCSV('${activeMember}')">📥 Download Statement</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="gold sm" onclick="exportMemberCSV('${activeMember}')">📥 CSV</button>
+          <button class="print-btn sm" onclick="triggerMemberPrint('${activeMember}')">🖨️ Print My Ledger</button>
+        </div>
       </div>
-      <div class="table-wrap" style="margin-top:14px">
-        <table><tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th></tr>${rows}</table>
+      <p style="font-size:11px;color:#888;margin-top:8px;margin-bottom:12px">Shortfall = unpaid savings gap + penalty charges for that month as of today.</p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th><th>Shortfall (incl. penalty)</th></tr>
+          ${rows}
+        </table>
       </div>
     </div>
     <div class="card">
@@ -744,7 +871,8 @@ function renderLedger(isAdmin,activeMember){
         ${loans.length?'<tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th><th>Outstanding</th></tr>':''}
         ${loans.map((l,i)=>{
           const lid=i+1,bal=calcLoanBalance(l,lid,activeMember);
-          return `<tr style="background:#E3F2FD;font-weight:600"><td>${l.date}</td><td>LOAN #${lid}</td><td>—</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td style="color:${bal.isFullyPaid?'var(--green)':'var(--red)'};">${bal.isFullyPaid?'✅ CLEARED':'UGX '+bal.outstanding.toLocaleString()}</td></tr>`+
+          if(!bal)return'';
+          return`<tr style="background:#E3F2FD;font-weight:600"><td>${l.date}</td><td>LOAN #${lid}</td><td>—</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td style="color:${bal.isFullyPaid?'var(--green)':'var(--red)'};">${bal.isFullyPaid?'✅ CLEARED':'UGX '+bal.outstanding.toLocaleString()}</td></tr>`+
           data[activeMember].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid)).map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:var(--green)">UGX ${Number(r.amt).toLocaleString()}</td><td>—</td></tr>`).join('');
         }).join('')}
       </table></div>
@@ -756,7 +884,7 @@ function renderLedger(isAdmin,activeMember){
 // ─────────────────────────────────────────────
 function renderActivity(){
   const S=getGlobalStats();
-  return `
+  return`
     <div class="card"><h2>🏦 SACCO-Wide Totals</h2>
       <div class="grid">
         <div class="stat-box"><div class="stat-label">Net Cash Position</div><div class="stat-value">UGX ${S.netCash.toLocaleString()}</div></div>
@@ -769,21 +897,21 @@ function renderActivity(){
       </div>
     </div>
     <div class="card"><h2>📥 Cash In / Donations</h2>
-      ${!data.cashIn.length?'<p style="color:#999;font-size:13px">No records yet.</p>':''}
+      ${!data.cashIn.length?'<p style="color:#999;font-size:13px">No records.</p>':''}
       <div class="table-wrap"><table>
         ${data.cashIn.length?'<tr><th>Date</th><th>Source</th><th>Amount</th></tr>':''}
         ${data.cashIn.map(c=>`<tr><td>${c.date}</td><td>${c.source}</td><td style="color:var(--green);font-weight:600">UGX ${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
       </table></div>
     </div>
     <div class="card"><h2>💸 Expenses</h2>
-      ${!data.expenses.length?'<p style="color:#999;font-size:13px">No expenses recorded.</p>':''}
+      ${!data.expenses.length?'<p style="color:#999;font-size:13px">No expenses.</p>':''}
       <div class="table-wrap"><table>
         ${data.expenses.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}
         ${data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td style="color:var(--red);font-weight:600">UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
       </table></div>
     </div>
     <div class="card"><h2>📈 Investments</h2>
-      ${!data.investments.length?'<p style="color:#999;font-size:13px">No investments recorded.</p>':''}
+      ${!data.investments.length?'<p style="color:#999;font-size:13px">No investments.</p>':''}
       <div class="table-wrap"><table>
         ${data.investments.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}
         ${data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td style="color:#6A1B9A;font-weight:600">UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
@@ -792,49 +920,35 @@ function renderActivity(){
 }
 
 // ─────────────────────────────────────────────
-// MONTHLY REPORT — with full print controls
+// MONTHLY REPORT
 // ─────────────────────────────────────────────
 function renderMonthlyReport(){
   const now=new Date();
   const curMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-
-  // determine which months to preview
   let previewMonths=[];
   let previewTitle='';
-  if(reportMode==='single'){
-    previewMonths=[reportMonth];
-    previewTitle=`Month: ${reportMonth}`;
-  } else if(reportMode==='range'){
-    previewMonths=reportStart&&reportEnd&&reportStart<=reportEnd?getMonthRange(reportStart,reportEnd):[];
-    previewTitle=`Range: ${reportStart} → ${reportEnd}`;
-  } else {
-    previewMonths=getMonthRange("2024-02",curMs);
-    previewTitle=`All-time: Feb 2024 → ${curMs}`;
-  }
+  if(reportMode==='single'){previewMonths=[reportMonth];previewTitle=`Month: ${reportMonth}`;}
+  else if(reportMode==='range'){previewMonths=reportStart&&reportEnd&&reportStart<=reportEnd?getMonthRange(reportStart,reportEnd):[];previewTitle=`Range: ${reportStart} → ${reportEnd}`;}
+  else{previewMonths=getMonthRange("2024-02",curMs);previewTitle=`All-time: Feb 2024 → ${curMs}`;}
 
   let total=0;
   const rows=data.members.map(m=>{
     const paid=previewMonths.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
     total+=paid;
     const expected=previewMonths.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
-    const gap=Math.max(0,expected-paid);
+    const trueShortfall=getMemberShortfallWithPenalty(m);
     const badge=paid>=expected?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
-    return `<tr><td>${m}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${expected.toLocaleString()}</td><td>UGX ${gap.toLocaleString()}</td><td>${badge}</td></tr>`;
+    return`<tr><td>${m}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${expected.toLocaleString()}</td><td style="color:var(--red);font-weight:700">UGX ${trueShortfall.toLocaleString()}</td><td>${badge}</td></tr>`;
   }).join('');
-
   const paidCount=previewMonths.length?data.members.filter(m=>{
     const paid=previewMonths.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
     const expected=previewMonths.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
     return paid>=expected;
   }).length:0;
-
   const S=getGlobalStats();
-
-  return `
+  return`
     <div class="card" style="border:2px solid var(--gold)">
       <h2>📅 Monthly Report & Print Centre</h2>
-
-      <!-- MODE SELECTOR -->
       <div style="margin-bottom:14px">
         <label style="font-size:12px;font-weight:700;color:var(--dark);display:block;margin-bottom:8px">Select Report Type:</label>
         <div class="report-mode-bar">
@@ -843,26 +957,15 @@ function renderMonthlyReport(){
           <button class="mode-btn ${reportMode==='overall'?'active':''}" onclick="reportMode='overall';render()">🗂️ Overall / All-Time</button>
         </div>
       </div>
-
-      <!-- CONTROLS PER MODE -->
       ${reportMode==='single'?`
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
-          <div style="flex:1;min-width:180px">
-            <label>Select Month</label>
-            <input type="month" style="margin:0" value="${reportMonth}" onchange="reportMonth=this.value;render()">
-          </div>
+          <div style="flex:1;min-width:180px"><label>Select Month</label><input type="month" style="margin:0" value="${reportMonth}" onchange="reportMonth=this.value;render()"></div>
           <button class="print-btn" onclick="printSingleMonth()">🖨️ Print / Save PDF</button>
         </div>`
       :reportMode==='range'?`
         <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
-          <div style="flex:1;min-width:150px">
-            <label>Start Month</label>
-            <input type="month" style="margin:0" value="${reportStart}" onchange="reportStart=this.value;render()">
-          </div>
-          <div style="flex:1;min-width:150px">
-            <label>End Month</label>
-            <input type="month" style="margin:0" value="${reportEnd}" onchange="reportEnd=this.value;render()">
-          </div>
+          <div style="flex:1;min-width:150px"><label>Start Month</label><input type="month" style="margin:0" value="${reportStart}" onchange="reportStart=this.value;render()"></div>
+          <div style="flex:1;min-width:150px"><label>End Month</label><input type="month" style="margin:0" value="${reportEnd}" onchange="reportEnd=this.value;render()"></div>
           <button class="print-btn" onclick="printRange()">🖨️ Print / Save PDF</button>
         </div>`
       :`
@@ -870,16 +973,10 @@ function renderMonthlyReport(){
           <p style="font-size:13px;color:#666;flex:1">Covers all SACCO history from <strong>February 2024</strong> to <strong>present</strong> (${previewMonths.length} months).</p>
           <button class="print-btn" onclick="printOverall()">🖨️ Print / Save PDF</button>
         </div>`}
-
-      <!-- PREVIEW LABEL -->
       <div style="background:#f8f8f8;border:1px solid #eee;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#555">
-        <strong>Preview:</strong> ${previewTitle} — <strong>${previewMonths.length} month(s)</strong> selected
-        &nbsp;|&nbsp; Total savings in period: <strong>UGX ${total.toLocaleString()}</strong>
-        &nbsp;|&nbsp; Fully paid members: <strong>${paidCount} / ${data.members.length}</strong>
+        <strong>Preview:</strong> ${previewTitle} — <strong>${previewMonths.length} month(s)</strong> | Period savings: <strong>UGX ${total.toLocaleString()}</strong> | Fully paid: <strong>${paidCount} / ${data.members.length}</strong>
       </div>
     </div>
-
-    <!-- FINANCIAL SUMMARY PREVIEW -->
     <div class="card">
       <h2>Financial Summary (All-Time SACCO Position)</h2>
       <div class="grid">
@@ -892,13 +989,12 @@ function renderMonthlyReport(){
         <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Active Loan Principal</div><div class="stat-value" style="color:var(--yellow)">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
       </div>
     </div>
-
-    <!-- MEMBER SAVINGS PREVIEW TABLE -->
     <div class="card">
       <h2>Member Savings — ${previewTitle}</h2>
-      ${!previewMonths.length?'<p style="color:#999;font-size:13px">Select a valid month or range above.</p>':''}
+      <p style="font-size:11px;color:#888;margin-bottom:12px">Shortfall = unpaid savings gap + penalty charges as of today (total owed including fines).</p>
+      ${!previewMonths.length?'<p style="color:#999;font-size:13px">Select a valid period above.</p>':''}
       ${previewMonths.length?`<div class="table-wrap"><table>
-        <tr><th>Member</th><th>Amount Paid</th><th>Expected</th><th>Shortfall</th><th>Status</th></tr>
+        <tr><th>Member</th><th>Amount Paid</th><th>Expected</th><th>Total Shortfall (incl. penalties)</th><th>Status</th></tr>
         ${rows}
       </table></div>`:''}
     </div>`;
@@ -909,7 +1005,7 @@ function renderMonthlyReport(){
 // ─────────────────────────────────────────────
 function renderAdmin(activeMember){
   const nextLoanId=data[activeMember].loans.filter(l=>l.type==='LOAN').length+1;
-  return `<div class="card" style="border:2px solid var(--gold)">
+  return`<div class="card" style="border:2px solid var(--gold)">
     <h2>⚙️ Admin Hub</h2>
     <div class="grid-2">
       <div>
@@ -959,7 +1055,7 @@ function renderAudit(){
   const arrRows=data.members.map(m=>{
     const sav=data[m].contributions.reduce((a,b)=>a+Number(b.amt),0);
     const arr=calcArrearsAndFines(m),debt=getMemberLoanDebt(m);
-    return `<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td><td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td><td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()}</td></tr>`;
+    return`<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td><td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td><td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()}</td></tr>`;
   }).join('');
   const txRows=data.members.map(mem=>
     data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">✕</button></td></tr>`).join('')+
@@ -969,7 +1065,7 @@ function renderAudit(){
     data.cashIn.map((c,i)=>`<tr><td>SYSTEM</td><td>Cash In</td><td>${c.source}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('C','',${i})">Edit</button><button class="del" onclick="del('C','',${i})">✕</button></td></tr>`).join('')+
     data.expenses.map((e,i)=>`<tr><td>SYSTEM</td><td>Expense</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('E','',${i})">Edit</button><button class="del" onclick="del('E','',${i})">✕</button></td></tr>`).join('')+
     data.investments.map((inv,i)=>`<tr><td>SYSTEM</td><td>Investment</td><td>${inv.reason}</td><td>UGX ${Number(inv.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('I','',${i})">Edit</button><button class="del" onclick="del('I','',${i})">✕</button></td></tr>`).join('');
-  return `
+  return`
     <div class="card"><h2>Member Arrears Overview</h2>
       <div class="table-wrap"><table><tr><th>Member</th><th>Total Savings</th><th>Arrears + Fines</th><th>Loan Debt (incl. interest)</th></tr>${arrRows}</table></div>
     </div>
@@ -982,7 +1078,7 @@ function renderAudit(){
 // SETTINGS
 // ─────────────────────────────────────────────
 function renderSettings(){
-  return `<div class="card" style="max-width:420px;margin:auto">
+  return`<div class="card" style="max-width:420px;margin:auto">
     <h2>🔐 Change My PIN</h2>
     <p style="font-size:13px;color:#666;margin-bottom:16px">Enter current PIN then choose a new one (min 4 characters).</p>
     <label>Current PIN</label><input type="password" id="oldPin" placeholder="Current PIN" maxlength="20">
@@ -1012,14 +1108,14 @@ function openEdit(cat,mem,idx){
   editModalData={cat,mem,idx,entry:e};render();
 }
 function renderEditModal(){
-  const {cat,mem,idx,entry}=editModalData;
+  const{cat,mem,idx,entry}=editModalData;
   const labels={S:'Savings',L:'Loan/Repayment',C:'Cash In',E:'Expense',I:'Investment'};
   let fields='';
   if(cat==='S') fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Month</label><input type="month" id="eMon" value="${entry.month}">`;
   else if(cat==='L') fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}">`;
   else if(cat==='C') fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Source</label><input type="text" id="eDesc" value="${entry.source||''}">`;
   else fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Description</label><input type="text" id="eDesc" value="${entry.reason||''}">`;
-  return `<div class="modal-overlay" onclick="closeEdit(event)">
+  return`<div class="modal-overlay" onclick="closeEdit(event)">
     <div class="modal">
       <button class="modal-close" onclick="editModalData=null;render()">✕</button>
       <h2>Edit Entry</h2>
@@ -1031,7 +1127,7 @@ function renderEditModal(){
 }
 function closeEdit(e){if(e.target.classList.contains('modal-overlay')){editModalData=null;render();}}
 function saveEdit(){
-  const {cat,mem,idx,entry}=editModalData;
+  const{cat,mem,idx,entry}=editModalData;
   const amt=Number(document.getElementById('eAmt').value),date=document.getElementById('eDate').value;
   if(!amt||!date){showToast("⚠️ Fill in all fields","warn");return;}
   if(cat==='S'){const mon=document.getElementById('eMon').value;data[mem].contributions[idx]={...entry,amt,date,month:mon};}
