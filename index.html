@@ -23,13 +23,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); min-height: 100vh; }
 
-  header {
-    background: var(--dark); color: #fff; padding: 14px 24px;
-    display: flex; align-items: center; gap: 14px;
-    border-bottom: 3px solid var(--gold);
-    position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.3);
-  }
+  header { background: var(--dark); color: #fff; padding: 14px 24px; display: flex; align-items: center; gap: 14px; border-bottom: 3px solid var(--gold); position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 16px rgba(0,0,0,0.3); }
   .logo-placeholder { height: 46px; width: 46px; border-radius: 50%; border: 2px solid var(--gold); background: #222; display: flex; align-items: center; justify-content: center; font-size: 20px; }
   .logo-img { height: 46px; width: 46px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; }
   .header-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--gold); letter-spacing: 1px; }
@@ -78,6 +72,8 @@
   button.full { width: 100%; margin: 4px 0; }
   button.outline { background: transparent; color: #fff; border: 1.5px solid #555; }
   button.outline:hover { background: #333; }
+  button.print-btn { background: #1B5E20; color: #fff; padding: 10px 18px; font-size: 13px; }
+  button.print-btn:hover { background: #2E7D32; }
 
   .badge { padding: 3px 9px; border-radius: 20px; font-size: 10px; font-weight: 700; display: inline-block; }
   .badge-comp    { background: #C8E6C9; color: #2E7D32; }
@@ -104,34 +100,62 @@
   .login-title { font-family: 'Playfair Display', serif; font-size: 1.5rem; }
   .login-sub { font-size: 12px; color: #999; margin-top: 4px; }
   .member-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
-  .member-btn { background: #f8f8f8; color: var(--dark); border: 1.5px solid #e5e5e5; font-size: 12px; padding: 10px; border-radius: 8px; text-align: left; font-weight: 500; transition: border-color 0.15s; }
+  .member-btn { background: #f8f8f8; color: var(--dark); border: 1.5px solid #e5e5e5; font-size: 12px; padding: 10px; border-radius: 8px; text-align: left; font-weight: 500; }
   .member-btn:hover { border-color: var(--gold); background: #faf6ee; transform: none; }
 
   .progress-wrap { background: #eee; border-radius: 99px; height: 7px; overflow: hidden; margin-top: 5px; }
   .progress-bar  { height: 7px; border-radius: 99px; background: linear-gradient(90deg, var(--gold), #e6b96a); }
   .divider { border: none; border-top: 1px solid #eee; margin: 14px 0; }
 
-  /* Hero net cash */
   .hero-card { background: var(--dark); color: #fff; padding: 22px 24px; border-radius: 16px; margin-bottom: 18px; }
   .hero-amount { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--gold); font-weight: 900; line-height: 1.1; }
   .hero-label  { font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
-
-  /* formula row */
   .formula-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 14px; font-size: 11px; }
   .f-pill { padding: 5px 10px; border-radius: 20px; font-weight: 700; font-size: 11px; }
-  .f-plus  { color: #81C784; }
-  .f-minus { color: #EF9A9A; }
   .f-op    { color: #666; font-size: 13px; font-weight: 700; }
 
-  /* loan cards */
   .loan-card { border: 1px solid #eee; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-  .loan-card.paid-loan   { border-color: #A5D6A7; background: #f5fff7; opacity: 0.85; }
-  .loan-card.overdue     { border-color: #ff4d4d; background: #fff5f5; }
-  .loan-card.active-loan { border-color: #90CAF9; background: #f5faff; }
+  .loan-card.paid-loan    { border-color: #A5D6A7; background: #f5fff7; opacity: 0.85; }
+  .loan-card.overdue      { border-color: #ff4d4d; background: #fff5f5; }
+  .loan-card.active-loan  { border-color: #90CAF9; background: #f5faff; }
 
-  /* timeline table compact */
-  .tl-table td, .tl-table th { padding: 7px 9px; }
+  /* ── REPORT MODE SELECTOR ── */
+  .report-mode-bar { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .mode-btn { padding: 9px 18px; border-radius: 8px; border: 2px solid #ddd; background: #fff; color: #555; font-weight: 600; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .mode-btn.active { border-color: var(--gold); background: var(--gold); color: var(--dark); }
+  .mode-btn:hover:not(.active) { border-color: #aaa; }
 
+  /* ── PRINT STYLES ── */
+  @media print {
+    body { background: #fff !important; font-family: Arial, sans-serif; font-size: 11pt; }
+    header, .tab-bar, .container > *:not(#printArea), #printControls { display: none !important; }
+    #printArea { display: block !important; padding: 0; margin: 0; }
+    .print-page { page-break-after: always; padding: 20mm 18mm; }
+    .print-page:last-child { page-break-after: avoid; }
+    .print-header { text-align: center; margin-bottom: 24px; border-bottom: 3px solid #B08D57; padding-bottom: 14px; }
+    .print-header h1 { font-size: 22pt; color: #111; margin-bottom: 4px; }
+    .print-header .ph-sub { font-size: 10pt; color: #666; }
+    .print-section { margin-bottom: 20px; }
+    .print-section h2 { font-size: 13pt; color: #111; border-bottom: 1.5px solid #B08D57; padding-bottom: 5px; margin-bottom: 10px; }
+    .print-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+    .print-stat { border: 1px solid #ddd; border-radius: 6px; padding: 10px; background: #fafafa; }
+    .print-stat .ps-label { font-size: 8pt; color: #888; text-transform: uppercase; font-weight: 700; margin-bottom: 3px; }
+    .print-stat .ps-value { font-size: 12pt; font-weight: 700; color: #111; }
+    .print-net { background: #111; color: #fff; padding: 14px 18px; border-radius: 8px; margin-bottom: 14px; }
+    .print-net .pn-label { font-size: 9pt; color: #aaa; text-transform: uppercase; margin-bottom: 4px; }
+    .print-net .pn-value { font-size: 20pt; font-weight: 900; color: #B08D57; }
+    .print-formula { font-size: 9pt; color: #888; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 12px; }
+    th { background: #111 !important; color: #B08D57 !important; padding: 7px 8px; font-size: 9pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    td { padding: 6px 8px; border: 1px solid #ddd; }
+    tr:nth-child(even) td { background: #f8f8f8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge { padding: 2px 7px; border-radius: 10px; font-size: 8pt; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge-comp { background: #C8E6C9 !important; color: #2E7D32 !important; }
+    .badge-part { background: #FFF9C4 !important; color: #F57F17 !important; }
+    .badge-pend { background: #FFCDD2 !important; color: #C62828 !important; }
+    .print-footer { text-align: center; font-size: 8pt; color: #aaa; border-top: 1px solid #eee; padding-top: 10px; margin-top: 20px; }
+    .no-print { display: none !important; }
+  }
   @media(max-width:600px){
     .grid-2 { grid-template-columns: 1fr; }
     .member-grid { grid-template-columns: 1fr; }
@@ -142,39 +166,52 @@
 </head>
 <body>
 <div id="root"></div>
+
+<!-- Hidden print area — populated dynamically -->
+<div id="printArea" style="display:none"></div>
+
 <script>
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // CONFIG
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 const BIN_ID          = "6971f3eb43b1c97be94154dc";
 const MASTER_KEY      = "$2a$10$83AEiP9GsrLhSQIC8.nuW.6QtHG5XVzJElaL67zasDR0h8BYGLsQu";
 const PRIMARY_ADMIN   = "Apule Gerald Humble";
 const SECONDARY_ADMIN = "Ameny Ronald";
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // STATE
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 let user               = null;
 let data               = {};
 let lastSelectedMember = null;
 let currentInflowType  = "S";
 let activeTab          = "dashboard";
 let editModalData      = null;
+// report state
+let reportMode         = "single";   // "single" | "range" | "overall"
+let reportMonth        = "";
+let reportStart        = "";
+let reportEnd          = "";
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // DATA LAYER
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 async function loadData() {
   try {
     const res  = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers:{'X-Master-Key':MASTER_KEY} });
     const json = await res.json();
     data = json.record;
-    // legacy name fix
-    const oN = "OKULLO DAVID LAURENCE", nN = "OKULLU DAVID LAURANCE";
-    if (data[oN]) { data[nN]=data[oN]; delete data[oN]; data.members=data.members.map(m=>m===oN?nN:m); }
-    if (!data.expenses)    data.expenses    = [];
-    if (!data.investments) data.investments = [];
-    if (!data.cashIn)      data.cashIn      = [];
+    const oN="OKULLO DAVID LAURENCE", nN="OKULLU DAVID LAURANCE";
+    if(data[oN]){data[nN]=data[oN];delete data[oN];data.members=data.members.map(m=>m===oN?nN:m);}
+    if(!data.expenses)    data.expenses    = [];
+    if(!data.investments) data.investments = [];
+    if(!data.cashIn)      data.cashIn      = [];
+    // default report month to current
+    const now=new Date();
+    reportMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    reportStart = "2024-02";
+    reportEnd   = reportMonth;
     render();
   } catch(e){ showToast("⚠️ Sync failed","danger"); }
 }
@@ -190,15 +227,15 @@ async function saveData() {
   } catch(e){ showToast("❌ Save failed","danger"); }
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // FINANCIAL CALCULATIONS
-// ─────────────────────────────────────────────────────────
-function getMonthlyTarget(ms) {
+// ─────────────────────────────────────────────
+function getMonthlyTarget(ms){
   const y=parseInt(ms.split('-')[0]), m=parseInt(ms.split('-')[1]);
-  return (y===2024 && m>=2 && m<=7) ? 80000 : 100000;
+  return (y===2024&&m>=2&&m<=7)?80000:100000;
 }
 
-function calcArrearsAndFines(mName) {
+function calcArrearsAndFines(mName){
   let total=0;
   const today=new Date(), curMs=today.toISOString().slice(0,7);
   let cy=2024,cm=2;
@@ -221,137 +258,313 @@ function calcArrearsAndFines(mName) {
   return total;
 }
 
-/*
-  LOAN INTEREST RULES:
-  • Grace period = calendar month of issue. No interest if cleared within that month.
-  • From the 1st of each NEW month the loan is still outstanding → balance *= 1.05 (compounded).
-  • Repayments made in a given month reduce the balance for that month before next month's interest applies.
-*/
-function calcLoanBalance(loan, loanId, mName) {
-  const principal = Number(loan.amt);
-  const issueDate = new Date(loan.date);
-  const issueY    = issueDate.getFullYear();
-  const issueM    = issueDate.getMonth(); // 0-based
-  const today     = new Date();
-  const todayY    = today.getFullYear();
-  const todayM    = today.getMonth();
-
-  const repayments = (data[mName].loans||[])
-    .filter(r=>r.type==='REPAYMENT' && String(r.loanId)===String(loanId))
-    .map(r=>({ y:new Date(r.date).getFullYear(), m:new Date(r.date).getMonth(), amt:Number(r.amt) }));
-
-  const totalRepaid = repayments.reduce((a,r)=>a+r.amt, 0);
-
-  let balance=principal, cy=issueY, cm=issueM, firstMonth=true;
+function calcLoanBalance(loan, loanId, mName){
+  const principal=Number(loan.amt);
+  const issueDate=new Date(loan.date);
+  const issueY=issueDate.getFullYear(), issueM=issueDate.getMonth();
+  const today=new Date(), todayY=today.getFullYear(), todayM=today.getMonth();
+  const repayments=(data[mName].loans||[])
+    .filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(loanId))
+    .map(r=>({y:new Date(r.date).getFullYear(),m:new Date(r.date).getMonth(),amt:Number(r.amt)}));
+  const totalRepaid=repayments.reduce((a,r)=>a+r.amt,0);
+  let balance=principal,cy=issueY,cm=issueM,firstMonth=true;
   while(cy<todayY||(cy===todayY&&cm<=todayM)){
-    if(!firstMonth && balance>0) balance*=1.05;
-    repayments.filter(r=>r.y===cy&&r.m===cm).forEach(r=>{ balance-=r.amt; });
-    if(balance<=0){ balance=0; break; }
+    if(!firstMonth&&balance>0) balance*=1.05;
+    repayments.filter(r=>r.y===cy&&r.m===cm).forEach(r=>{balance-=r.amt;});
+    if(balance<=0){balance=0;break;}
     firstMonth=false; cm++; if(cm>11){cm=0;cy++;}
   }
-
-  const outstanding    = Math.max(0, Math.round(balance));
-  const isFullyPaid    = outstanding===0 && totalRepaid>0;
-  const monthsElapsed  = (todayY-issueY)*12+(todayM-issueM);
-  const isOverdue      = !isFullyPaid && monthsElapsed>=1 && totalRepaid===0;
-  // Interest COLLECTED = how much of what was repaid exceeded the principal
-  // i.e. total repaid minus principal (only positive if borrower overpaid relative to principal)
-  // More precisely: collected interest = repayments - principal portions repaid
-  // We calculate it as: totalRepaid - (principal - outstanding) when fully or partially repaid
-  const principalRepaid   = Math.min(totalRepaid, principal);
-  const interestCollected = Math.max(0, totalRepaid - principalRepaid);
-  const interestAccrued   = Math.max(0, Math.round(outstanding + totalRepaid - principal));
-
-  return { principal, monthsElapsed, outstanding, totalRepaid, interestCollected, interestAccrued, isFullyPaid, isOverdue };
-}
-
-/*
-  GLOBAL STATS — the single source of truth for all dashboard numbers.
-
-  • grossSavings          = sum of every contribution amount across all members
-  • interestCollected     = total loan interest ACTUALLY RECEIVED in cash
-                           (only repayment amounts that exceeded the principal of each loan)
-  • cashIn                = donations / external cash in
-  • expenses              = sum of all expense entries
-  • investments           = sum of all investment entries
-  • activeLoanPrincipal   = total PRINCIPAL still outstanding (not interest — just the unpaid
-                            original borrowed amounts net of principal repayments)
-  • netCash               = (grossSavings + interestCollected + cashIn)
-                            − (expenses + activeLoanPrincipal + investments)
-*/
-function getGlobalStats() {
-  let grossSavings=0, interestCollected=0, activeLoanPrincipal=0;
-
-  data.members.forEach(m=>{
-    data[m].contributions.forEach(c=> grossSavings += Number(c.amt));
-
-    data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{
-      const bal = calcLoanBalance(loan, idx+1, m);
-
-      // Interest collected on this loan = how much the borrower paid ABOVE the principal
-      // We use: totalRepaid - min(totalRepaid, principal)
-      // But we need a per-loan breakdown:
-      //   principalRepaid = min(totalRepaid, principal)
-      //   interestCollected = totalRepaid - principalRepaid  ← actual cash earned
-      const principalRepaid = Math.min(bal.totalRepaid, bal.principal);
-      interestCollected    += Math.max(0, bal.totalRepaid - principalRepaid);
-
-      // Active principal outstanding = original principal minus principal portion repaid
-      const principalOutstanding = Math.max(0, bal.principal - principalRepaid);
-      activeLoanPrincipal        += principalOutstanding;
-    });
-  });
-
-  const cashIn      = data.cashIn.reduce((a,b)=>a+Number(b.amt),0);
-  const expenses    = data.expenses.reduce((a,b)=>a+Number(b.amt),0);
-  const investments = data.investments.reduce((a,b)=>a+Number(b.amt),0);
-
-  const netCash = (grossSavings + interestCollected + cashIn) - (expenses + activeLoanPrincipal + investments);
-
-  return { grossSavings, interestCollected, cashIn, expenses, investments, activeLoanPrincipal, netCash };
+  const outstanding=Math.max(0,Math.round(balance));
+  const isFullyPaid=outstanding===0&&totalRepaid>0;
+  const monthsElapsed=(todayY-issueY)*12+(todayM-issueM);
+  const isOverdue=!isFullyPaid&&monthsElapsed>=1&&totalRepaid===0;
+  const principalRepaid=Math.min(totalRepaid,principal);
+  const interestCollected=Math.max(0,totalRepaid-principalRepaid);
+  const interestAccrued=Math.max(0,Math.round(outstanding+totalRepaid-principal));
+  return {principal,monthsElapsed,outstanding,totalRepaid,interestCollected,interestAccrued,isFullyPaid,isOverdue};
 }
 
 function getMemberLoanDebt(mName){
   return data[mName].loans.filter(l=>l.type==='LOAN')
-    .reduce((s,loan,idx)=>s+calcLoanBalance(loan,idx+1,mName).outstanding, 0);
+    .reduce((s,loan,idx)=>s+calcLoanBalance(loan,idx+1,mName).outstanding,0);
 }
 
-// ─────────────────────────────────────────────────────────
+function getGlobalStats(){
+  let grossSavings=0,interestCollected=0,activeLoanPrincipal=0;
+  data.members.forEach(m=>{
+    data[m].contributions.forEach(c=>grossSavings+=Number(c.amt));
+    data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{
+      const bal=calcLoanBalance(loan,idx+1,m);
+      const principalRepaid=Math.min(bal.totalRepaid,bal.principal);
+      interestCollected+=Math.max(0,bal.totalRepaid-principalRepaid);
+      activeLoanPrincipal+=Math.max(0,bal.principal-principalRepaid);
+    });
+  });
+  const cashIn=data.cashIn.reduce((a,b)=>a+Number(b.amt),0);
+  const expenses=data.expenses.reduce((a,b)=>a+Number(b.amt),0);
+  const investments=data.investments.reduce((a,b)=>a+Number(b.amt),0);
+  const netCash=(grossSavings+interestCollected+cashIn)-(expenses+activeLoanPrincipal+investments);
+  return {grossSavings,interestCollected,cashIn,expenses,investments,activeLoanPrincipal,netCash};
+}
+
+// ─────────────────────────────────────────────
+// REPORT DATA BUILDER
+// Computes stats scoped to a list of monthStrings
+// ─────────────────────────────────────────────
+function getMonthRange(startMs, endMs){
+  const months=[];
+  let [sy,sm]=[parseInt(startMs.split('-')[0]),parseInt(startMs.split('-')[1])-1];
+  const [ey,em]=[parseInt(endMs.split('-')[0]),parseInt(endMs.split('-')[1])-1];
+  while(sy<ey||(sy===ey&&sm<=em)){
+    months.push(`${sy}-${String(sm+1).padStart(2,'0')}`);
+    sm++; if(sm>11){sm=0;sy++;}
+  }
+  return months;
+}
+
+function buildReportData(months){
+  // savings for these months only
+  let savingsInRange=0;
+  const memberRows=data.members.map(m=>{
+    const paid=months.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
+    savingsInRange+=paid;
+    const expected=months.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
+    const gap=Math.max(0,expected-paid);
+    const status=paid>=expected?'COMPLETE':paid>0?'PARTIAL':'PENDING';
+    return {name:m, paid, expected, gap, status};
+  });
+
+  // global stats (all-time — always show full SACCO position)
+  const S=getGlobalStats();
+
+  // loan portfolio (all active loans)
+  const loanRows=[];
+  data.members.forEach(m=>{
+    data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{
+      const bal=calcLoanBalance(loan,idx+1,m);
+      if(!bal.isFullyPaid){
+        loanRows.push({member:m, loanId:idx+1, date:loan.date, principal:bal.principal, outstanding:bal.outstanding, monthsElapsed:bal.monthsElapsed, isOverdue:bal.isOverdue, totalRepaid:bal.totalRepaid, interestAccrued:bal.interestAccrued});
+      }
+    });
+  });
+
+  // expenses & investments (all-time for overall context)
+  return {S, memberRows, loanRows, savingsInRange, months};
+}
+
+// ─────────────────────────────────────────────
+// PRINT ENGINE
+// ─────────────────────────────────────────────
+function buildPrintHTML(title, subtitle, rd){
+  const {S,memberRows,loanRows,savingsInRange}=rd;
+  const generated=new Date().toLocaleString('en-UG',{dateStyle:'full',timeStyle:'short'});
+
+  // member table rows
+  const mRows=memberRows.map(r=>{
+    const badgeCls=r.status==='COMPLETE'?'badge-comp':r.status==='PARTIAL'?'badge-part':'badge-pend';
+    return `<tr>
+      <td>${r.name}</td>
+      <td>UGX ${r.paid.toLocaleString()}</td>
+      <td>UGX ${r.expected.toLocaleString()}</td>
+      <td>UGX ${r.gap.toLocaleString()}</td>
+      <td><span class="badge ${badgeCls}">${r.status}</span></td>
+    </tr>`;
+  }).join('');
+
+  // loan table rows
+  const lRows=loanRows.length?loanRows.map(r=>`<tr>
+    <td>${r.member}</td>
+    <td>#${r.loanId}</td>
+    <td>${r.date}</td>
+    <td>UGX ${r.principal.toLocaleString()}</td>
+    <td>UGX ${r.totalRepaid.toLocaleString()}</td>
+    <td>UGX ${r.interestAccrued.toLocaleString()}</td>
+    <td style="font-weight:700; color:#C62828">UGX ${r.outstanding.toLocaleString()}</td>
+    <td>${r.isOverdue?'<span class="badge badge-pend">OVERDUE</span>':'<span class="badge badge-comp">Active</span>'}</td>
+  </tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:#999">No active loans</td></tr>';
+
+  // expenses rows
+  const eRows=data.expenses.length?data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join('')
+    :'<tr><td colspan="3" style="text-align:center;color:#999">No expenses recorded</td></tr>';
+
+  // investments rows
+  const iRows=data.investments.length?data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td>UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join('')
+    :'<tr><td colspan="3" style="text-align:center;color:#999">No investments recorded</td></tr>';
+
+  const totalExpenses=data.expenses.reduce((a,b)=>a+Number(b.amt),0);
+  const totalInvestments=data.investments.reduce((a,b)=>a+Number(b.amt),0);
+  const totalLoansOut=loanRows.reduce((a,r)=>a+r.outstanding,0);
+
+  return `
+    <!-- PAGE 1: Cover + Financial Summary -->
+    <div class="print-page">
+      <div class="print-header">
+        <h1>ELITES SACCO</h1>
+        <div class="ph-sub" style="font-size:14pt; font-weight:700; color:#B08D57; margin:4px 0">${title}</div>
+        <div class="ph-sub">${subtitle}</div>
+        <div class="ph-sub" style="margin-top:6px">Generated: ${generated}</div>
+      </div>
+
+      <!-- Net Cash -->
+      <div class="print-net">
+        <div class="pn-label">SACCO Net Cash Position</div>
+        <div class="pn-value">UGX ${S.netCash.toLocaleString()}</div>
+        <div class="print-formula">(Gross Savings + Interest Earned + Cash In) − (Expenses + Active Loan Principal + Investments)</div>
+      </div>
+
+      <!-- Financial Summary Grid -->
+      <div class="print-section">
+        <h2>Financial Summary (All-Time)</h2>
+        <div class="print-grid">
+          <div class="print-stat">
+            <div class="ps-label">Gross Savings</div>
+            <div class="ps-value">UGX ${S.grossSavings.toLocaleString()}</div>
+          </div>
+          <div class="print-stat">
+            <div class="ps-label">Interest Earned (Collected)</div>
+            <div class="ps-value" style="color:#2E7D32">UGX ${S.interestCollected.toLocaleString()}</div>
+          </div>
+          <div class="print-stat">
+            <div class="ps-label">Cash In / Donations</div>
+            <div class="ps-value" style="color:#1565C0">UGX ${S.cashIn.toLocaleString()}</div>
+          </div>
+          <div class="print-stat">
+            <div class="ps-label">Total Expenses</div>
+            <div class="ps-value" style="color:#C62828">UGX ${S.expenses.toLocaleString()}</div>
+          </div>
+          <div class="print-stat">
+            <div class="ps-label">Active Loan Principal Out</div>
+            <div class="ps-value" style="color:#B08D57">UGX ${S.activeLoanPrincipal.toLocaleString()}</div>
+          </div>
+          <div class="print-stat">
+            <div class="ps-label">Total Investments</div>
+            <div class="ps-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Member Savings for Period -->
+      <div class="print-section">
+        <h2>Member Savings — ${title}</h2>
+        <p style="font-size:9pt; color:#666; margin-bottom:8px">
+          Savings collected within the selected period. Expected = monthly target × number of months selected.
+          Period total collected: <strong>UGX ${savingsInRange.toLocaleString()}</strong>
+        </p>
+        <table>
+          <tr><th>Member</th><th>Amount Paid</th><th>Expected</th><th>Shortfall</th><th>Status</th></tr>
+          ${mRows}
+        </table>
+      </div>
+
+      <div class="print-footer">ELITES SACCO — Confidential — Page 1</div>
+    </div>
+
+    <!-- PAGE 2: Loans + Expenses + Investments -->
+    <div class="print-page">
+      <div class="print-header">
+        <h1>ELITES SACCO</h1>
+        <div class="ph-sub" style="font-size:12pt; font-weight:700; color:#B08D57">${title} — Loans, Expenses & Investments</div>
+      </div>
+
+      <!-- Active Loan Portfolio -->
+      <div class="print-section">
+        <h2>Active Loan Portfolio</h2>
+        <p style="font-size:9pt; color:#666; margin-bottom:8px">
+          Total outstanding across all active loans: <strong>UGX ${totalLoansOut.toLocaleString()}</strong>
+        </p>
+        <table>
+          <tr><th>Member</th><th>Loan</th><th>Issued</th><th>Principal</th><th>Repaid</th><th>Interest</th><th>Outstanding</th><th>Status</th></tr>
+          ${lRows}
+        </table>
+      </div>
+
+      <!-- Expenses Breakdown -->
+      <div class="print-section">
+        <h2>Expenses Breakdown</h2>
+        <p style="font-size:9pt; color:#666; margin-bottom:8px">Total expenses: <strong>UGX ${totalExpenses.toLocaleString()}</strong></p>
+        <table>
+          <tr><th>Date</th><th>Description</th><th>Amount</th></tr>
+          ${eRows}
+        </table>
+      </div>
+
+      <!-- Investments Breakdown -->
+      <div class="print-section">
+        <h2>Investments Breakdown</h2>
+        <p style="font-size:9pt; color:#666; margin-bottom:8px">Total investments: <strong>UGX ${totalInvestments.toLocaleString()}</strong></p>
+        <table>
+          <tr><th>Date</th><th>Description</th><th>Amount</th></tr>
+          ${iRows}
+        </table>
+      </div>
+
+      <div class="print-footer">ELITES SACCO — Confidential — Page 2 | Printed: ${generated}</div>
+    </div>`;
+}
+
+function triggerPrint(title, subtitle, months){
+  const rd=buildReportData(months);
+  const html=buildPrintHTML(title, subtitle, rd);
+  document.getElementById('printArea').innerHTML=html;
+  setTimeout(()=>{
+    window.print();
+    // clean up after print dialog closes
+    setTimeout(()=>{ document.getElementById('printArea').innerHTML=''; }, 2000);
+  }, 300);
+}
+
+function printSingleMonth(){
+  const ms=reportMonth;
+  if(!ms){showToast("⚠️ Select a month first","warn");return;}
+  const label=new Date(ms+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
+  triggerPrint(`Monthly Report — ${label}`, `Single month: ${ms}`, [ms]);
+}
+
+function printRange(){
+  if(!reportStart||!reportEnd){showToast("⚠️ Select both start and end months","warn");return;}
+  if(reportStart>reportEnd){showToast("⚠️ Start month must be before end month","warn");return;}
+  const months=getMonthRange(reportStart,reportEnd);
+  const sLabel=new Date(reportStart+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
+  const eLabel=new Date(reportEnd+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
+  triggerPrint(`Report: ${sLabel} to ${eLabel}`, `Date range: ${reportStart} → ${reportEnd} (${months.length} months)`, months);
+}
+
+function printOverall(){
+  const now=new Date();
+  const endMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const months=getMonthRange("2024-02", endMs);
+  triggerPrint("Overall SACCO Report", `All-time: February 2024 to present (${months.length} months)`, months);
+}
+
+// ─────────────────────────────────────────────
 // RENDER ENGINE
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function render(){
   const root=document.getElementById("root");
-  if(!user){ root.innerHTML=renderLogin(); return; }
-
-  const isAdmin      = user.name===PRIMARY_ADMIN || user.name===SECONDARY_ADMIN;
-  const activeMember = (isAdmin && lastSelectedMember) ? lastSelectedMember : user.name;
-
+  if(!user){root.innerHTML=renderLogin();return;}
+  const isAdmin=user.name===PRIMARY_ADMIN||user.name===SECONDARY_ADMIN;
+  const activeMember=(isAdmin&&lastSelectedMember)?lastSelectedMember:user.name;
   const tabs=[
-    {id:'dashboard', label:'📊 Dashboard'},
-    {id:'ledger',    label:'📒 Ledger'},
-    {id:'activity',  label:'🏦 SACCO Activity'},
+    {id:'dashboard',label:'📊 Dashboard'},
+    {id:'ledger',label:'📒 Ledger'},
+    {id:'activity',label:'🏦 SACCO Activity'},
     ...(isAdmin?[
-      {id:'admin',   label:'⚙️ Admin Hub'},
-      {id:'audit',   label:'🔍 Global Audit'},
-      {id:'monthly', label:'📅 Monthly Report'}
+      {id:'admin',label:'⚙️ Admin Hub'},
+      {id:'audit',label:'🔍 Global Audit'},
+      {id:'monthly',label:'📅 Monthly Report'}
     ]:[]),
-    {id:'settings',  label:'🔐 Settings'}
+    {id:'settings',label:'🔐 Settings'}
   ];
-
   let html=`
     <header>
       <div>${data.logo?`<img class="logo-img" src="${data.logo}">`:`<div class="logo-placeholder">🏦</div>`}</div>
-      <div>
-        <div class="header-title">ELITES SACCO</div>
-        <div class="header-sub">${user.name}${isAdmin?' · Admin':''}</div>
-      </div>
+      <div><div class="header-title">ELITES SACCO</div><div class="header-sub">${user.name}${isAdmin?' · Admin':''}</div></div>
       <div class="header-right"><button class="outline sm" onclick="logout()">Logout</button></div>
     </header>
     <div class="tab-bar">
       ${tabs.map(t=>`<button class="tab-btn ${activeTab===t.id?'active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`).join('')}
     </div>
     <div class="container">`;
-
   if      (activeTab==='dashboard')          html+=renderDashboard(isAdmin,activeMember);
   else if (activeTab==='ledger')             html+=renderLedger(isAdmin,activeMember);
   else if (activeTab==='activity')           html+=renderActivity();
@@ -359,64 +572,52 @@ function render(){
   else if (activeTab==='audit'  &&isAdmin)   html+=renderAudit();
   else if (activeTab==='monthly'&&isAdmin)   html+=renderMonthlyReport();
   else if (activeTab==='settings')           html+=renderSettings();
-
   html+=`</div>`;
   if(editModalData) html+=renderEditModal();
   root.innerHTML=html;
 }
+function switchTab(t){activeTab=t;render();}
+function logout(){user=null;activeTab='dashboard';lastSelectedMember=null;render();}
 
-function switchTab(t){ activeTab=t; render(); }
-function logout(){ user=null; activeTab='dashboard'; lastSelectedMember=null; render(); }
-
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // LOGIN
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function renderLogin(){
-  return `
-    <div class="login-wrap">
-      <div class="login-card">
-        <div class="login-logo">
-          <div class="login-icon">🏦</div>
-          <div class="login-title">ELITES SACCO</div>
-          <div class="login-sub">Master Audit System — Select your name</div>
-        </div>
-        <hr class="divider">
-        <div class="member-grid">
-          ${(data.members||[]).map(m=>`<button class="member-btn" onclick="checkLogin('${m}')">${m}</button>`).join('')}
-        </div>
-      </div>
-    </div>`;
+  return `<div class="login-wrap"><div class="login-card">
+    <div class="login-logo">
+      <div class="login-icon">🏦</div>
+      <div class="login-title">ELITES SACCO</div>
+      <div class="login-sub">Master Audit System — Select your name</div>
+    </div>
+    <hr class="divider">
+    <div class="member-grid">
+      ${(data.members||[]).map(m=>`<button class="member-btn" onclick="checkLogin('${m}')">${m}</button>`).join('')}
+    </div>
+  </div></div>`;
 }
-
 function checkLogin(n){
-  const p=prompt(`PIN for ${n}:`); if(p===null)return;
+  const p=prompt(`PIN for ${n}:`);if(p===null)return;
   if(p===data[n].pin){user={name:n};activeTab='dashboard';render();}
   else alert("Incorrect PIN.");
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // DASHBOARD
-// ─────────────────────────────────────────────────────────
-function renderDashboard(isAdmin, activeMember){
-  const S   = getGlobalStats();
-  const mySavings = data[activeMember].contributions.reduce((a,b)=>a+Number(b.amt),0);
-  const myDebt    = getMemberLoanDebt(activeMember);
-  const myArrears = calcArrearsAndFines(activeMember);
-
-  // alerts
+// ─────────────────────────────────────────────
+function renderDashboard(isAdmin,activeMember){
+  const S=getGlobalStats();
+  const mySavings=data[activeMember].contributions.reduce((a,b)=>a+Number(b.amt),0);
+  const myDebt=getMemberLoanDebt(activeMember);
+  const myArrears=calcArrearsAndFines(activeMember);
   let alerts='';
-  if(myArrears>0)              alerts+=`<div class="alert alert-warn">⚠️ You have arrears &amp; fines of <strong>UGX ${myArrears.toLocaleString()}</strong>. Please clear to stay in good standing.</div>`;
-  if(myDebt>0)                 alerts+=`<div class="alert alert-danger">🔴 Outstanding loan balance: <strong>UGX ${myDebt.toLocaleString()}</strong> (includes compounded interest).</div>`;
-  if(myArrears===0&&myDebt===0)alerts+=`<div class="alert alert-success">✅ You're fully up to date — no arrears or outstanding loans.</div>`;
-
-  // this month progress
+  if(myArrears>0) alerts+=`<div class="alert alert-warn">⚠️ You have arrears &amp; fines of <strong>UGX ${myArrears.toLocaleString()}</strong>.</div>`;
+  if(myDebt>0)    alerts+=`<div class="alert alert-danger">🔴 Outstanding loan balance: <strong>UGX ${myDebt.toLocaleString()}</strong> (includes compounded interest).</div>`;
+  if(!myArrears&&!myDebt) alerts+=`<div class="alert alert-success">✅ Fully up to date — no arrears or outstanding loans.</div>`;
   const now=new Date();
   const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const thisTarget=getMonthlyTarget(thisMonth);
   const thisPaid=data[activeMember].contributions.filter(c=>c.month===thisMonth).reduce((a,b)=>a+Number(b.amt),0);
   const pct=Math.min(100,Math.round((thisPaid/thisTarget)*100));
-
-  // savings timeline for ALL members (not just admin)
   let timelineRows='';
   let cy=2024,cm=2;
   while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth()+1)){
@@ -425,435 +626,390 @@ function renderDashboard(isAdmin, activeMember){
     const target=getMonthlyTarget(ms);
     const badge=paid>=target?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
     timelineRows+=`<tr><td>${ms}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${target.toLocaleString()}</td><td>${badge}</td></tr>`;
-    cm++; if(cm>12){cm=1;cy++;}
+    cm++;if(cm>12){cm=1;cy++;}
   }
-
   return `
     ${alerts}
-
-    <!-- ══ NET CASH HERO ══ -->
     <div class="hero-card">
       <div class="hero-label">SACCO Net Cash Position</div>
       <div class="hero-amount">UGX ${S.netCash.toLocaleString()}</div>
-
-      <!-- formula visual -->
       <div class="formula-row">
-        <span style="color:#aaa; font-size:10px; font-weight:600">HOW WE GOT HERE:</span>
-        <span class="f-pill" style="background:#1B4332; color:#81C784">Savings ${S.grossSavings.toLocaleString()}</span>
+        <span style="color:#aaa;font-size:10px;font-weight:600">HOW WE GOT HERE:</span>
+        <span class="f-pill" style="background:#1B4332;color:#81C784">Savings ${S.grossSavings.toLocaleString()}</span>
         <span class="f-op">+</span>
-        <span class="f-pill" style="background:#1A3A1A; color:#A5D6A7">Interest ${S.interestCollected.toLocaleString()}</span>
+        <span class="f-pill" style="background:#1A3A1A;color:#A5D6A7">Interest ${S.interestCollected.toLocaleString()}</span>
         <span class="f-op">+</span>
-        <span class="f-pill" style="background:#1A3A1A; color:#A5D6A7">Cash In ${S.cashIn.toLocaleString()}</span>
+        <span class="f-pill" style="background:#1A3A1A;color:#A5D6A7">Cash In ${S.cashIn.toLocaleString()}</span>
         <span class="f-op" style="color:#EF9A9A">−</span>
-        <span class="f-pill" style="background:#3B1A1A; color:#EF9A9A">Expenses ${S.expenses.toLocaleString()}</span>
+        <span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Expenses ${S.expenses.toLocaleString()}</span>
         <span class="f-op" style="color:#EF9A9A">−</span>
-        <span class="f-pill" style="background:#3B1A1A; color:#EF9A9A">Loans Out ${S.activeLoanPrincipal.toLocaleString()}</span>
+        <span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Loans Out ${S.activeLoanPrincipal.toLocaleString()}</span>
         <span class="f-op" style="color:#EF9A9A">−</span>
-        <span class="f-pill" style="background:#3B1A1A; color:#EF9A9A">Investments ${S.investments.toLocaleString()}</span>
+        <span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Investments ${S.investments.toLocaleString()}</span>
       </div>
-
-      <!-- stat boxes -->
-      <div class="grid" style="margin-top:14px; gap:8px">
-        <div class="stat-box-dark">
-          <div class="hero-label">Gross Savings</div>
-          <div style="color:#fff; font-weight:700">UGX ${S.grossSavings.toLocaleString()}</div>
-          <div style="font-size:10px; color:#666; margin-top:2px">All member contributions</div>
-        </div>
-        <div class="stat-box-dark" style="border-color:#2E7D32">
-          <div class="hero-label">Interest Earned</div>
-          <div style="color:#81C784; font-weight:700">UGX ${S.interestCollected.toLocaleString()}</div>
-          <div style="font-size:10px; color:#666; margin-top:2px">Cash collected above principal</div>
-        </div>
-        <div class="stat-box-dark" style="border-color:#1565C0">
-          <div class="hero-label">Cash In / Donations</div>
-          <div style="color:#90CAF9; font-weight:700">UGX ${S.cashIn.toLocaleString()}</div>
-          <div style="font-size:10px; color:#666; margin-top:2px">External funds received</div>
-        </div>
-        <div class="stat-box-dark" style="border-color:#B71C1C">
-          <div class="hero-label">Expenses</div>
-          <div style="color:#EF9A9A; font-weight:700">UGX ${S.expenses.toLocaleString()}</div>
-          <div style="font-size:10px; color:#666; margin-top:2px">Total outgoing expenses</div>
-        </div>
-        <div class="stat-box-dark" style="border-color:#B08D57">
-          <div class="hero-label">Active Loan Principal Out</div>
-          <div style="color:var(--gold); font-weight:700">UGX ${S.activeLoanPrincipal.toLocaleString()}</div>
-          <div style="font-size:10px; color:#666; margin-top:2px">Principal not yet repaid</div>
-        </div>
-        <div class="stat-box-dark" style="border-color:#6A1B9A">
-          <div class="hero-label">Investments</div>
-          <div style="color:#CE93D8; font-weight:700">UGX ${S.investments.toLocaleString()}</div>
-          <div style="font-size:10px; color:#666; margin-top:2px">Total invested</div>
-        </div>
+      <div class="grid" style="margin-top:14px;gap:8px">
+        <div class="stat-box-dark"><div class="hero-label">Gross Savings</div><div style="color:#fff;font-weight:700">UGX ${S.grossSavings.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">All member contributions</div></div>
+        <div class="stat-box-dark" style="border-color:#2E7D32"><div class="hero-label">Interest Earned</div><div style="color:#81C784;font-weight:700">UGX ${S.interestCollected.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">Cash collected above principal</div></div>
+        <div class="stat-box-dark" style="border-color:#1565C0"><div class="hero-label">Cash In / Donations</div><div style="color:#90CAF9;font-weight:700">UGX ${S.cashIn.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">External funds received</div></div>
+        <div class="stat-box-dark" style="border-color:#B71C1C"><div class="hero-label">Expenses</div><div style="color:#EF9A9A;font-weight:700">UGX ${S.expenses.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">Total outgoing expenses</div></div>
+        <div class="stat-box-dark" style="border-color:#B08D57"><div class="hero-label">Active Loan Principal Out</div><div style="color:var(--gold);font-weight:700">UGX ${S.activeLoanPrincipal.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">Principal not yet repaid</div></div>
+        <div class="stat-box-dark" style="border-color:#6A1B9A"><div class="hero-label">Investments</div><div style="color:#CE93D8;font-weight:700">UGX ${S.investments.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">Total invested</div></div>
       </div>
     </div>
-
-    <!-- ══ MY PERSONAL SUMMARY ══ -->
     <div class="card">
       <h2>My Summary — ${activeMember}</h2>
       <div class="grid">
-        <div class="stat-box">
-          <div class="stat-label">Total Savings</div>
-          <div class="stat-value">UGX ${mySavings.toLocaleString()}</div>
-        </div>
-        <div class="stat-box" style="background:#FFF9C4">
-          <div class="stat-label">Arrears + Fines</div>
-          <div class="stat-value" style="color:var(--yellow)">UGX ${myArrears.toLocaleString()}</div>
-        </div>
-        <div class="stat-box" style="background:#FFEBEE">
-          <div class="stat-label">Loan Balance (incl. interest)</div>
-          <div class="stat-value" style="color:var(--red)">UGX ${myDebt.toLocaleString()}</div>
-        </div>
+        <div class="stat-box"><div class="stat-label">Total Savings</div><div class="stat-value">UGX ${mySavings.toLocaleString()}</div></div>
+        <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Arrears + Fines</div><div class="stat-value" style="color:var(--yellow)">UGX ${myArrears.toLocaleString()}</div></div>
+        <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Loan Balance (incl. interest)</div><div class="stat-value" style="color:var(--red)">UGX ${myDebt.toLocaleString()}</div></div>
       </div>
-
       <h3 style="margin-top:16px">This Month — ${thisMonth}</h3>
-      <div style="display:flex; justify-content:space-between; font-size:12px; color:#666; margin-bottom:4px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:4px">
         <span>UGX ${thisPaid.toLocaleString()} paid</span>
         <span>Target: UGX ${thisTarget.toLocaleString()} (${pct}%)</span>
       </div>
       <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
     </div>
-
-    <!-- ══ MY SAVINGS TIMELINE (all members see this) ══ -->
     <div class="card">
       <h2>My Savings Timeline</h2>
       <div class="table-wrap">
-        <table class="tl-table">
-          <tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th></tr>
-          ${timelineRows}
-        </table>
+        <table><tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th></tr>${timelineRows}</table>
       </div>
     </div>
-
     ${renderLoanCards(activeMember)}`;
 }
 
-// ─────────────────────────────────────────────────────────
-// LOAN CARDS
-// ─────────────────────────────────────────────────────────
 function renderLoanCards(mName){
   const loans=data[mName].loans.filter(l=>l.type==='LOAN');
-  if(!loans.length) return '';
+  if(!loans.length)return'';
   let html=`<div class="card"><h2>My Loans</h2>`;
   loans.forEach((loan,idx)=>{
-    const loanId=idx+1;
-    const bal=calcLoanBalance(loan,loanId,mName);
+    const loanId=idx+1, bal=calcLoanBalance(loan,loanId,mName);
     const cls=bal.isFullyPaid?'paid-loan':bal.isOverdue?'overdue':'active-loan';
-    const badge=bal.isFullyPaid
-      ?'<span class="badge badge-paid">✅ FULLY PAID</span>'
-      :bal.isOverdue
-        ?'<span class="badge badge-overdue">⚠️ OVERDUE</span>'
-        :'<span class="badge badge-active">Active</span>';
-    html+=`
-      <div class="loan-card ${cls}">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <strong>Loan #${loanId} &nbsp;<small style="color:#888;font-weight:400">Issued: ${loan.date}</small></strong>
-          ${badge}
-        </div>
-        <div class="grid" style="gap:8px">
-          <div><div class="stat-label">Principal</div><div style="font-weight:600">UGX ${bal.principal.toLocaleString()}</div></div>
-          <div><div class="stat-label">Months Elapsed</div><div style="font-weight:600">${bal.monthsElapsed}</div></div>
-          <div><div class="stat-label">Total Repaid</div><div style="font-weight:600;color:var(--green)">UGX ${bal.totalRepaid.toLocaleString()}</div></div>
-          <div><div class="stat-label">Interest Accrued</div><div style="font-weight:600;color:#888">UGX ${bal.interestAccrued.toLocaleString()}</div></div>
-        </div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee">
-          <div class="stat-label">Outstanding Balance (Principal + Compounded Interest)</div>
-          <div style="font-weight:800;font-size:1.1rem;color:${bal.isFullyPaid?'var(--green)':'var(--red)'}">
-            UGX ${bal.outstanding.toLocaleString()}
-          </div>
-        </div>
-        ${bal.isOverdue?`<div class="alert alert-danger" style="margin-top:10px;padding:8px 12px;font-size:12px">⚠️ No repayments recorded. Active for ${bal.monthsElapsed} month(s). Contact admin.</div>`:''}
-      </div>`;
+    const badge=bal.isFullyPaid?'<span class="badge badge-paid">✅ FULLY PAID</span>':bal.isOverdue?'<span class="badge badge-overdue">⚠️ OVERDUE</span>':'<span class="badge badge-active">Active</span>';
+    html+=`<div class="loan-card ${cls}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <strong>Loan #${loanId} &nbsp;<small style="color:#888;font-weight:400">Issued: ${loan.date}</small></strong>${badge}
+      </div>
+      <div class="grid" style="gap:8px">
+        <div><div class="stat-label">Principal</div><div style="font-weight:600">UGX ${bal.principal.toLocaleString()}</div></div>
+        <div><div class="stat-label">Months Elapsed</div><div style="font-weight:600">${bal.monthsElapsed}</div></div>
+        <div><div class="stat-label">Total Repaid</div><div style="font-weight:600;color:var(--green)">UGX ${bal.totalRepaid.toLocaleString()}</div></div>
+        <div><div class="stat-label">Interest Accrued</div><div style="font-weight:600;color:#888">UGX ${bal.interestAccrued.toLocaleString()}</div></div>
+      </div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee">
+        <div class="stat-label">Outstanding Balance</div>
+        <div style="font-weight:800;font-size:1.1rem;color:${bal.isFullyPaid?'var(--green)':'var(--red)'}">UGX ${bal.outstanding.toLocaleString()}</div>
+      </div>
+      ${bal.isOverdue?`<div class="alert alert-danger" style="margin-top:10px;padding:8px 12px;font-size:12px">⚠️ No repayments recorded. Active for ${bal.monthsElapsed} month(s).</div>`:''}
+    </div>`;
   });
   return html+`</div>`;
 }
 
-// ─────────────────────────────────────────────────────────
-// LEDGER TAB
-// ─────────────────────────────────────────────────────────
-function renderLedger(isAdmin, activeMember){
-  const now=new Date();
-  let rows=''; let cy=2024,cm=2;
+// ─────────────────────────────────────────────
+// LEDGER
+// ─────────────────────────────────────────────
+function renderLedger(isAdmin,activeMember){
+  const now=new Date();let rows='';let cy=2024,cm=2;
   while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth()+1)){
     const ms=`${cy}-${String(cm).padStart(2,'0')}`;
     const paid=data[activeMember].contributions.filter(c=>c.month===ms).reduce((a,b)=>a+Number(b.amt),0);
     const target=getMonthlyTarget(ms);
     const badge=paid>=target?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
     rows+=`<tr><td>${ms}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${target.toLocaleString()}</td><td>${badge}</td></tr>`;
-    cm++; if(cm>12){cm=1;cy++;}
+    cm++;if(cm>12){cm=1;cy++;}
   }
   const loans=data[activeMember].loans.filter(l=>l.type==='LOAN');
   let picker='';
-  if(isAdmin) picker=`
-    <div class="card" style="border:2px solid var(--gold);padding:14px;margin-bottom:18px">
-      <label style="font-size:13px;font-weight:700">👤 Admin: View Any Member's Ledger</label>
-      <select style="margin-top:6px" onchange="lastSelectedMember=this.value;render()">
-        ${data.members.map(m=>`<option value="${m}" ${m===activeMember?'selected':''}>${m}</option>`).join('')}
-      </select>
-    </div>`;
-
-  return `
-    ${picker}
+  if(isAdmin) picker=`<div class="card" style="border:2px solid var(--gold);padding:14px;margin-bottom:18px">
+    <label style="font-size:13px;font-weight:700">👤 Admin: View Any Member's Ledger</label>
+    <select style="margin-top:6px" onchange="lastSelectedMember=this.value;render()">
+      ${data.members.map(m=>`<option value="${m}" ${m===activeMember?'selected':''}>${m}</option>`).join('')}
+    </select></div>`;
+  return `${picker}
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
         <h2 style="border:none;padding:0;margin:0">📒 Savings Timeline — ${activeMember}</h2>
         <button class="gold sm" onclick="exportMemberCSV('${activeMember}')">📥 Download Statement</button>
       </div>
       <div class="table-wrap" style="margin-top:14px">
-        <table>
-          <tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th></tr>
-          ${rows}
-        </table>
+        <table><tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th></tr>${rows}</table>
       </div>
     </div>
     <div class="card">
       <h2>Loan & Repayment History — ${activeMember}</h2>
       ${!loans.length?'<p style="color:#999;font-size:13px">No loan records.</p>':''}
-      <div class="table-wrap">
-        <table>
-          ${loans.length?'<tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th><th>Outstanding (w/ interest)</th></tr>':''}
-          ${loans.map((l,i)=>{
-            const lid=i+1, bal=calcLoanBalance(l,lid,activeMember);
-            return `<tr style="background:#E3F2FD;font-weight:600">
-              <td>${l.date}</td><td>LOAN #${lid} — Disbursed</td><td>—</td>
-              <td>UGX ${Number(l.amt).toLocaleString()}</td>
-              <td style="color:${bal.isFullyPaid?'var(--green)':'var(--red)'};font-weight:700">
-                ${bal.isFullyPaid?'✅ CLEARED':'UGX '+bal.outstanding.toLocaleString()+' remaining'}
-              </td>
-            </tr>`+
-            data[activeMember].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid))
-              .map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:var(--green)">UGX ${Number(r.amt).toLocaleString()}</td><td>—</td></tr>`).join('');
-          }).join('')}
-        </table>
-      </div>
+      <div class="table-wrap"><table>
+        ${loans.length?'<tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th><th>Outstanding</th></tr>':''}
+        ${loans.map((l,i)=>{
+          const lid=i+1,bal=calcLoanBalance(l,lid,activeMember);
+          return `<tr style="background:#E3F2FD;font-weight:600"><td>${l.date}</td><td>LOAN #${lid}</td><td>—</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td style="color:${bal.isFullyPaid?'var(--green)':'var(--red)'};">${bal.isFullyPaid?'✅ CLEARED':'UGX '+bal.outstanding.toLocaleString()}</td></tr>`+
+          data[activeMember].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid)).map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:var(--green)">UGX ${Number(r.amt).toLocaleString()}</td><td>—</td></tr>`).join('');
+        }).join('')}
+      </table></div>
     </div>`;
 }
 
-// ─────────────────────────────────────────────────────────
-// SACCO ACTIVITY — all members
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// SACCO ACTIVITY
+// ─────────────────────────────────────────────
 function renderActivity(){
   const S=getGlobalStats();
   return `
-    <div class="card">
-      <h2>🏦 SACCO-Wide Totals</h2>
+    <div class="card"><h2>🏦 SACCO-Wide Totals</h2>
       <div class="grid">
         <div class="stat-box"><div class="stat-label">Net Cash Position</div><div class="stat-value">UGX ${S.netCash.toLocaleString()}</div></div>
-        <div class="stat-box"><div class="stat-label">Gross Savings (All Members)</div><div class="stat-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
-        <div class="stat-box gold-border"><div class="stat-label">Interest Earned (Collected)</div><div class="stat-value" style="color:var(--green)">UGX ${S.interestCollected.toLocaleString()}</div></div>
+        <div class="stat-box"><div class="stat-label">Gross Savings</div><div class="stat-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
+        <div class="stat-box gold-border"><div class="stat-label">Interest Earned</div><div class="stat-value" style="color:var(--green)">UGX ${S.interestCollected.toLocaleString()}</div></div>
         <div class="stat-box" style="background:#E3F2FD"><div class="stat-label">Cash In / Donations</div><div class="stat-value" style="color:var(--blue)">UGX ${S.cashIn.toLocaleString()}</div></div>
         <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Total Expenses</div><div class="stat-value" style="color:var(--red)">UGX ${S.expenses.toLocaleString()}</div></div>
         <div class="stat-box" style="background:#F3E5F5"><div class="stat-label">Total Investments</div><div class="stat-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
-        <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Active Loan Principal Out</div><div class="stat-value" style="color:var(--yellow)">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
+        <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Active Loan Principal</div><div class="stat-value" style="color:var(--yellow)">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
       </div>
     </div>
-
-    <div class="card">
-      <h2>📥 Cash In / Donations</h2>
+    <div class="card"><h2>📥 Cash In / Donations</h2>
       ${!data.cashIn.length?'<p style="color:#999;font-size:13px">No records yet.</p>':''}
-      <div class="table-wrap">
-        <table>
-          ${data.cashIn.length?'<tr><th>Date</th><th>Source / Description</th><th>Amount</th></tr>':''}
-          ${data.cashIn.map(c=>`<tr><td>${c.date}</td><td>${c.source}</td><td style="color:var(--green);font-weight:600">UGX ${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
-        </table>
-      </div>
+      <div class="table-wrap"><table>
+        ${data.cashIn.length?'<tr><th>Date</th><th>Source</th><th>Amount</th></tr>':''}
+        ${data.cashIn.map(c=>`<tr><td>${c.date}</td><td>${c.source}</td><td style="color:var(--green);font-weight:600">UGX ${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
+      </table></div>
     </div>
-
-    <div class="card">
-      <h2>💸 Expenses</h2>
+    <div class="card"><h2>💸 Expenses</h2>
       ${!data.expenses.length?'<p style="color:#999;font-size:13px">No expenses recorded.</p>':''}
-      <div class="table-wrap">
-        <table>
-          ${data.expenses.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}
-          ${data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td style="color:var(--red);font-weight:600">UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
-        </table>
-      </div>
+      <div class="table-wrap"><table>
+        ${data.expenses.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}
+        ${data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td style="color:var(--red);font-weight:600">UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
+      </table></div>
     </div>
-
-    <div class="card">
-      <h2>📈 Investments</h2>
+    <div class="card"><h2>📈 Investments</h2>
       ${!data.investments.length?'<p style="color:#999;font-size:13px">No investments recorded.</p>':''}
-      <div class="table-wrap">
-        <table>
-          ${data.investments.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}
-          ${data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td style="color:#6A1B9A;font-weight:600">UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
-        </table>
-      </div>
+      <div class="table-wrap"><table>
+        ${data.investments.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}
+        ${data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td style="color:#6A1B9A;font-weight:600">UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
+      </table></div>
     </div>`;
 }
 
-// ─────────────────────────────────────────────────────────
-// ADMIN HUB
-// ─────────────────────────────────────────────────────────
-function renderAdmin(activeMember){
-  const nextLoanId=data[activeMember].loans.filter(l=>l.type==='LOAN').length+1;
+// ─────────────────────────────────────────────
+// MONTHLY REPORT — with full print controls
+// ─────────────────────────────────────────────
+function renderMonthlyReport(){
+  const now=new Date();
+  const curMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+
+  // determine which months to preview
+  let previewMonths=[];
+  let previewTitle='';
+  if(reportMode==='single'){
+    previewMonths=[reportMonth];
+    previewTitle=`Month: ${reportMonth}`;
+  } else if(reportMode==='range'){
+    previewMonths=reportStart&&reportEnd&&reportStart<=reportEnd?getMonthRange(reportStart,reportEnd):[];
+    previewTitle=`Range: ${reportStart} → ${reportEnd}`;
+  } else {
+    previewMonths=getMonthRange("2024-02",curMs);
+    previewTitle=`All-time: Feb 2024 → ${curMs}`;
+  }
+
+  let total=0;
+  const rows=data.members.map(m=>{
+    const paid=previewMonths.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
+    total+=paid;
+    const expected=previewMonths.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
+    const gap=Math.max(0,expected-paid);
+    const badge=paid>=expected?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
+    return `<tr><td>${m}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${expected.toLocaleString()}</td><td>UGX ${gap.toLocaleString()}</td><td>${badge}</td></tr>`;
+  }).join('');
+
+  const paidCount=previewMonths.length?data.members.filter(m=>{
+    const paid=previewMonths.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
+    const expected=previewMonths.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
+    return paid>=expected;
+  }).length:0;
+
+  const S=getGlobalStats();
+
   return `
     <div class="card" style="border:2px solid var(--gold)">
-      <h2>⚙️ Admin Hub</h2>
-      <div class="grid-2">
-        <div>
-          <h3>📥 Post Inflow</h3>
-          <label>Member</label>
-          <select id="mI" onchange="lastSelectedMember=this.value;render()">
-            ${data.members.map(m=>`<option value="${m}" ${m===activeMember?'selected':''}>${m}</option>`).join('')}
-          </select>
-          <label>Type</label>
-          <select id="tI" onchange="currentInflowType=this.value;render()">
-            <option value="S" ${currentInflowType==='S'?'selected':''}>Savings</option>
-            <option value="R" ${currentInflowType==='R'?'selected':''}>Loan Repayment</option>
-            <option value="C" ${currentInflowType==='C'?'selected':''}>Cash In / Donation</option>
-          </select>
-          ${currentInflowType==='R'
-            ?`<label>Select Loan</label>
-              <select id="lID">
-                ${data[activeMember].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Repay Loan #${i+1} (${l.date})</option>`).join('')||'<option disabled>No Loans</option>'}
-              </select>`
-            :currentInflowType==='S'
-              ?`<label>Month</label><input type="month" id="moI" value="${new Date().toISOString().slice(0,7)}">`
-              :`<label>Description</label><input type="text" id="descIn" placeholder="e.g. Donation from sponsor">`}
-          <label>Date</label>
-          <input type="date" id="daMan" value="${new Date().toISOString().split('T')[0]}">
-          <label>Amount (UGX)</label>
-          <input type="number" id="amI" placeholder="Enter amount">
-          <button class="gold full" onclick="postInflow()">Post Inflow ↗</button>
-        </div>
-        <div>
-          <h3>📤 Post Outflow <span style="float:right;font-size:11px;color:var(--gold);font-weight:400">Next: Loan #${nextLoanId}</span></h3>
-          <label>Type</label>
-          <select id="tO">
-            <option value="L">Issue Loan #${nextLoanId} to ${activeMember}</option>
-            <option value="E">Expense</option>
-            <option value="I">Investment</option>
-          </select>
-          <label>Date</label>
-          <input type="date" id="daOut" value="${new Date().toISOString().split('T')[0]}">
-          <label>Description</label>
-          <input type="text" id="reO" placeholder="Reason / description">
-          <label>Amount (UGX)</label>
-          <input type="number" id="amO" placeholder="Enter amount">
-          <button class="gold full" onclick="postOutflow()">Post Outflow ↙</button>
+      <h2>📅 Monthly Report & Print Centre</h2>
+
+      <!-- MODE SELECTOR -->
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:700;color:var(--dark);display:block;margin-bottom:8px">Select Report Type:</label>
+        <div class="report-mode-bar">
+          <button class="mode-btn ${reportMode==='single'?'active':''}" onclick="reportMode='single';render()">📆 Single Month</button>
+          <button class="mode-btn ${reportMode==='range'?'active':''}" onclick="reportMode='range';render()">📅 Date Range</button>
+          <button class="mode-btn ${reportMode==='overall'?'active':''}" onclick="reportMode='overall';render()">🗂️ Overall / All-Time</button>
         </div>
       </div>
-      <hr class="divider">
-      <button class="gold full" onclick="exportMasterAudit()">📥 DOWNLOAD MASTER SACCO AUDIT (CSV)</button>
+
+      <!-- CONTROLS PER MODE -->
+      ${reportMode==='single'?`
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+          <div style="flex:1;min-width:180px">
+            <label>Select Month</label>
+            <input type="month" style="margin:0" value="${reportMonth}" onchange="reportMonth=this.value;render()">
+          </div>
+          <button class="print-btn" onclick="printSingleMonth()">🖨️ Print / Save PDF</button>
+        </div>`
+      :reportMode==='range'?`
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+          <div style="flex:1;min-width:150px">
+            <label>Start Month</label>
+            <input type="month" style="margin:0" value="${reportStart}" onchange="reportStart=this.value;render()">
+          </div>
+          <div style="flex:1;min-width:150px">
+            <label>End Month</label>
+            <input type="month" style="margin:0" value="${reportEnd}" onchange="reportEnd=this.value;render()">
+          </div>
+          <button class="print-btn" onclick="printRange()">🖨️ Print / Save PDF</button>
+        </div>`
+      :`
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+          <p style="font-size:13px;color:#666;flex:1">Covers all SACCO history from <strong>February 2024</strong> to <strong>present</strong> (${previewMonths.length} months).</p>
+          <button class="print-btn" onclick="printOverall()">🖨️ Print / Save PDF</button>
+        </div>`}
+
+      <!-- PREVIEW LABEL -->
+      <div style="background:#f8f8f8;border:1px solid #eee;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#555">
+        <strong>Preview:</strong> ${previewTitle} — <strong>${previewMonths.length} month(s)</strong> selected
+        &nbsp;|&nbsp; Total savings in period: <strong>UGX ${total.toLocaleString()}</strong>
+        &nbsp;|&nbsp; Fully paid members: <strong>${paidCount} / ${data.members.length}</strong>
+      </div>
+    </div>
+
+    <!-- FINANCIAL SUMMARY PREVIEW -->
+    <div class="card">
+      <h2>Financial Summary (All-Time SACCO Position)</h2>
+      <div class="grid">
+        <div class="stat-box"><div class="stat-label">Net Cash Position</div><div class="stat-value">UGX ${S.netCash.toLocaleString()}</div></div>
+        <div class="stat-box"><div class="stat-label">Gross Savings</div><div class="stat-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
+        <div class="stat-box gold-border"><div class="stat-label">Interest Earned</div><div class="stat-value" style="color:var(--green)">UGX ${S.interestCollected.toLocaleString()}</div></div>
+        <div class="stat-box" style="background:#E3F2FD"><div class="stat-label">Cash In / Donations</div><div class="stat-value" style="color:var(--blue)">UGX ${S.cashIn.toLocaleString()}</div></div>
+        <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Expenses</div><div class="stat-value" style="color:var(--red)">UGX ${S.expenses.toLocaleString()}</div></div>
+        <div class="stat-box" style="background:#F3E5F5"><div class="stat-label">Investments</div><div class="stat-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
+        <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Active Loan Principal</div><div class="stat-value" style="color:var(--yellow)">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
+      </div>
+    </div>
+
+    <!-- MEMBER SAVINGS PREVIEW TABLE -->
+    <div class="card">
+      <h2>Member Savings — ${previewTitle}</h2>
+      ${!previewMonths.length?'<p style="color:#999;font-size:13px">Select a valid month or range above.</p>':''}
+      ${previewMonths.length?`<div class="table-wrap"><table>
+        <tr><th>Member</th><th>Amount Paid</th><th>Expected</th><th>Shortfall</th><th>Status</th></tr>
+        ${rows}
+      </table></div>`:''}
     </div>`;
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// ADMIN HUB
+// ─────────────────────────────────────────────
+function renderAdmin(activeMember){
+  const nextLoanId=data[activeMember].loans.filter(l=>l.type==='LOAN').length+1;
+  return `<div class="card" style="border:2px solid var(--gold)">
+    <h2>⚙️ Admin Hub</h2>
+    <div class="grid-2">
+      <div>
+        <h3>📥 Post Inflow</h3>
+        <label>Member</label>
+        <select id="mI" onchange="lastSelectedMember=this.value;render()">
+          ${data.members.map(m=>`<option value="${m}" ${m===activeMember?'selected':''}>${m}</option>`).join('')}
+        </select>
+        <label>Type</label>
+        <select id="tI" onchange="currentInflowType=this.value;render()">
+          <option value="S" ${currentInflowType==='S'?'selected':''}>Savings</option>
+          <option value="R" ${currentInflowType==='R'?'selected':''}>Loan Repayment</option>
+          <option value="C" ${currentInflowType==='C'?'selected':''}>Cash In / Donation</option>
+        </select>
+        ${currentInflowType==='R'
+          ?`<label>Select Loan</label><select id="lID">${data[activeMember].loans.filter(l=>l.type==='LOAN').map((l,i)=>`<option value="${i+1}">Repay Loan #${i+1} (${l.date})</option>`).join('')||'<option disabled>No Loans</option>'}</select>`
+          :currentInflowType==='S'
+            ?`<label>Month</label><input type="month" id="moI" value="${new Date().toISOString().slice(0,7)}">`
+            :`<label>Description</label><input type="text" id="descIn" placeholder="e.g. Donation from sponsor">`}
+        <label>Date</label><input type="date" id="daMan" value="${new Date().toISOString().split('T')[0]}">
+        <label>Amount (UGX)</label><input type="number" id="amI" placeholder="Enter amount">
+        <button class="gold full" onclick="postInflow()">Post Inflow ↗</button>
+      </div>
+      <div>
+        <h3>📤 Post Outflow <span style="float:right;font-size:11px;color:var(--gold);font-weight:400">Next: Loan #${nextLoanId}</span></h3>
+        <label>Type</label>
+        <select id="tO">
+          <option value="L">Issue Loan #${nextLoanId} to ${activeMember}</option>
+          <option value="E">Expense</option>
+          <option value="I">Investment</option>
+        </select>
+        <label>Date</label><input type="date" id="daOut" value="${new Date().toISOString().split('T')[0]}">
+        <label>Description</label><input type="text" id="reO" placeholder="Reason / description">
+        <label>Amount (UGX)</label><input type="number" id="amO" placeholder="Enter amount">
+        <button class="gold full" onclick="postOutflow()">Post Outflow ↙</button>
+      </div>
+    </div>
+    <hr class="divider">
+    <button class="gold full" onclick="exportMasterAudit()">📥 DOWNLOAD MASTER SACCO AUDIT (CSV)</button>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────
 // GLOBAL AUDIT
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function renderAudit(){
   const arrRows=data.members.map(m=>{
     const sav=data[m].contributions.reduce((a,b)=>a+Number(b.amt),0);
-    const arr=calcArrearsAndFines(m), debt=getMemberLoanDebt(m);
-    return `<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td>
-      <td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td>
-      <td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()}</td></tr>`;
+    const arr=calcArrearsAndFines(m),debt=getMemberLoanDebt(m);
+    return `<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td><td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td><td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()}</td></tr>`;
   }).join('');
-
   const txRows=data.members.map(mem=>
-    data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td>
-      <td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button>
-          <button class="del" onclick="del('S','${mem}',${i})">✕</button></td></tr>`).join('')+
-    data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan Disbursed':'Repay Loan #'+l.loanId}</td><td>UGX ${Number(l.amt).toLocaleString()}</td>
-      <td><button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button>
-          <button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`).join('')
+    data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">✕</button></td></tr>`).join('')+
+    data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan Disbursed':'Repay Loan #'+l.loanId}</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`).join('')
   ).join('');
-
   const sysRows=
-    data.cashIn.map((c,i)=>`<tr><td>SYSTEM</td><td>Cash In</td><td>${c.source}</td><td>UGX ${Number(c.amt).toLocaleString()}</td>
-      <td><button class="edit-btn" onclick="openEdit('C','',${i})">Edit</button>
-          <button class="del" onclick="del('C','',${i})">✕</button></td></tr>`).join('')+
-    data.expenses.map((e,i)=>`<tr><td>SYSTEM</td><td>Expense</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td>
-      <td><button class="edit-btn" onclick="openEdit('E','',${i})">Edit</button>
-          <button class="del" onclick="del('E','',${i})">✕</button></td></tr>`).join('')+
-    data.investments.map((inv,i)=>`<tr><td>SYSTEM</td><td>Investment</td><td>${inv.reason}</td><td>UGX ${Number(inv.amt).toLocaleString()}</td>
-      <td><button class="edit-btn" onclick="openEdit('I','',${i})">Edit</button>
-          <button class="del" onclick="del('I','',${i})">✕</button></td></tr>`).join('');
-
+    data.cashIn.map((c,i)=>`<tr><td>SYSTEM</td><td>Cash In</td><td>${c.source}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('C','',${i})">Edit</button><button class="del" onclick="del('C','',${i})">✕</button></td></tr>`).join('')+
+    data.expenses.map((e,i)=>`<tr><td>SYSTEM</td><td>Expense</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('E','',${i})">Edit</button><button class="del" onclick="del('E','',${i})">✕</button></td></tr>`).join('')+
+    data.investments.map((inv,i)=>`<tr><td>SYSTEM</td><td>Investment</td><td>${inv.reason}</td><td>UGX ${Number(inv.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('I','',${i})">Edit</button><button class="del" onclick="del('I','',${i})">✕</button></td></tr>`).join('');
   return `
-    <div class="card">
-      <h2>Member Arrears Overview</h2>
-      <div class="table-wrap">
-        <table><tr><th>Member</th><th>Total Savings</th><th>Arrears + Fines</th><th>Loan Debt (incl. interest)</th></tr>${arrRows}</table>
-      </div>
+    <div class="card"><h2>Member Arrears Overview</h2>
+      <div class="table-wrap"><table><tr><th>Member</th><th>Total Savings</th><th>Arrears + Fines</th><th>Loan Debt (incl. interest)</th></tr>${arrRows}</table></div>
     </div>
-    <div class="card">
-      <h2>Full Transaction Audit Log</h2>
-      <div class="table-wrap">
-        <table><tr><th>Member</th><th>Type</th><th>Ref / Month</th><th>Amount</th><th>Actions</th></tr>${txRows}${sysRows}</table>
-      </div>
+    <div class="card"><h2>Full Transaction Audit Log</h2>
+      <div class="table-wrap"><table><tr><th>Member</th><th>Type</th><th>Ref</th><th>Amount</th><th>Actions</th></tr>${txRows}${sysRows}</table></div>
     </div>`;
 }
 
-// ─────────────────────────────────────────────────────────
-// MONTHLY REPORT
-// ─────────────────────────────────────────────────────────
-function renderMonthlyReport(){
-  const now=new Date();
-  const def=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const sel=window._reportMonth||def;
-  const target=getMonthlyTarget(sel);
-  let total=0;
-  const rows=data.members.map(m=>{
-    const paid=data[m].contributions.filter(c=>c.month===sel).reduce((a,b)=>a+Number(b.amt),0);
-    total+=paid;
-    const gap=Math.max(0,target-paid);
-    const badge=paid>=target?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
-    return `<tr><td>${m}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${gap.toLocaleString()}</td><td>${badge}</td></tr>`;
-  }).join('');
-  const paidCount=data.members.filter(m=>data[m].contributions.filter(c=>c.month===sel).reduce((a,b)=>a+Number(b.amt),0)>=target).length;
-  return `
-    <div class="card">
-      <h2>📅 Monthly Summary Report</h2>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
-        <label style="margin:0">Select Month:</label>
-        <input type="month" style="width:auto;margin:0" value="${sel}" onchange="window._reportMonth=this.value;render()">
-      </div>
-      <div class="grid" style="margin-bottom:16px">
-        <div class="stat-box"><div class="stat-label">Target per Member</div><div class="stat-value">UGX ${target.toLocaleString()}</div></div>
-        <div class="stat-box gold-border"><div class="stat-label">Total Collected</div><div class="stat-value" style="color:var(--green)">UGX ${total.toLocaleString()}</div></div>
-        <div class="stat-box"><div class="stat-label">Fully Paid Members</div><div class="stat-value">${paidCount} / ${data.members.length}</div></div>
-        <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Collection Gap</div><div class="stat-value" style="color:var(--red)">UGX ${(target*data.members.length-total).toLocaleString()}</div></div>
-      </div>
-      <div class="table-wrap">
-        <table><tr><th>Member</th><th>Amount Paid</th><th>Shortfall</th><th>Status</th></tr>${rows}</table>
-      </div>
-    </div>`;
-}
-
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // SETTINGS
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function renderSettings(){
-  return `
-    <div class="card" style="max-width:420px;margin:auto">
-      <h2>🔐 Change My PIN</h2>
-      <p style="font-size:13px;color:#666;margin-bottom:16px">Enter your current PIN then choose a new one (minimum 4 characters).</p>
-      <label>Current PIN</label><input type="password" id="oldPin" placeholder="Current PIN" maxlength="20">
-      <label>New PIN</label><input type="password" id="newPin" placeholder="New PIN (min 4 chars)" maxlength="20">
-      <label>Confirm New PIN</label><input type="password" id="confPin" placeholder="Re-enter new PIN" maxlength="20">
-      <button class="gold full" onclick="changePin()" style="margin-top:4px">Update PIN</button>
-    </div>`;
+  return `<div class="card" style="max-width:420px;margin:auto">
+    <h2>🔐 Change My PIN</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:16px">Enter current PIN then choose a new one (min 4 characters).</p>
+    <label>Current PIN</label><input type="password" id="oldPin" placeholder="Current PIN" maxlength="20">
+    <label>New PIN</label><input type="password" id="newPin" placeholder="New PIN" maxlength="20">
+    <label>Confirm New PIN</label><input type="password" id="confPin" placeholder="Re-enter new PIN" maxlength="20">
+    <button class="gold full" onclick="changePin()">Update PIN</button>
+  </div>`;
 }
 function changePin(){
-  const o=document.getElementById('oldPin').value, n=document.getElementById('newPin').value, c=document.getElementById('confPin').value;
-  if(o!==data[user.name].pin){showToast("❌ Current PIN is incorrect","danger");return;}
-  if(!n||n.length<4){showToast("⚠️ New PIN must be at least 4 characters","warn");return;}
-  if(n!==c){showToast("❌ New PINs do not match","danger");return;}
-  data[user.name].pin=n; saveData();
+  const o=document.getElementById('oldPin').value,n=document.getElementById('newPin').value,c=document.getElementById('confPin').value;
+  if(o!==data[user.name].pin){showToast("❌ Current PIN incorrect","danger");return;}
+  if(!n||n.length<4){showToast("⚠️ PIN must be at least 4 characters","warn");return;}
+  if(n!==c){showToast("❌ PINs do not match","danger");return;}
+  data[user.name].pin=n;saveData();
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // EDIT MODAL
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function openEdit(cat,mem,idx){
-  let entry;
-  if(cat==='S') entry={...data[mem].contributions[idx]};
-  else if(cat==='L') entry={...data[mem].loans[idx]};
-  else if(cat==='C') entry={...data.cashIn[idx]};
-  else if(cat==='E') entry={...data.expenses[idx]};
-  else if(cat==='I') entry={...data.investments[idx]};
-  editModalData={cat,mem,idx,entry}; render();
+  let e;
+  if(cat==='S')e={...data[mem].contributions[idx]};
+  else if(cat==='L')e={...data[mem].loans[idx]};
+  else if(cat==='C')e={...data.cashIn[idx]};
+  else if(cat==='E')e={...data.expenses[idx]};
+  else if(cat==='I')e={...data.investments[idx]};
+  editModalData={cat,mem,idx,entry:e};render();
 }
 function renderEditModal(){
   const {cat,mem,idx,entry}=editModalData;
@@ -863,79 +1019,78 @@ function renderEditModal(){
   else if(cat==='L') fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}">`;
   else if(cat==='C') fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Source</label><input type="text" id="eDesc" value="${entry.source||''}">`;
   else fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Description</label><input type="text" id="eDesc" value="${entry.reason||''}">`;
-  return `
-    <div class="modal-overlay" onclick="closeEdit(event)">
-      <div class="modal">
-        <button class="modal-close" onclick="editModalData=null;render()">✕</button>
-        <h2>Edit Entry</h2>
-        <p style="font-size:12px;color:#666;margin-bottom:14px"><strong>${labels[cat]}</strong>${mem?' — '+mem:''}</p>
-        ${fields}
-        <button class="gold full" onclick="saveEdit()" style="margin-top:8px">💾 Save Changes</button>
-      </div>
-    </div>`;
+  return `<div class="modal-overlay" onclick="closeEdit(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="editModalData=null;render()">✕</button>
+      <h2>Edit Entry</h2>
+      <p style="font-size:12px;color:#666;margin-bottom:14px"><strong>${labels[cat]}</strong>${mem?' — '+mem:''}</p>
+      ${fields}
+      <button class="gold full" onclick="saveEdit()" style="margin-top:8px">💾 Save Changes</button>
+    </div>
+  </div>`;
 }
 function closeEdit(e){if(e.target.classList.contains('modal-overlay')){editModalData=null;render();}}
 function saveEdit(){
   const {cat,mem,idx,entry}=editModalData;
-  const amt=Number(document.getElementById('eAmt').value), date=document.getElementById('eDate').value;
-  if(!amt||!date){showToast("⚠️ Fill in all required fields","warn");return;}
+  const amt=Number(document.getElementById('eAmt').value),date=document.getElementById('eDate').value;
+  if(!amt||!date){showToast("⚠️ Fill in all fields","warn");return;}
   if(cat==='S'){const mon=document.getElementById('eMon').value;data[mem].contributions[idx]={...entry,amt,date,month:mon};}
   else if(cat==='L'){data[mem].loans[idx]={...entry,amt,date};}
   else if(cat==='C'){data.cashIn[idx]={...entry,amt,date,source:document.getElementById('eDesc').value};}
   else if(cat==='E'){data.expenses[idx]={...entry,amt,date,reason:document.getElementById('eDesc').value};}
   else if(cat==='I'){data.investments[idx]={...entry,amt,date,reason:document.getElementById('eDesc').value};}
-  editModalData=null; saveData();
+  editModalData=null;saveData();
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // POST INFLOW / OUTFLOW
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function postInflow(){
-  const m=document.getElementById("mI").value, t=currentInflowType;
-  const amt=Number(document.getElementById("amI").value), date=document.getElementById("daMan").value;
+  const m=document.getElementById("mI").value,t=currentInflowType;
+  const amt=Number(document.getElementById("amI").value),date=document.getElementById("daMan").value;
   if(!amt||amt<=0){showToast("⚠️ Enter a valid amount","warn");return;}
   if(!date){showToast("⚠️ Enter a valid date","warn");return;}
   if(t==='S'){
     const mStr=document.getElementById("moI").value;
     if(data[m].contributions.some(c=>c.month===mStr)){showToast("⚠️ Month already has an entry!","warn");return;}
     data[m].contributions.push({amt,date,month:mStr});
-  } else if(t==='R'){
+  }else if(t==='R'){
     const lID=document.getElementById("lID")?document.getElementById("lID").value:null;
     if(!lID){showToast("⚠️ No loan selected","warn");return;}
     data[m].loans.push({amt,date,type:'REPAYMENT',loanId:lID});
-  } else if(t==='C'){
+  }else if(t==='C'){
     const src=document.getElementById("descIn")?document.getElementById("descIn").value||"Donation":"Donation";
     data.cashIn.push({amt,date,source:src});
   }
   saveData();
 }
 function postOutflow(){
-  const t=document.getElementById("tO").value, amt=Number(document.getElementById("amO").value);
-  const desc=document.getElementById("reO").value, m=lastSelectedMember||user.name;
+  const t=document.getElementById("tO").value,amt=Number(document.getElementById("amO").value);
+  const desc=document.getElementById("reO").value,m=lastSelectedMember||user.name;
   const date=document.getElementById("daOut").value;
   if(!amt||amt<=0){showToast("⚠️ Enter a valid amount","warn");return;}
-  if(t==='L') data[m].loans.push({amt,date,type:'LOAN'});
-  else if(t==='E') data.expenses.push({amt,reason:desc,date});
-  else if(t==='I') data.investments.push({amt,reason:desc,date});
+  if(t==='L')data[m].loans.push({amt,date,type:'LOAN'});
+  else if(t==='E')data.expenses.push({amt,reason:desc,date});
+  else if(t==='I')data.investments.push({amt,reason:desc,date});
   saveData();
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // DELETE
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function del(cat,mem,idx){
   if(!confirm("Delete this entry?"))return;
-  if(cat==='S') data[mem].contributions.splice(idx,1);
-  else if(cat==='L') data[mem].loans.splice(idx,1);
-  else if(cat==='C') data.cashIn.splice(idx,1);
-  else if(cat==='E') data.expenses.splice(idx,1);
-  else if(cat==='I') data.investments.splice(idx,1);
+  if(cat==='S')data[mem].contributions.splice(idx,1);
+  else if(cat==='L')data[mem].loans.splice(idx,1);
+  else if(cat==='C')data.cashIn.splice(idx,1);
+  else if(cat==='E')data.expenses.splice(idx,1);
+  else if(cat==='I')data.investments.splice(idx,1);
   saveData();
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // CSV EXPORTS
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function exportMemberCSV(name){
   const rows=[["Date","Type","Reference","Amount"]];
   data[name].contributions.forEach(c=>rows.push([c.date,"Savings",c.month,c.amt]));
@@ -957,25 +1112,25 @@ function downloadCSV(filename,rows){
   const link=document.createElement("a");
   link.setAttribute("href",encodeURI("data:text/csv;charset=utf-8,"+rows.map(e=>e.join(",")).join("\n")));
   link.setAttribute("download",filename);
-  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  document.body.appendChild(link);link.click();document.body.removeChild(link);
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // TOAST
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 function showToast(msg,type="success"){
-  const ex=document.getElementById('toast'); if(ex)ex.remove();
+  const ex=document.getElementById('toast');if(ex)ex.remove();
   const colors={success:'#2E7D32',danger:'#C62828',warn:'#E65100'};
   const t=document.createElement('div');
   t.id='toast';
   t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${colors[type]||'#333'};color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.25);font-family:'DM Sans',sans-serif`;
-  t.textContent=msg; document.body.appendChild(t);
+  t.textContent=msg;document.body.appendChild(t);
   setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.4s';setTimeout(()=>t.remove(),400);},3000);
 }
 
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 // BOOT
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────
 loadData();
 </script>
 </body>
