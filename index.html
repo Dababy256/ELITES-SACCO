@@ -9,58 +9,56 @@
 <meta name="theme-color" content="#111111">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --gold:#B08D57; --dark:#111111; --cream:#F3E9D2; --white:#ffffff;
-    --red:#C62828; --green:#2E7D32; --yellow:#F57F17; --blue:#1565C0;
-    --shadow:0 4px 24px rgba(0,0,0,0.10);
-  }
+  :root{--gold:#B08D57;--dark:#111111;--cream:#F3E9D2;--white:#ffffff;--red:#C62828;--green:#2E7D32;--yellow:#F57F17;--blue:#1565C0;--shadow:0 4px 24px rgba(0,0,0,0.10);}
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);min-height:100vh;}
-  header{background:var(--dark);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:14px;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.3);}
-  .logo-placeholder{height:46px;width:46px;border-radius:50%;border:2px solid var(--gold);background:#222;display:flex;align-items:center;justify-content:center;font-size:20px;}
-  .logo-img{height:46px;width:46px;border-radius:50%;border:2px solid var(--gold);object-fit:cover;}
-  .header-title{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--gold);letter-spacing:1px;}
-  .header-sub{font-size:11px;color:#aaa;margin-top:2px;}
-  .header-right{margin-left:auto;}
+  header{background:var(--dark);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:100;box-shadow:0 2px 16px rgba(0,0,0,0.3);}
+  .hdr-avatar{height:42px;width:42px;border-radius:50%;border:2px solid var(--gold);object-fit:cover;background:#222;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;overflow:hidden;}
+  .hdr-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+  .header-title{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--gold);letter-spacing:1px;}
+  .header-sub{font-size:11px;color:#aaa;margin-top:1px;}
+  .header-right{margin-left:auto;display:flex;gap:6px;align-items:center;}
   .tab-bar{background:var(--dark);display:flex;border-bottom:2px solid var(--gold);overflow-x:auto;}
   .tab-bar::-webkit-scrollbar{height:0;}
-  .tab-btn{padding:11px 18px;border:none;background:transparent;color:#888;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap;}
+  .tab-btn{padding:10px 16px;border:none;background:transparent;color:#888;font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap;}
   .tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);background:#1a1a1a;}
   .tab-btn:hover:not(.active){color:#ccc;background:#181818;}
-  .container{padding:20px 16px;max-width:1100px;margin:auto;}
-  .card{background:var(--white);padding:22px;border-radius:14px;margin-bottom:18px;box-shadow:var(--shadow);}
-  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
-  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  .stat-box{padding:14px 16px;border-radius:10px;background:#f8f8f8;border:1px solid #e5e5e5;}
+  .container{padding:18px 14px;max-width:1100px;margin:auto;}
+  .card{background:var(--white);padding:20px;border-radius:14px;margin-bottom:16px;box-shadow:var(--shadow);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:11px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .stat-box{padding:13px 15px;border-radius:10px;background:#f8f8f8;border:1px solid #e5e5e5;}
   .stat-box.gold-border{border-color:var(--gold);}
-  .stat-label{font-size:10px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;}
+  .stat-label{font-size:10px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;}
   .stat-value{font-size:1rem;font-weight:700;color:var(--dark);}
-  .stat-box-dark{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:14px;}
-  h2{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--dark);border-bottom:2px solid var(--gold);padding-bottom:8px;margin-bottom:16px;}
-  h3{font-size:0.9rem;font-weight:600;color:#555;margin-bottom:8px;margin-top:16px;}
+  .stat-box-dark{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:13px;}
+  h2{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--dark);border-bottom:2px solid var(--gold);padding-bottom:7px;margin-bottom:14px;}
+  h3{font-size:0.88rem;font-weight:600;color:#555;margin-bottom:7px;margin-top:14px;}
   h3:first-child{margin-top:0;}
   .table-wrap{overflow-x:auto;}
-  table{width:100%;border-collapse:collapse;font-size:12px;}
-  th,td{border:1px solid #eee;padding:8px 10px;text-align:left;}
+  table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  th,td{border:1px solid #eee;padding:7px 9px;text-align:left;}
   th{background:var(--dark);color:var(--gold);font-weight:600;font-size:11px;}
   tr:nth-child(even) td{background:#fafafa;}
   tr:hover td{background:#f5f0e8;}
-  input,select{padding:10px 13px;width:100%;margin-bottom:10px;border:1.5px solid #ddd;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fff;outline:none;transition:border 0.2s;}
-  input:focus,select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(176,141,87,0.12);}
-  label{font-size:11px;font-weight:600;color:#666;display:block;margin-bottom:4px;}
-  button{padding:9px 16px;border:none;border-radius:8px;background:var(--dark);color:#fff;cursor:pointer;font-weight:600;font-size:12px;font-family:'DM Sans',sans-serif;transition:all 0.15s;margin:2px;}
+  input,select,textarea{padding:9px 12px;width:100%;margin-bottom:9px;border:1.5px solid #ddd;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;background:#fff;outline:none;transition:border 0.2s;}
+  textarea{resize:vertical;min-height:120px;}
+  input:focus,select:focus,textarea:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(176,141,87,0.12);}
+  label{font-size:11px;font-weight:600;color:#666;display:block;margin-bottom:3px;}
+  button{padding:8px 15px;border:none;border-radius:8px;background:var(--dark);color:#fff;cursor:pointer;font-weight:600;font-size:12px;font-family:'DM Sans',sans-serif;transition:all 0.15s;margin:2px;}
   button:hover{opacity:0.88;transform:translateY(-1px);}
   button:active{transform:translateY(0);}
   button.gold{background:var(--gold);color:var(--dark);}
-  button.del{background:#ff4d4d;color:#fff;padding:4px 9px;font-size:10px;border-radius:5px;}
-  button.edit-btn{background:#1976D2;color:#fff;padding:4px 9px;font-size:10px;border-radius:5px;}
-  button.sm{padding:6px 11px;font-size:11px;}
-  button.full{width:100%;margin:4px 0;}
+  button.del{background:#ff4d4d;color:#fff;padding:4px 8px;font-size:10px;border-radius:5px;}
+  button.edit-btn{background:#1976D2;color:#fff;padding:4px 8px;font-size:10px;border-radius:5px;}
+  button.sm{padding:6px 10px;font-size:11px;}
+  button.full{width:100%;margin:3px 0;}
   button.outline{background:transparent;color:#fff;border:1.5px solid #555;}
   button.outline:hover{background:#333;}
-  button.print-btn{background:#1B5E20;color:#fff;padding:10px 18px;font-size:13px;}
+  button.print-btn{background:#1B5E20;color:#fff;padding:9px 16px;font-size:12px;}
   button.print-btn:hover{background:#2E7D32;}
-  .badge{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;display:inline-block;}
+  button.danger{background:#C62828;color:#fff;}
+  .badge{padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;display:inline-block;}
   .badge-comp{background:#C8E6C9;color:#2E7D32;}
   .badge-part{background:#FFF9C4;color:#F57F17;}
   .badge-pend{background:#FFCDD2;color:#C62828;}
@@ -68,80 +66,92 @@
   .badge-active{background:#E3F2FD;color:#1565C0;}
   .badge-paid{background:#C8E6C9;color:#2E7D32;}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.65}}
-  .alert{padding:11px 15px;border-radius:10px;margin-bottom:12px;font-size:13px;font-weight:500;}
+  .alert{padding:10px 14px;border-radius:10px;margin-bottom:11px;font-size:13px;font-weight:500;}
   .alert-warn{background:#FFF8E1;border:1px solid #FFD54F;color:#5D4037;}
   .alert-danger{background:#FFEBEE;border:1px solid #EF9A9A;color:#B71C1C;}
   .alert-success{background:#E8F5E9;border:1px solid #A5D6A7;color:#1B5E20;}
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px;}
-  .modal{background:#fff;border-radius:16px;padding:28px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;}
-  .modal-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:#666;}
+  .modal{background:#fff;border-radius:16px;padding:26px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;max-height:90vh;overflow-y:auto;}
+  .modal-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;cursor:pointer;color:#666;}
   .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--cream);}
-  .login-card{background:#fff;padding:36px 28px;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,0.13);max-width:500px;width:100%;}
-  .login-logo{text-align:center;margin-bottom:20px;}
-  .login-icon{width:64px;height:64px;border-radius:50%;border:3px solid var(--gold);background:var(--dark);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 12px;}
-  .login-title{font-family:'Playfair Display',serif;font-size:1.5rem;}
-  .login-sub{font-size:12px;color:#999;margin-top:4px;}
-  .member-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;}
-  .member-btn{background:#f8f8f8;color:var(--dark);border:1.5px solid #e5e5e5;font-size:12px;padding:10px;border-radius:8px;text-align:left;font-weight:500;}
+  .login-card{background:#fff;padding:34px 26px;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,0.13);max-width:520px;width:100%;}
+  .login-logo{text-align:center;margin-bottom:18px;}
+  .login-icon{width:64px;height:64px;border-radius:50%;border:3px solid var(--gold);background:var(--dark);display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 10px;}
+  .login-title{font-family:'Playfair Display',serif;font-size:1.4rem;}
+  .login-sub{font-size:12px;color:#999;margin-top:3px;}
+  .member-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:12px;}
+  .member-btn{background:#f8f8f8;color:var(--dark);border:1.5px solid #e5e5e5;font-size:11px;padding:10px 8px;border-radius:10px;text-align:center;font-weight:500;display:flex;flex-direction:column;align-items:center;gap:7px;}
   .member-btn:hover{border-color:var(--gold);background:#faf6ee;transform:none;}
-  .progress-wrap{background:#eee;border-radius:99px;height:7px;overflow:hidden;margin-top:5px;}
+  .member-btn-avatar{width:46px;height:46px;border-radius:50%;border:2px solid var(--gold);object-fit:cover;background:#eee;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;}
+  .member-btn-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+  .progress-wrap{background:#eee;border-radius:99px;height:7px;overflow:hidden;margin-top:4px;}
   .progress-bar{height:7px;border-radius:99px;background:linear-gradient(90deg,var(--gold),#e6b96a);}
-  .divider{border:none;border-top:1px solid #eee;margin:14px 0;}
-  .hero-card{background:var(--dark);color:#fff;padding:22px 24px;border-radius:16px;margin-bottom:18px;}
-  .hero-amount{font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold);font-weight:900;line-height:1.1;}
+  .divider{border:none;border-top:1px solid #eee;margin:13px 0;}
+  .hero-card{background:var(--dark);color:#fff;padding:20px 22px;border-radius:16px;margin-bottom:16px;}
+  .hero-amount{font-family:'Playfair Display',serif;font-size:1.9rem;color:var(--gold);font-weight:900;line-height:1.1;}
   .hero-label{font-size:10px;color:#777;text-transform:uppercase;letter-spacing:1px;margin-bottom:3px;}
-  .formula-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;font-size:11px;}
-  .f-pill{padding:5px 10px;border-radius:20px;font-weight:700;font-size:11px;}
-  .f-op{color:#666;font-size:13px;font-weight:700;}
-  .loan-card{border:1px solid #eee;border-radius:10px;padding:14px;margin-bottom:10px;}
+  .formula-row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:12px;font-size:10px;}
+  .f-pill{padding:4px 9px;border-radius:20px;font-weight:700;font-size:10px;}
+  .f-op{color:#666;font-size:12px;font-weight:700;}
+  .loan-card{border:1px solid #eee;border-radius:10px;padding:13px;margin-bottom:9px;}
   .loan-card.paid-loan{border-color:#A5D6A7;background:#f5fff7;opacity:0.85;}
   .loan-card.overdue{border-color:#ff4d4d;background:#fff5f5;}
   .loan-card.active-loan{border-color:#90CAF9;background:#f5faff;}
-  .report-mode-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
-  .mode-btn{padding:9px 18px;border-radius:8px;border:2px solid #ddd;background:#fff;color:#555;font-weight:600;font-size:12px;cursor:pointer;transition:all 0.15s;}
+  .report-mode-bar{display:flex;gap:7px;margin-bottom:16px;flex-wrap:wrap;}
+  .mode-btn{padding:8px 16px;border-radius:8px;border:2px solid #ddd;background:#fff;color:#555;font-weight:600;font-size:12px;cursor:pointer;transition:all 0.15s;}
   .mode-btn.active{border-color:var(--gold);background:var(--gold);color:var(--dark);}
-  .mode-btn:hover:not(.active){border-color:#aaa;}
+  /* member management */
+  .member-mgmt-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid #eee;border-radius:10px;margin-bottom:8px;background:#fafafa;}
+  .member-mgmt-avatar{width:44px;height:44px;border-radius:50%;border:2px solid var(--gold);object-fit:cover;background:#eee;display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;flex-shrink:0;}
+  .member-mgmt-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+  /* minutes */
+  .minutes-card{border:1px solid #e5e5e5;border-radius:11px;margin-bottom:10px;overflow:hidden;}
+  .minutes-header{padding:13px 16px;background:#f8f8f8;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-weight:600;}
+  .minutes-header:hover{background:#f0ebe0;}
+  .minutes-body{padding:16px;border-top:1px solid #eee;font-size:13px;line-height:1.7;white-space:pre-wrap;display:none;}
+  .minutes-body.open{display:block;}
+  /* photo upload preview */
+  .photo-preview{width:80px;height:80px;border-radius:50%;border:3px solid var(--gold);object-fit:cover;background:#eee;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;margin:0 auto 10px;}
+  .photo-preview img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
 
-  /* ── PRINT STYLES ── */
-  @media print {
+  /* PRINT */
+  @media print{
     body{background:#fff!important;font-family:Arial,sans-serif;font-size:11pt;}
     header,.tab-bar,#appContainer{display:none!important;}
     #printArea{display:block!important;padding:0;margin:0;}
-    .print-page{page-break-after:always;padding:16mm 15mm;}
+    .print-page{page-break-after:always;padding:15mm 14mm;}
     .print-page:last-child{page-break-after:avoid;}
-    .print-header{text-align:center;margin-bottom:20px;border-bottom:3px solid #B08D57;padding-bottom:12px;}
-    .print-header h1{font-size:20pt;color:#111;margin-bottom:3px;}
-    .print-header .ph-sub{font-size:10pt;color:#555;}
-    .print-header .ph-title{font-size:13pt;font-weight:700;color:#B08D57;margin:4px 0;}
-    .print-section{margin-bottom:18px;}
-    .print-section h2{font-size:12pt;color:#111;border-bottom:1.5px solid #B08D57;padding-bottom:4px;margin-bottom:8px;}
-    .print-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:12px;}
-    .print-stat{border:1px solid #ddd;border-radius:5px;padding:8px 10px;background:#fafafa;}
+    .print-header{text-align:center;margin-bottom:18px;border-bottom:3px solid #B08D57;padding-bottom:11px;}
+    .print-header h1{font-size:19pt;color:#111;margin-bottom:3px;}
+    .print-header .ph-sub{font-size:9.5pt;color:#555;}
+    .print-header .ph-title{font-size:12.5pt;font-weight:700;color:#B08D57;margin:3px 0;}
+    .print-section{margin-bottom:16px;}
+    .print-section h2{font-size:11.5pt;color:#111;border-bottom:1.5px solid #B08D57;padding-bottom:4px;margin-bottom:7px;}
+    .print-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:11px;}
+    .print-stat{border:1px solid #ddd;border-radius:5px;padding:7px 9px;background:#fafafa;}
     .print-stat .ps-label{font-size:7.5pt;color:#888;text-transform:uppercase;font-weight:700;margin-bottom:2px;}
-    .print-stat .ps-value{font-size:11pt;font-weight:700;color:#111;}
-    .print-net{background:#111;color:#fff;padding:12px 16px;border-radius:6px;margin-bottom:12px;}
+    .print-stat .ps-value{font-size:10.5pt;font-weight:700;color:#111;}
+    .print-net{background:#111;color:#fff;padding:11px 15px;border-radius:6px;margin-bottom:11px;}
     .print-net .pn-label{font-size:8pt;color:#aaa;text-transform:uppercase;margin-bottom:3px;}
-    .print-net .pn-value{font-size:18pt;font-weight:900;color:#B08D57;}
-    .print-formula{font-size:8pt;color:#aaa;margin-top:4px;}
-    table{width:100%;border-collapse:collapse;font-size:9.5pt;margin-bottom:10px;}
-    th{background:#111!important;color:#B08D57!important;padding:6px 7px;font-size:8.5pt;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    .print-net .pn-value{font-size:17pt;font-weight:900;color:#B08D57;}
+    .print-formula{font-size:7.5pt;color:#aaa;margin-top:3px;}
+    table{width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:9px;}
+    th{background:#111!important;color:#B08D57!important;padding:5px 7px;font-size:8pt;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     td{padding:5px 7px;border:1px solid #ddd;}
     tr:nth-child(even) td{background:#f8f8f8!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .badge{padding:2px 6px;border-radius:10px;font-size:7.5pt;font-weight:700;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
     .badge-comp{background:#C8E6C9!important;color:#2E7D32!important;}
     .badge-part{background:#FFF9C4!important;color:#F57F17!important;}
     .badge-pend{background:#FFCDD2!important;color:#C62828!important;}
-    .print-footer{text-align:center;font-size:7.5pt;color:#aaa;border-top:1px solid #eee;padding-top:8px;margin-top:16px;}
-    .no-print{display:none!important;}
-    .print-member-stat{display:inline-block;border:1px solid #ddd;border-radius:5px;padding:8px 12px;margin:4px;background:#fafafa;min-width:140px;}
+    .print-footer{text-align:center;font-size:7pt;color:#aaa;border-top:1px solid #eee;padding-top:7px;margin-top:14px;}
+    .print-member-stat{display:inline-block;border:1px solid #ddd;border-radius:5px;padding:7px 11px;margin:3px;background:#fafafa;min-width:130px;}
     .print-member-stat .ps-label{font-size:7.5pt;color:#888;text-transform:uppercase;font-weight:700;}
-    .print-member-stat .ps-value{font-size:11pt;font-weight:700;}
+    .print-member-stat .ps-value{font-size:10.5pt;font-weight:700;}
   }
   @media(max-width:600px){
     .grid-2{grid-template-columns:1fr;}
-    .member-grid{grid-template-columns:1fr;}
     .hero-amount{font-size:1.4rem;}
-    .formula-row{font-size:10px;}
+    .formula-row{font-size:9px;}
   }
 </style>
 </head>
@@ -150,33 +160,20 @@
 <div id="appContainer">
   <div id="root"></div>
 </div>
-
 <script>
-// ─────────────────────────────────────────────
-// CONFIG
-// ─────────────────────────────────────────────
+// ─── CONFIG ───────────────────────────────────
 const BIN_ID          = "6971f3eb43b1c97be94154dc";
 const MASTER_KEY      = "$2a$10$83AEiP9GsrLhSQIC8.nuW.6QtHG5XVzJElaL67zasDR0h8BYGLsQu";
 const PRIMARY_ADMIN   = "Apule Gerald Humble";
 const SECONDARY_ADMIN = "Ameny Ronald";
+const MAX_PHOTO_SIZE  = 60000; // ~60KB max base64 per photo
 
-// ─────────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────────
-let user               = null;
-let data               = {};
-let lastSelectedMember = null;
-let currentInflowType  = "S";
-let activeTab          = "dashboard";
-let editModalData      = null;
-let reportMode         = "single";
-let reportMonth        = "";
-let reportStart        = "";
-let reportEnd          = "";
+// ─── STATE ────────────────────────────────────
+let user=null,data={},lastSelectedMember=null,currentInflowType="S",activeTab="dashboard",editModalData=null;
+let reportMode="single",reportMonth="",reportStart="",reportEnd="";
+let expandedMinutes={}; // track which minutes are expanded
 
-// ─────────────────────────────────────────────
-// DATA LAYER
-// ─────────────────────────────────────────────
+// ─── DATA LAYER ───────────────────────────────
 async function loadData(){
   try{
     const res=await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`,{headers:{'X-Master-Key':MASTER_KEY}});
@@ -187,10 +184,11 @@ async function loadData(){
     if(!data.expenses)    data.expenses=[];
     if(!data.investments) data.investments=[];
     if(!data.cashIn)      data.cashIn=[];
+    if(!data.minutes)     data.minutes=[];
+    if(!data.photos)      data.photos={};
     const now=new Date();
     reportMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    reportStart="2024-02";
-    reportEnd=reportMonth;
+    reportStart="2024-02"; reportEnd=reportMonth;
     render();
   }catch(e){showToast("⚠️ Sync failed","danger");}
 }
@@ -200,23 +198,49 @@ async function saveData(){
       method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':MASTER_KEY},
       body:JSON.stringify(data)
     });
-    showToast("✅ Saved successfully","success");
-    render();
+    showToast("✅ Saved","success"); render();
   }catch(e){showToast("❌ Save failed","danger");}
 }
 
-// ─────────────────────────────────────────────
-// FINANCIAL CALCULATIONS
-// ─────────────────────────────────────────────
+// ─── PHOTO HELPERS ────────────────────────────
+// Compress image to canvas, return base64 JPEG under MAX_PHOTO_SIZE
+function compressPhoto(file,cb){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=220; // max dimension px
+      let w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      let quality=0.85;
+      let b64=canvas.toDataURL('image/jpeg',quality);
+      // reduce quality until under limit
+      while(b64.length>MAX_PHOTO_SIZE&&quality>0.2){quality-=0.1;b64=canvas.toDataURL('image/jpeg',quality);}
+      cb(b64);
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function getPhoto(mName){return(data.photos&&data.photos[mName])||null;}
+
+function avatarHTML(mName,size=42,style=''){
+  const ph=getPhoto(mName);
+  if(ph) return`<div class="hdr-avatar" style="width:${size}px;height:${size}px;${style}"><img src="${ph}" alt="${mName}"></div>`;
+  return`<div class="hdr-avatar" style="width:${size}px;height:${size}px;${style}">👤</div>`;
+}
+
+// ─── FINANCIAL CALCULATIONS ───────────────────
 function getMonthlyTarget(ms){
   const y=parseInt(ms.split('-')[0]),m=parseInt(ms.split('-')[1]);
   return(y===2024&&m>=2&&m<=7)?80000:100000;
 }
 
-// Returns arrears + fines for a specific member up to today
-// Also can return per-month breakdown for reporting
-function calcArrearsAndFines(mName,returnBreakdown=false){
-  const breakdown=[];
+function calcArrearsAndFines(mName){
   let total=0;
   const today=new Date(),curMs=today.toISOString().slice(0,7);
   let cy=2024,cm=2;
@@ -226,111 +250,68 @@ function calcArrearsAndFines(mName,returnBreakdown=false){
     const contribs=data[mName].contributions.filter(c=>c.month===ms);
     const paid=contribs.reduce((a,b)=>a+Number(b.amt),0);
     if(paid<target){
-      const gap=target-paid;
       let penalty=0;
       const onTime=contribs.some(c=>parseInt(c.date.split('-')[2])<=10);
       if(!onTime){
         if(ms!==curMs) penalty=15000;
         else if(today.getDate()>=10) penalty=Math.min((Math.floor((today.getDate()-10)/7)+1)*5000,15000);
       }
-      const monthTotal=gap+penalty;
-      total+=monthTotal;
-      if(returnBreakdown) breakdown.push({ms,paid,target,gap,penalty,monthTotal});
+      total+=(target-paid)+penalty;
     }
     cm++;if(cm>12){cm=1;cy++;}
   }
-  return returnBreakdown?{total,breakdown}:total;
+  return total;
 }
 
-/*
-  LOAN INTEREST — REVISED RULES:
-  ─ 5% is applied IMMEDIATELY on the day the loan is issued (principal × 1.05 from day one).
-  ─ On each exact monthly anniversary of the issue date (e.g. issued Feb 10 → compounds Mar 10, Apr 10...), 
-    the running balance × 1.05 again — as long as the loan is still not fully paid.
-  ─ Repayments reduce the running balance on the day they're made.
-  ─ We compute by stepping through each anniversary date up to today.
-*/
 function calcLoanBalance(loan,loanId,mName){
-  if(!loan||loan.type!=='LOAN') return null;
+  if(!loan||loan.type!=='LOAN')return null;
   const principal=Number(loan.amt);
   const issueDate=new Date(loan.date);
-
-  // All repayments for this loan, sorted by date
   const repayments=(data[mName].loans||[])
     .filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(loanId))
     .map(r=>({date:new Date(r.date),amt:Number(r.amt)}))
     .sort((a,b)=>a.date-b.date);
-
   const totalRepaid=repayments.reduce((a,r)=>a+r.amt,0);
-  const today=new Date();
-  today.setHours(23,59,59,999); // include today fully
-
-  // Step 1: apply immediate 5% on day of issue
+  const today=new Date(); today.setHours(23,59,59,999);
+  // immediate 5% on issue
   let balance=principal*1.05;
-
-  // Step 2: subtract any repayments made ON the issue date itself
   repayments.filter(r=>r.date<=issueDate).forEach(r=>{balance-=r.amt;});
   if(balance<=0){
     return{principal,outstanding:0,totalRepaid,interestCollected:Math.max(0,totalRepaid-principal),
-           interestAccrued:Math.max(0,totalRepaid-principal),isFullyPaid:true,isOverdue:false,monthsElapsed:0,loanId};
+           interestAccrued:Math.max(0,totalRepaid-principal),isFullyPaid:true,isOverdue:false,monthsElapsed:0};
   }
-
-  // Step 3: walk through exact monthly anniversaries
-  // anniversary 1 = issueDate + 1 month, anniversary 2 = +2 months, etc.
   let anniversaryNum=1;
   while(true){
-    // compute next anniversary date
     const anniv=new Date(issueDate);
     anniv.setMonth(anniv.getMonth()+anniversaryNum);
-    // handle end-of-month overflow (e.g. Jan 31 + 1 month → Feb 28)
-    if(anniv.getDate()!==issueDate.getDate()){
-      // overflowed — set to last day of that month
-      anniv.setDate(0);
-    }
-
-    if(anniv>today) break; // haven't reached this anniversary yet
-
-    // subtract repayments that occurred BETWEEN previous anniversary and this one (exclusive prev, inclusive this)
+    if(anniv.getDate()!==issueDate.getDate()) anniv.setDate(0);
+    if(anniv>today) break;
     const prevAnniv=new Date(issueDate);
     prevAnniv.setMonth(prevAnniv.getMonth()+(anniversaryNum-1));
     if(prevAnniv.getDate()!==issueDate.getDate()) prevAnniv.setDate(0);
-
-    repayments
-      .filter(r=>r.date>prevAnniv&&r.date<=anniv)
-      .forEach(r=>{balance-=r.amt;});
-
+    repayments.filter(r=>r.date>prevAnniv&&r.date<=anniv).forEach(r=>{balance-=r.amt;});
     if(balance<=0){balance=0;break;}
-
-    // compound on this anniversary
     balance*=1.05;
     anniversaryNum++;
   }
-
-  // subtract any repayments made after the last anniversary up to today
   const lastAnniv=new Date(issueDate);
   lastAnniv.setMonth(lastAnniv.getMonth()+(anniversaryNum-1));
   if(lastAnniv.getDate()!==issueDate.getDate()) lastAnniv.setDate(0);
   repayments.filter(r=>r.date>lastAnniv&&r.date<=today).forEach(r=>{balance-=r.amt;});
-  if(balance<0) balance=0;
-
+  if(balance<0)balance=0;
   const outstanding=Math.max(0,Math.round(balance));
   const isFullyPaid=outstanding===0&&totalRepaid>0;
-  const monthsElapsed=anniversaryNum-1; // number of full month anniversaries passed
+  const monthsElapsed=anniversaryNum-1;
   const isOverdue=!isFullyPaid&&monthsElapsed>=1&&totalRepaid===0;
   const principalRepaid=Math.min(totalRepaid,principal);
   const interestCollected=Math.max(0,totalRepaid-principalRepaid);
-  // interest accrued = (outstanding + totalRepaid) - principal — what compounding added total
   const interestAccrued=Math.max(0,Math.round(outstanding+totalRepaid-principal));
-
-  return{principal,outstanding,totalRepaid,interestCollected,interestAccrued,isFullyPaid,isOverdue,monthsElapsed,loanId};
+  return{principal,outstanding,totalRepaid,interestCollected,interestAccrued,isFullyPaid,isOverdue,monthsElapsed};
 }
 
 function getMemberLoanDebt(mName){
   return data[mName].loans.filter(l=>l.type==='LOAN')
-    .reduce((s,loan,idx)=>{
-      const bal=calcLoanBalance(loan,idx+1,mName);
-      return s+(bal?bal.outstanding:0);
-    },0);
+    .reduce((s,loan,idx)=>{const b=calcLoanBalance(loan,idx+1,mName);return s+(b?b.outstanding:0);},0);
 }
 
 function getGlobalStats(){
@@ -340,9 +321,9 @@ function getGlobalStats(){
     data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{
       const bal=calcLoanBalance(loan,idx+1,m);
       if(!bal)return;
-      const principalRepaid=Math.min(bal.totalRepaid,bal.principal);
-      interestCollected+=Math.max(0,bal.totalRepaid-principalRepaid);
-      activeLoanPrincipal+=Math.max(0,bal.principal-principalRepaid);
+      const pr=Math.min(bal.totalRepaid,bal.principal);
+      interestCollected+=Math.max(0,bal.totalRepaid-pr);
+      activeLoanPrincipal+=Math.max(0,bal.principal-pr);
     });
   });
   const cashIn=data.cashIn.reduce((a,b)=>a+Number(b.amt),0);
@@ -352,292 +333,155 @@ function getGlobalStats(){
   return{grossSavings,interestCollected,cashIn,expenses,investments,activeLoanPrincipal,netCash};
 }
 
-// ─────────────────────────────────────────────
-// SHORTFALL = savings gap + penalty for that member
-// Used in report and ledger print
-// ─────────────────────────────────────────────
-function getMemberShortfallWithPenalty(mName){
-  return calcArrearsAndFines(mName); // already includes gap + penalty
-}
-
-// ─────────────────────────────────────────────
-// MONTH RANGE HELPER
-// ─────────────────────────────────────────────
-function getMonthRange(startMs,endMs){
+function getMonthRange(s,e){
   const months=[];
-  let[sy,sm]=[parseInt(startMs.split('-')[0]),parseInt(startMs.split('-')[1])-1];
-  const[ey,em]=[parseInt(endMs.split('-')[0]),parseInt(endMs.split('-')[1])-1];
-  while(sy<ey||(sy===ey&&sm<=em)){
-    months.push(`${sy}-${String(sm+1).padStart(2,'0')}`);
-    sm++;if(sm>11){sm=0;sy++;}
-  }
+  let[sy,sm]=[parseInt(s.split('-')[0]),parseInt(s.split('-')[1])-1];
+  const[ey,em]=[parseInt(e.split('-')[0]),parseInt(e.split('-')[1])-1];
+  while(sy<ey||(sy===ey&&sm<=em)){months.push(`${sy}-${String(sm+1).padStart(2,'0')}`);sm++;if(sm>11){sm=0;sy++;}}
   return months;
 }
 
-// ─────────────────────────────────────────────
-// REPORT DATA BUILDER
-// ─────────────────────────────────────────────
+function getMemberShortfall(mName){return calcArrearsAndFines(mName);}
+
+// ─── PRINT ENGINE ─────────────────────────────
 function buildReportData(months){
   let savingsInRange=0;
   const memberRows=data.members.map(m=>{
     const paid=months.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
     savingsInRange+=paid;
     const expected=months.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
-    // shortfall = savings gap for this period + ALL penalties/arrears up to today
-    const savingsGap=Math.max(0,expected-paid);
-    const penalties=getMemberShortfallWithPenalty(m);
-    // trueShortfall: savings gap in period + any outstanding fines
-    // We use the total arrears figure (which includes both gap and penalty for all months)
-    const trueShortfall=getMemberShortfallWithPenalty(m);
+    const trueShortfall=getMemberShortfall(m);
     const status=paid>=expected?'COMPLETE':paid>0?'PARTIAL':'PENDING';
-    return{name:m,paid,expected,savingsGap,trueShortfall,status};
+    return{name:m,paid,expected,trueShortfall,status};
   });
   const S=getGlobalStats();
   const loanRows=[];
   data.members.forEach(m=>{
     data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{
       const bal=calcLoanBalance(loan,idx+1,m);
-      if(bal&&!bal.isFullyPaid){
-        loanRows.push({member:m,loanId:idx+1,date:loan.date,principal:bal.principal,outstanding:bal.outstanding,monthsElapsed:bal.monthsElapsed,isOverdue:bal.isOverdue,totalRepaid:bal.totalRepaid,interestAccrued:bal.interestAccrued});
-      }
+      if(bal&&!bal.isFullyPaid) loanRows.push({member:m,loanId:idx+1,date:loan.date,...bal});
     });
   });
   return{S,memberRows,loanRows,savingsInRange,months};
 }
 
-// ─────────────────────────────────────────────
-// PRINT ENGINE — SACCO REPORT
-// ─────────────────────────────────────────────
 function buildSaccoPrintHTML(title,subtitle,rd){
   const{S,memberRows,loanRows,savingsInRange}=rd;
-  const generated=new Date().toLocaleString('en-UG',{dateStyle:'full',timeStyle:'short'});
+  const gen=new Date().toLocaleString('en-UG',{dateStyle:'full',timeStyle:'short'});
   const mRows=memberRows.map(r=>{
     const bc=r.status==='COMPLETE'?'badge-comp':r.status==='PARTIAL'?'badge-part':'badge-pend';
     return`<tr><td>${r.name}</td><td>UGX ${r.paid.toLocaleString()}</td><td>UGX ${r.expected.toLocaleString()}</td><td style="color:#C62828;font-weight:700">UGX ${r.trueShortfall.toLocaleString()}</td><td><span class="badge ${bc}">${r.status}</span></td></tr>`;
   }).join('');
-  const lRows=loanRows.length?loanRows.map(r=>`<tr><td>${r.member}</td><td>#${r.loanId}</td><td>${r.date}</td><td>UGX ${r.principal.toLocaleString()}</td><td>UGX ${r.totalRepaid.toLocaleString()}</td><td>UGX ${r.interestAccrued.toLocaleString()}</td><td style="font-weight:700;color:#C62828">UGX ${r.outstanding.toLocaleString()}</td><td>${r.isOverdue?'<span class="badge badge-pend">OVERDUE</span>':'<span class="badge badge-comp">Active</span>'}</td></tr>`).join('')
-    :'<tr><td colspan="8" style="text-align:center;color:#999">No active loans</td></tr>';
-  const eRows=data.expenses.length?data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#999">No expenses</td></tr>';
-  const iRows=data.investments.length?data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td>UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#999">No investments</td></tr>';
-  const totalExp=data.expenses.reduce((a,b)=>a+Number(b.amt),0);
-  const totalInv=data.investments.reduce((a,b)=>a+Number(b.amt),0);
-  const totalOut=loanRows.reduce((a,r)=>a+r.outstanding,0);
-  return`
-    <div class="print-page">
-      <div class="print-header">
-        <h1>ELITES SACCO</h1>
-        <div class="ph-title">${title}</div>
-        <div class="ph-sub">${subtitle}</div>
-        <div class="ph-sub" style="margin-top:5px">Generated: ${generated}</div>
+  const lRows=loanRows.length?loanRows.map(r=>`<tr><td>${r.member}</td><td>#${r.loanId}</td><td>${r.date}</td><td>UGX ${r.principal.toLocaleString()}</td><td>UGX ${r.totalRepaid.toLocaleString()}</td><td>UGX ${r.interestAccrued.toLocaleString()}</td><td style="font-weight:700;color:#C62828">UGX ${r.outstanding.toLocaleString()}</td><td>${r.isOverdue?'<span class="badge badge-pend">OVERDUE</span>':'Active'}</td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:#999">No active loans</td></tr>';
+  const eRows=data.expenses.length?data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#999">None</td></tr>';
+  const iRows=data.investments.length?data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td>UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#999">None</td></tr>';
+  const tE=data.expenses.reduce((a,b)=>a+Number(b.amt),0),tI=data.investments.reduce((a,b)=>a+Number(b.amt),0),tO=loanRows.reduce((a,r)=>a+r.outstanding,0);
+  return`<div class="print-page">
+    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">${title}</div><div class="ph-sub">${subtitle}</div><div class="ph-sub" style="margin-top:4px">Generated: ${gen}</div></div>
+    <div class="print-net"><div class="pn-label">SACCO Net Cash Position</div><div class="pn-value">UGX ${S.netCash.toLocaleString()}</div><div class="print-formula">(Gross Savings + Interest Earned + Cash In) − (Expenses + Active Loan Principal + Investments)</div></div>
+    <div class="print-section"><h2>Financial Summary (All-Time)</h2>
+      <div class="print-grid">
+        <div class="print-stat"><div class="ps-label">Gross Savings</div><div class="ps-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Interest Earned</div><div class="ps-value" style="color:#2E7D32">UGX ${S.interestCollected.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Cash In / Donations</div><div class="ps-value" style="color:#1565C0">UGX ${S.cashIn.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Total Expenses</div><div class="ps-value" style="color:#C62828">UGX ${S.expenses.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Active Loan Principal</div><div class="ps-value" style="color:#B08D57">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Total Investments</div><div class="ps-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
       </div>
-      <div class="print-net">
-        <div class="pn-label">SACCO Net Cash Position</div>
-        <div class="pn-value">UGX ${S.netCash.toLocaleString()}</div>
-        <div class="print-formula">(Gross Savings + Interest Earned + Cash In) − (Expenses + Active Loan Principal + Investments)</div>
-      </div>
-      <div class="print-section">
-        <h2>Financial Summary (All-Time)</h2>
-        <div class="print-grid">
-          <div class="print-stat"><div class="ps-label">Gross Savings</div><div class="ps-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
-          <div class="print-stat"><div class="ps-label">Interest Earned</div><div class="ps-value" style="color:#2E7D32">UGX ${S.interestCollected.toLocaleString()}</div></div>
-          <div class="print-stat"><div class="ps-label">Cash In / Donations</div><div class="ps-value" style="color:#1565C0">UGX ${S.cashIn.toLocaleString()}</div></div>
-          <div class="print-stat"><div class="ps-label">Total Expenses</div><div class="ps-value" style="color:#C62828">UGX ${S.expenses.toLocaleString()}</div></div>
-          <div class="print-stat"><div class="ps-label">Active Loan Principal</div><div class="ps-value" style="color:#B08D57">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
-          <div class="print-stat"><div class="ps-label">Total Investments</div><div class="ps-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
-        </div>
-      </div>
-      <div class="print-section">
-        <h2>Member Savings — ${title}</h2>
-        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Period savings collected: <strong>UGX ${savingsInRange.toLocaleString()}</strong>. Shortfall = unpaid savings gap + penalty charges as of today.</p>
-        <table>
-          <tr><th>Member</th><th>Amount Paid</th><th>Expected</th><th>Total Shortfall (incl. penalties)</th><th>Status</th></tr>
-          ${mRows}
-        </table>
-      </div>
-      <div class="print-footer">ELITES SACCO — Confidential — Page 1 of 2</div>
     </div>
-    <div class="print-page">
-      <div class="print-header">
-        <h1>ELITES SACCO</h1>
-        <div class="ph-title">${title} — Loans, Expenses & Investments</div>
-      </div>
-      <div class="print-section">
-        <h2>Active Loan Portfolio</h2>
-        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Total outstanding: <strong>UGX ${totalOut.toLocaleString()}</strong>. Interest = 5% applied on issue date, then compounds on each monthly anniversary.</p>
-        <table>
-          <tr><th>Member</th><th>Loan</th><th>Issued</th><th>Principal</th><th>Repaid</th><th>Interest</th><th>Outstanding</th><th>Status</th></tr>
-          ${lRows}
-        </table>
-      </div>
-      <div class="print-section">
-        <h2>Expenses Breakdown</h2>
-        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Total: <strong>UGX ${totalExp.toLocaleString()}</strong></p>
-        <table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${eRows}</table>
-      </div>
-      <div class="print-section">
-        <h2>Investments Breakdown</h2>
-        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Total: <strong>UGX ${totalInv.toLocaleString()}</strong></p>
-        <table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${iRows}</table>
-      </div>
-      <div class="print-footer">ELITES SACCO — Confidential — Page 2 of 2 | Printed: ${generated}</div>
-    </div>`;
+    <div class="print-section"><h2>Member Savings — ${title}</h2>
+      <p style="font-size:8pt;color:#666;margin-bottom:6px">Period total: <strong>UGX ${savingsInRange.toLocaleString()}</strong>. Shortfall = unpaid gap + penalty charges as of today.</p>
+      <table><tr><th>Member</th><th>Paid</th><th>Expected</th><th>Total Shortfall (incl. penalties)</th><th>Status</th></tr>${mRows}</table>
+    </div>
+    <div class="print-footer">ELITES SACCO — Confidential — Page 1 of 2</div>
+  </div>
+  <div class="print-page">
+    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">${title} — Loans, Expenses & Investments</div></div>
+    <div class="print-section"><h2>Active Loan Portfolio</h2>
+      <p style="font-size:8pt;color:#666;margin-bottom:6px">Total outstanding: <strong>UGX ${tO.toLocaleString()}</strong>. Interest: 5% on issue date, compounds on each monthly anniversary.</p>
+      <table><tr><th>Member</th><th>Loan</th><th>Issued</th><th>Principal</th><th>Repaid</th><th>Interest</th><th>Outstanding</th><th>Status</th></tr>${lRows}</table>
+    </div>
+    <div class="print-section"><h2>Expenses</h2><p style="font-size:8pt;color:#666;margin-bottom:6px">Total: <strong>UGX ${tE.toLocaleString()}</strong></p>
+      <table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${eRows}</table>
+    </div>
+    <div class="print-section"><h2>Investments</h2><p style="font-size:8pt;color:#666;margin-bottom:6px">Total: <strong>UGX ${tI.toLocaleString()}</strong></p>
+      <table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${iRows}</table>
+    </div>
+    <div class="print-footer">ELITES SACCO — Confidential — Page 2 of 2 | Printed: ${gen}</div>
+  </div>`;
 }
 
-// ─────────────────────────────────────────────
-// PRINT ENGINE — INDIVIDUAL MEMBER LEDGER
-// ─────────────────────────────────────────────
 function buildMemberPrintHTML(mName){
-  const generated=new Date().toLocaleString('en-UG',{dateStyle:'full',timeStyle:'short'});
+  const gen=new Date().toLocaleString('en-UG',{dateStyle:'full',timeStyle:'short'});
   const mySavings=data[mName].contributions.reduce((a,b)=>a+Number(b.amt),0);
-  const myDebt=getMemberLoanDebt(mName);
-  const myArrears=calcArrearsAndFines(mName);
-
-  // savings timeline with per-month shortfall
-  const now=new Date();
-  let timelineRows='';
-  let cy=2024,cm=2;
+  const myDebt=getMemberLoanDebt(mName),myArrears=calcArrearsAndFines(mName);
+  const now=new Date();let tRows='';let cy=2024,cm=2;
   while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth()+1)){
     const ms=`${cy}-${String(cm).padStart(2,'0')}`;
     const paid=data[mName].contributions.filter(c=>c.month===ms).reduce((a,b)=>a+Number(b.amt),0);
-    const target=getMonthlyTarget(ms);
-    const gap=Math.max(0,target-paid);
-    // per-month penalty
-    const today2=new Date();
-    const curMs=today2.toISOString().slice(0,7);
+    const target=getMonthlyTarget(ms);const gap=Math.max(0,target-paid);
+    const today2=new Date(),curMs2=today2.toISOString().slice(0,7);
     const contribs=data[mName].contributions.filter(c=>c.month===ms);
     let penalty=0;
-    if(gap>0){
-      const onTime=contribs.some(c=>parseInt(c.date.split('-')[2])<=10);
-      if(!onTime){
-        if(ms!==curMs) penalty=15000;
-        else if(today2.getDate()>=10) penalty=Math.min((Math.floor((today2.getDate()-10)/7)+1)*5000,15000);
-      }
-    }
-    const monthShortfall=gap+penalty;
+    if(gap>0){const onTime=contribs.some(c=>parseInt(c.date.split('-')[2])<=10);
+      if(!onTime){if(ms!==curMs2)penalty=15000;else if(today2.getDate()>=10)penalty=Math.min((Math.floor((today2.getDate()-10)/7)+1)*5000,15000);}}
+    const shortfall=gap+penalty;
     const badge=paid>=target?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
-    timelineRows+=`<tr>
-      <td>${ms}</td>
-      <td>UGX ${paid.toLocaleString()}</td>
-      <td>UGX ${target.toLocaleString()}</td>
-      <td>${badge}</td>
-      <td style="${monthShortfall>0?'color:#C62828;font-weight:700':'color:#2E7D32'}">UGX ${monthShortfall.toLocaleString()}</td>
-    </tr>`;
+    tRows+=`<tr><td>${ms}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${target.toLocaleString()}</td><td>${badge}</td><td style="${shortfall>0?'color:#C62828;font-weight:700':'color:#2E7D32'}">UGX ${shortfall.toLocaleString()}</td></tr>`;
     cm++;if(cm>12){cm=1;cy++;}
   }
-
-  // loan section
   const loans=data[mName].loans.filter(l=>l.type==='LOAN');
-  let loanHTML='<p style="font-size:9pt;color:#999">No loan records.</p>';
-  if(loans.length){
-    loanHTML=loans.map((loan,idx)=>{
-      const lid=idx+1;
-      const bal=calcLoanBalance(loan,lid,mName);
-      if(!bal)return'';
-      const repayRows=data[mName].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid))
-        .map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:#2E7D32">UGX ${Number(r.amt).toLocaleString()}</td></tr>`).join('');
-      return`
-        <p style="font-size:9.5pt;font-weight:700;margin:10px 0 5px">Loan #${lid} — Issued: ${loan.date} &nbsp; Status: ${bal.isFullyPaid?'✅ FULLY PAID':bal.isOverdue?'⚠️ OVERDUE':'Active'}</p>
-        <table>
-          <tr><th>Principal</th><th>Total Repaid</th><th>Interest Accrued</th><th>Outstanding Balance</th><th>Months Elapsed</th></tr>
-          <tr>
-            <td>UGX ${bal.principal.toLocaleString()}</td>
-            <td style="color:#2E7D32">UGX ${bal.totalRepaid.toLocaleString()}</td>
-            <td>UGX ${bal.interestAccrued.toLocaleString()}</td>
-            <td style="font-weight:700;color:${bal.isFullyPaid?'#2E7D32':'#C62828'}">UGX ${bal.outstanding.toLocaleString()}</td>
-            <td>${bal.monthsElapsed}</td>
-          </tr>
-        </table>
-        ${repayRows?`<table><tr><th>Date</th><th>Type</th><th>Reference</th><th>Amount</th></tr>${repayRows}</table>`:''}`;
-    }).join('');
-  }
-
-  return`
-    <div class="print-page">
-      <div class="print-header">
-        <h1>ELITES SACCO</h1>
-        <div class="ph-title">Member Statement — ${mName}</div>
-        <div class="ph-sub">Generated: ${generated}</div>
+  let lHTML='<p style="font-size:9pt;color:#999">No loan records.</p>';
+  if(loans.length){lHTML=loans.map((loan,idx)=>{
+    const lid=idx+1,bal=calcLoanBalance(loan,lid,mName);if(!bal)return'';
+    const rRows=data[mName].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid))
+      .map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:#2E7D32">UGX ${Number(r.amt).toLocaleString()}</td></tr>`).join('');
+    return`<p style="font-size:9pt;font-weight:700;margin:9px 0 4px">Loan #${lid} — ${loan.date} — ${bal.isFullyPaid?'✅ FULLY PAID':bal.isOverdue?'⚠️ OVERDUE':'Active'}</p>
+    <table><tr><th>Principal</th><th>Repaid</th><th>Interest</th><th>Outstanding</th><th>Anniversaries</th></tr>
+    <tr><td>UGX ${bal.principal.toLocaleString()}</td><td style="color:#2E7D32">UGX ${bal.totalRepaid.toLocaleString()}</td><td>UGX ${bal.interestAccrued.toLocaleString()}</td><td style="font-weight:700;color:${bal.isFullyPaid?'#2E7D32':'#C62828'}">UGX ${bal.outstanding.toLocaleString()}</td><td>${bal.monthsElapsed}</td></tr></table>
+    ${rRows?`<table><tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th></tr>${rRows}</table>`:''}`;
+  }).join('');}
+  return`<div class="print-page">
+    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Member Statement — ${mName}</div><div class="ph-sub">Generated: ${gen}</div></div>
+    <div class="print-section"><h2>Personal Summary</h2>
+      <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">
+        <div class="print-member-stat"><div class="ps-label">Total Savings</div><div class="ps-value">UGX ${mySavings.toLocaleString()}</div></div>
+        <div class="print-member-stat"><div class="ps-label">Arrears + Fines</div><div class="ps-value" style="color:#C62828">UGX ${myArrears.toLocaleString()}</div></div>
+        <div class="print-member-stat"><div class="ps-label">Loan Balance</div><div class="ps-value" style="color:#C62828">UGX ${myDebt.toLocaleString()}</div></div>
       </div>
-      <div class="print-section">
-        <h2>Personal Summary</h2>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
-          <div class="print-member-stat"><div class="ps-label">Total Savings</div><div class="ps-value">UGX ${mySavings.toLocaleString()}</div></div>
-          <div class="print-member-stat"><div class="ps-label">Total Arrears + Fines</div><div class="ps-value" style="color:#C62828">UGX ${myArrears.toLocaleString()}</div></div>
-          <div class="print-member-stat"><div class="ps-label">Loan Balance (incl. interest)</div><div class="ps-value" style="color:#C62828">UGX ${myDebt.toLocaleString()}</div></div>
-        </div>
-      </div>
-      <div class="print-section">
-        <h2>Savings Timeline</h2>
-        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Shortfall = unpaid savings gap + penalty charges for that month as of today's date.</p>
-        <table>
-          <tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th><th>Shortfall (incl. penalty)</th></tr>
-          ${timelineRows}
-        </table>
-      </div>
-      <div class="print-footer">ELITES SACCO — Personal Statement — ${mName} — Page 1 of 2</div>
     </div>
-    <div class="print-page">
-      <div class="print-header">
-        <h1>ELITES SACCO</h1>
-        <div class="ph-title">Member Statement — ${mName} — Loan History</div>
-      </div>
-      <div class="print-section">
-        <h2>Loan Records</h2>
-        <p style="font-size:8.5pt;color:#666;margin-bottom:7px">Interest: 5% applied immediately on issue, then compounds on each exact monthly anniversary date.</p>
-        ${loanHTML}
-      </div>
-      <div class="print-footer">ELITES SACCO — Personal Statement — ${mName} — Page 2 of 2 | Printed: ${generated}</div>
-    </div>`;
+    <div class="print-section"><h2>Savings Timeline</h2>
+      <p style="font-size:8pt;color:#666;margin-bottom:6px">Shortfall = unpaid savings gap + penalty charges for that month.</p>
+      <table><tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th><th>Shortfall (incl. penalty)</th></tr>${tRows}</table>
+    </div>
+    <div class="print-footer">ELITES SACCO — ${mName} — Page 1 of 2</div>
+  </div>
+  <div class="print-page">
+    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Member Statement — ${mName} — Loans</div></div>
+    <div class="print-section"><h2>Loan Records</h2>
+      <p style="font-size:8pt;color:#666;margin-bottom:6px">5% applied on issue date, compounds on each exact monthly anniversary.</p>
+      ${lHTML}
+    </div>
+    <div class="print-footer">ELITES SACCO — ${mName} — Page 2 of 2 | Printed: ${gen}</div>
+  </div>`;
 }
 
 function triggerSaccoPrint(title,subtitle,months){
   const rd=buildReportData(months);
   document.getElementById('printArea').innerHTML=buildSaccoPrintHTML(title,subtitle,rd);
   document.getElementById('appContainer').style.display='none';
-  setTimeout(()=>{
-    window.print();
-    setTimeout(()=>{
-      document.getElementById('printArea').innerHTML='';
-      document.getElementById('appContainer').style.display='block';
-    },1500);
-  },300);
+  setTimeout(()=>{window.print();setTimeout(()=>{document.getElementById('printArea').innerHTML='';document.getElementById('appContainer').style.display='block';},1500);},300);
 }
-
 function triggerMemberPrint(mName){
   document.getElementById('printArea').innerHTML=buildMemberPrintHTML(mName);
   document.getElementById('appContainer').style.display='none';
-  setTimeout(()=>{
-    window.print();
-    setTimeout(()=>{
-      document.getElementById('printArea').innerHTML='';
-      document.getElementById('appContainer').style.display='block';
-    },1500);
-  },300);
+  setTimeout(()=>{window.print();setTimeout(()=>{document.getElementById('printArea').innerHTML='';document.getElementById('appContainer').style.display='block';},1500);},300);
 }
+function printSingleMonth(){if(!reportMonth){showToast("⚠️ Select a month","warn");return;}const label=new Date(reportMonth+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});triggerSaccoPrint(`Monthly Report — ${label}`,`Single month: ${reportMonth}`,[reportMonth]);}
+function printRange(){if(!reportStart||!reportEnd){showToast("⚠️ Select both months","warn");return;}if(reportStart>reportEnd){showToast("⚠️ Start must be before end","warn");return;}const months=getMonthRange(reportStart,reportEnd);const sL=new Date(reportStart+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'}),eL=new Date(reportEnd+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});triggerSaccoPrint(`Report: ${sL} to ${eL}`,`${reportStart} → ${reportEnd} (${months.length} months)`,months);}
+function printOverall(){const now=new Date();const endMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;const months=getMonthRange("2024-02",endMs);triggerSaccoPrint("Overall SACCO Report",`All-time: February 2024 to present (${months.length} months)`,months);}
 
-function printSingleMonth(){
-  if(!reportMonth){showToast("⚠️ Select a month first","warn");return;}
-  const label=new Date(reportMonth+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
-  triggerSaccoPrint(`Monthly Report — ${label}`,`Single month: ${reportMonth}`,[reportMonth]);
-}
-function printRange(){
-  if(!reportStart||!reportEnd){showToast("⚠️ Select both months","warn");return;}
-  if(reportStart>reportEnd){showToast("⚠️ Start must be before end","warn");return;}
-  const months=getMonthRange(reportStart,reportEnd);
-  const sL=new Date(reportStart+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
-  const eL=new Date(reportEnd+'-01').toLocaleString('en-UG',{month:'long',year:'numeric'});
-  triggerSaccoPrint(`Report: ${sL} to ${eL}`,`Date range: ${reportStart} → ${reportEnd} (${months.length} months)`,months);
-}
-function printOverall(){
-  const now=new Date();
-  const endMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const months=getMonthRange("2024-02",endMs);
-  triggerSaccoPrint("Overall SACCO Report",`All-time: February 2024 to present (${months.length} months)`,months);
-}
-
-// ─────────────────────────────────────────────
-// RENDER ENGINE
-// ─────────────────────────────────────────────
+// ─── RENDER ENGINE ────────────────────────────
 function render(){
   const root=document.getElementById("root");
   if(!user){root.innerHTML=renderLogin();return;}
@@ -647,30 +491,33 @@ function render(){
     {id:'dashboard',label:'📊 Dashboard'},
     {id:'ledger',label:'📒 Ledger'},
     {id:'activity',label:'🏦 SACCO Activity'},
+    {id:'minutes',label:'📋 Minutes'},
     ...(isAdmin?[
       {id:'admin',label:'⚙️ Admin Hub'},
-      {id:'audit',label:'🔍 Global Audit'},
-      {id:'monthly',label:'📅 Monthly Report'}
+      {id:'members',label:'👥 Members'},
+      {id:'audit',label:'🔍 Audit'},
+      {id:'monthly',label:'📅 Reports'}
     ]:[]),
     {id:'settings',label:'🔐 Settings'}
   ];
+  const ph=getPhoto(user.name);
   let html=`
     <header>
-      <div>${data.logo?`<img class="logo-img" src="${data.logo}">`:`<div class="logo-placeholder">🏦</div>`}</div>
+      <div class="hdr-avatar" style="flex-shrink:0">${ph?`<img src="${ph}" alt="${user.name}">`:'👤'}</div>
       <div><div class="header-title">ELITES SACCO</div><div class="header-sub">${user.name}${isAdmin?' · Admin':''}</div></div>
       <div class="header-right"><button class="outline sm" onclick="logout()">Logout</button></div>
     </header>
-    <div class="tab-bar">
-      ${tabs.map(t=>`<button class="tab-btn ${activeTab===t.id?'active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`).join('')}
-    </div>
+    <div class="tab-bar">${tabs.map(t=>`<button class="tab-btn ${activeTab===t.id?'active':''}" onclick="switchTab('${t.id}')">${t.label}</button>`).join('')}</div>
     <div class="container">`;
-  if      (activeTab==='dashboard')         html+=renderDashboard(isAdmin,activeMember);
-  else if (activeTab==='ledger')            html+=renderLedger(isAdmin,activeMember);
-  else if (activeTab==='activity')          html+=renderActivity();
-  else if (activeTab==='admin'  &&isAdmin)  html+=renderAdmin(activeMember);
-  else if (activeTab==='audit'  &&isAdmin)  html+=renderAudit();
-  else if (activeTab==='monthly'&&isAdmin)  html+=renderMonthlyReport();
-  else if (activeTab==='settings')          html+=renderSettings();
+  if      (activeTab==='dashboard')          html+=renderDashboard(isAdmin,activeMember);
+  else if (activeTab==='ledger')             html+=renderLedger(isAdmin,activeMember);
+  else if (activeTab==='activity')           html+=renderActivity();
+  else if (activeTab==='minutes')            html+=renderMinutes(isAdmin);
+  else if (activeTab==='admin'  &&isAdmin)   html+=renderAdmin(activeMember);
+  else if (activeTab==='members'&&isAdmin)   html+=renderMemberMgmt();
+  else if (activeTab==='audit'  &&isAdmin)   html+=renderAudit();
+  else if (activeTab==='monthly'&&isAdmin)   html+=renderMonthlyReport();
+  else if (activeTab==='settings')           html+=renderSettings();
   html+=`</div>`;
   if(editModalData)html+=renderEditModal();
   root.innerHTML=html;
@@ -678,19 +525,23 @@ function render(){
 function switchTab(t){activeTab=t;render();}
 function logout(){user=null;activeTab='dashboard';lastSelectedMember=null;render();}
 
-// ─────────────────────────────────────────────
-// LOGIN
-// ─────────────────────────────────────────────
+// ─── LOGIN ────────────────────────────────────
 function renderLogin(){
   return`<div class="login-wrap"><div class="login-card">
     <div class="login-logo">
       <div class="login-icon">🏦</div>
       <div class="login-title">ELITES SACCO</div>
-      <div class="login-sub">Master Audit System — Select your name</div>
+      <div class="login-sub">Select your name to login</div>
     </div>
     <hr class="divider">
     <div class="member-grid">
-      ${(data.members||[]).map(m=>`<button class="member-btn" onclick="checkLogin('${m}')">${m}</button>`).join('')}
+      ${(data.members||[]).map(m=>{
+        const ph=getPhoto(m);
+        return`<button class="member-btn" onclick="checkLogin('${m}')">
+          <div class="member-btn-avatar">${ph?`<img src="${ph}" alt="${m}">`:'👤'}</div>
+          <span>${m.split(' ')[0]}</span>
+        </button>`;
+      }).join('')}
     </div>
   </div></div>`;
 }
@@ -700,59 +551,47 @@ function checkLogin(n){
   else alert("Incorrect PIN.");
 }
 
-// ─────────────────────────────────────────────
-// DASHBOARD
-// ─────────────────────────────────────────────
+// ─── DASHBOARD ────────────────────────────────
 function renderDashboard(isAdmin,activeMember){
   const S=getGlobalStats();
   const mySavings=data[activeMember].contributions.reduce((a,b)=>a+Number(b.amt),0);
-  const myDebt=getMemberLoanDebt(activeMember);
-  const myArrears=calcArrearsAndFines(activeMember);
+  const myDebt=getMemberLoanDebt(activeMember),myArrears=calcArrearsAndFines(activeMember);
   let alerts='';
-  if(myArrears>0) alerts+=`<div class="alert alert-warn">⚠️ You have arrears &amp; fines of <strong>UGX ${myArrears.toLocaleString()}</strong>.</div>`;
-  if(myDebt>0)    alerts+=`<div class="alert alert-danger">🔴 Outstanding loan balance: <strong>UGX ${myDebt.toLocaleString()}</strong> (includes compounded interest).</div>`;
+  if(myArrears>0)alerts+=`<div class="alert alert-warn">⚠️ Arrears &amp; fines: <strong>UGX ${myArrears.toLocaleString()}</strong></div>`;
+  if(myDebt>0)alerts+=`<div class="alert alert-danger">🔴 Loan balance: <strong>UGX ${myDebt.toLocaleString()}</strong> (incl. interest)</div>`;
   if(!myArrears&&!myDebt)alerts+=`<div class="alert alert-success">✅ Fully up to date — no arrears or outstanding loans.</div>`;
-  const now=new Date();
-  const thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const thisTarget=getMonthlyTarget(thisMonth);
-  const thisPaid=data[activeMember].contributions.filter(c=>c.month===thisMonth).reduce((a,b)=>a+Number(b.amt),0);
+  const now=new Date(),thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const thisTarget=getMonthlyTarget(thisMonth),thisPaid=data[activeMember].contributions.filter(c=>c.month===thisMonth).reduce((a,b)=>a+Number(b.amt),0);
   const pct=Math.min(100,Math.round((thisPaid/thisTarget)*100));
-  let timelineRows='';
-  let cy=2024,cm=2;
+  let tRows='';let cy=2024,cm=2;
   while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth()+1)){
     const ms=`${cy}-${String(cm).padStart(2,'0')}`;
     const paid=data[activeMember].contributions.filter(c=>c.month===ms).reduce((a,b)=>a+Number(b.amt),0);
     const target=getMonthlyTarget(ms);
     const badge=paid>=target?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
-    timelineRows+=`<tr><td>${ms}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${target.toLocaleString()}</td><td>${badge}</td></tr>`;
+    tRows+=`<tr><td>${ms}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${target.toLocaleString()}</td><td>${badge}</td></tr>`;
     cm++;if(cm>12){cm=1;cy++;}
   }
-  return`
-    ${alerts}
+  return`${alerts}
     <div class="hero-card">
       <div class="hero-label">SACCO Net Cash Position</div>
       <div class="hero-amount">UGX ${S.netCash.toLocaleString()}</div>
       <div class="formula-row">
-        <span style="color:#aaa;font-size:10px;font-weight:600">HOW WE GOT HERE:</span>
+        <span style="color:#aaa;font-size:9px;font-weight:600">HOW:</span>
         <span class="f-pill" style="background:#1B4332;color:#81C784">Savings ${S.grossSavings.toLocaleString()}</span>
-        <span class="f-op">+</span>
-        <span class="f-pill" style="background:#1A3A1A;color:#A5D6A7">Interest ${S.interestCollected.toLocaleString()}</span>
-        <span class="f-op">+</span>
-        <span class="f-pill" style="background:#1A3A1A;color:#A5D6A7">Cash In ${S.cashIn.toLocaleString()}</span>
-        <span class="f-op" style="color:#EF9A9A">−</span>
-        <span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Expenses ${S.expenses.toLocaleString()}</span>
-        <span class="f-op" style="color:#EF9A9A">−</span>
-        <span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Loans Out ${S.activeLoanPrincipal.toLocaleString()}</span>
-        <span class="f-op" style="color:#EF9A9A">−</span>
-        <span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Investments ${S.investments.toLocaleString()}</span>
+        <span class="f-op">+</span><span class="f-pill" style="background:#1A3A1A;color:#A5D6A7">Interest ${S.interestCollected.toLocaleString()}</span>
+        <span class="f-op">+</span><span class="f-pill" style="background:#1A3A1A;color:#A5D6A7">Cash In ${S.cashIn.toLocaleString()}</span>
+        <span class="f-op" style="color:#EF9A9A">−</span><span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Expenses ${S.expenses.toLocaleString()}</span>
+        <span class="f-op" style="color:#EF9A9A">−</span><span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Loans Out ${S.activeLoanPrincipal.toLocaleString()}</span>
+        <span class="f-op" style="color:#EF9A9A">−</span><span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Investments ${S.investments.toLocaleString()}</span>
       </div>
-      <div class="grid" style="margin-top:14px;gap:8px">
-        <div class="stat-box-dark"><div class="hero-label">Gross Savings</div><div style="color:#fff;font-weight:700">UGX ${S.grossSavings.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">All member contributions</div></div>
-        <div class="stat-box-dark" style="border-color:#2E7D32"><div class="hero-label">Interest Earned</div><div style="color:#81C784;font-weight:700">UGX ${S.interestCollected.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">Cash collected above principal</div></div>
-        <div class="stat-box-dark" style="border-color:#1565C0"><div class="hero-label">Cash In / Donations</div><div style="color:#90CAF9;font-weight:700">UGX ${S.cashIn.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">External funds received</div></div>
-        <div class="stat-box-dark" style="border-color:#B71C1C"><div class="hero-label">Expenses</div><div style="color:#EF9A9A;font-weight:700">UGX ${S.expenses.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">Total outgoing expenses</div></div>
-        <div class="stat-box-dark" style="border-color:#B08D57"><div class="hero-label">Active Loan Principal Out</div><div style="color:var(--gold);font-weight:700">UGX ${S.activeLoanPrincipal.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">Principal not yet repaid</div></div>
-        <div class="stat-box-dark" style="border-color:#6A1B9A"><div class="hero-label">Investments</div><div style="color:#CE93D8;font-weight:700">UGX ${S.investments.toLocaleString()}</div><div style="font-size:10px;color:#555;margin-top:2px">Total invested</div></div>
+      <div class="grid" style="margin-top:12px;gap:7px">
+        <div class="stat-box-dark"><div class="hero-label">Gross Savings</div><div style="color:#fff;font-weight:700">UGX ${S.grossSavings.toLocaleString()}</div><div style="font-size:9px;color:#555;margin-top:1px">All member contributions</div></div>
+        <div class="stat-box-dark" style="border-color:#2E7D32"><div class="hero-label">Interest Earned</div><div style="color:#81C784;font-weight:700">UGX ${S.interestCollected.toLocaleString()}</div><div style="font-size:9px;color:#555;margin-top:1px">Cash collected above principal</div></div>
+        <div class="stat-box-dark" style="border-color:#1565C0"><div class="hero-label">Cash In / Donations</div><div style="color:#90CAF9;font-weight:700">UGX ${S.cashIn.toLocaleString()}</div><div style="font-size:9px;color:#555;margin-top:1px">External funds</div></div>
+        <div class="stat-box-dark" style="border-color:#B71C1C"><div class="hero-label">Expenses</div><div style="color:#EF9A9A;font-weight:700">UGX ${S.expenses.toLocaleString()}</div><div style="font-size:9px;color:#555;margin-top:1px">Total outgoing</div></div>
+        <div class="stat-box-dark" style="border-color:#B08D57"><div class="hero-label">Loan Principal Out</div><div style="color:var(--gold);font-weight:700">UGX ${S.activeLoanPrincipal.toLocaleString()}</div><div style="font-size:9px;color:#555;margin-top:1px">Principal not yet repaid</div></div>
+        <div class="stat-box-dark" style="border-color:#6A1B9A"><div class="hero-label">Investments</div><div style="color:#CE93D8;font-weight:700">UGX ${S.investments.toLocaleString()}</div><div style="font-size:9px;color:#555;margin-top:1px">Total invested</div></div>
       </div>
     </div>
     <div class="card">
@@ -762,18 +601,12 @@ function renderDashboard(isAdmin,activeMember){
         <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Arrears + Fines</div><div class="stat-value" style="color:var(--yellow)">UGX ${myArrears.toLocaleString()}</div></div>
         <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Loan Balance (incl. interest)</div><div class="stat-value" style="color:var(--red)">UGX ${myDebt.toLocaleString()}</div></div>
       </div>
-      <h3 style="margin-top:16px">This Month — ${thisMonth}</h3>
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:#666;margin-bottom:4px">
-        <span>UGX ${thisPaid.toLocaleString()} paid</span>
-        <span>Target: UGX ${thisTarget.toLocaleString()} (${pct}%)</span>
-      </div>
+      <h3 style="margin-top:14px">This Month — ${thisMonth}</h3>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:#666;margin-bottom:3px"><span>UGX ${thisPaid.toLocaleString()} paid</span><span>Target: UGX ${thisTarget.toLocaleString()} (${pct}%)</span></div>
       <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
     </div>
-    <div class="card">
-      <h2>My Savings Timeline</h2>
-      <div class="table-wrap">
-        <table><tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th></tr>${timelineRows}</table>
-      </div>
+    <div class="card"><h2>My Savings Timeline</h2>
+      <div class="table-wrap"><table><tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th></tr>${tRows}</table></div>
     </div>
     ${renderLoanCards(activeMember)}`;
 }
@@ -783,95 +616,69 @@ function renderLoanCards(mName){
   if(!loans.length)return'';
   let html=`<div class="card"><h2>My Loans</h2>`;
   loans.forEach((loan,idx)=>{
-    const loanId=idx+1,bal=calcLoanBalance(loan,loanId,mName);
-    if(!bal)return;
+    const lid=idx+1,bal=calcLoanBalance(loan,lid,mName);if(!bal)return;
     const cls=bal.isFullyPaid?'paid-loan':bal.isOverdue?'overdue':'active-loan';
     const badge=bal.isFullyPaid?'<span class="badge badge-paid">✅ FULLY PAID</span>':bal.isOverdue?'<span class="badge badge-overdue">⚠️ OVERDUE</span>':'<span class="badge badge-active">Active</span>';
     html+=`<div class="loan-card ${cls}">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <strong>Loan #${loanId} &nbsp;<small style="color:#888;font-weight:400">Issued: ${loan.date}</small></strong>${badge}
-      </div>
-      <div class="grid" style="gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:9px"><strong>Loan #${lid} &nbsp;<small style="color:#888;font-weight:400">Issued: ${loan.date}</small></strong>${badge}</div>
+      <div class="grid" style="gap:7px">
         <div><div class="stat-label">Principal</div><div style="font-weight:600">UGX ${bal.principal.toLocaleString()}</div></div>
-        <div><div class="stat-label">Monthly Anniversaries Passed</div><div style="font-weight:600">${bal.monthsElapsed}</div></div>
+        <div><div class="stat-label">Anniversaries Passed</div><div style="font-weight:600">${bal.monthsElapsed}</div></div>
         <div><div class="stat-label">Total Repaid</div><div style="font-weight:600;color:var(--green)">UGX ${bal.totalRepaid.toLocaleString()}</div></div>
         <div><div class="stat-label">Interest Accrued</div><div style="font-weight:600;color:#888">UGX ${bal.interestAccrued.toLocaleString()}</div></div>
       </div>
-      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee">
-        <div class="stat-label">Outstanding Balance (Principal + Compounded Interest)</div>
-        <div style="font-weight:800;font-size:1.1rem;color:${bal.isFullyPaid?'var(--green)':'var(--red)'}">UGX ${bal.outstanding.toLocaleString()}</div>
+      <div style="margin-top:9px;padding-top:9px;border-top:1px solid #eee">
+        <div class="stat-label">Outstanding Balance</div>
+        <div style="font-weight:800;font-size:1.05rem;color:${bal.isFullyPaid?'var(--green)':'var(--red)'}">UGX ${bal.outstanding.toLocaleString()}</div>
       </div>
-      ${bal.isOverdue?`<div class="alert alert-danger" style="margin-top:10px;padding:8px 12px;font-size:12px">⚠️ No repayments recorded. ${bal.monthsElapsed} monthly anniversary(ies) passed.</div>`:''}
+      ${bal.isOverdue?`<div class="alert alert-danger" style="margin-top:9px;padding:7px 11px;font-size:11px">⚠️ No repayments. ${bal.monthsElapsed} anniversary(ies) passed.</div>`:''}
     </div>`;
   });
   return html+`</div>`;
 }
 
-// ─────────────────────────────────────────────
-// LEDGER — with print button
-// ─────────────────────────────────────────────
+// ─── LEDGER ───────────────────────────────────
 function renderLedger(isAdmin,activeMember){
-  const now=new Date();
-  let rows='';let cy=2024,cm=2;
+  const now=new Date();let rows='';let cy=2024,cm=2;
   while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth()+1)){
     const ms=`${cy}-${String(cm).padStart(2,'0')}`;
     const paid=data[activeMember].contributions.filter(c=>c.month===ms).reduce((a,b)=>a+Number(b.amt),0);
-    const target=getMonthlyTarget(ms);
-    const gap=Math.max(0,target-paid);
-    // per-month penalty
+    const target=getMonthlyTarget(ms),gap=Math.max(0,target-paid);
     const today2=new Date(),curMs2=today2.toISOString().slice(0,7);
     const contribs=data[activeMember].contributions.filter(c=>c.month===ms);
     let penalty=0;
-    if(gap>0){
-      const onTime=contribs.some(c=>parseInt(c.date.split('-')[2])<=10);
-      if(!onTime){
-        if(ms!==curMs2) penalty=15000;
-        else if(today2.getDate()>=10) penalty=Math.min((Math.floor((today2.getDate()-10)/7)+1)*5000,15000);
-      }
-    }
+    if(gap>0){const onTime=contribs.some(c=>parseInt(c.date.split('-')[2])<=10);
+      if(!onTime){if(ms!==curMs2)penalty=15000;else if(today2.getDate()>=10)penalty=Math.min((Math.floor((today2.getDate()-10)/7)+1)*5000,15000);}}
     const shortfall=gap+penalty;
     const badge=paid>=target?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
-    rows+=`<tr>
-      <td>${ms}</td>
-      <td>UGX ${paid.toLocaleString()}</td>
-      <td>UGX ${target.toLocaleString()}</td>
-      <td>${badge}</td>
-      <td style="${shortfall>0?'color:var(--red);font-weight:700':'color:var(--green)'}">UGX ${shortfall.toLocaleString()}</td>
-    </tr>`;
+    rows+=`<tr><td>${ms}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${target.toLocaleString()}</td><td>${badge}</td><td style="${shortfall>0?'color:var(--red);font-weight:700':'color:var(--green)'}">UGX ${shortfall.toLocaleString()}</td></tr>`;
     cm++;if(cm>12){cm=1;cy++;}
   }
   const loans=data[activeMember].loans.filter(l=>l.type==='LOAN');
   let picker='';
-  if(isAdmin) picker=`<div class="card" style="border:2px solid var(--gold);padding:14px;margin-bottom:18px">
+  if(isAdmin)picker=`<div class="card" style="border:2px solid var(--gold);padding:13px;margin-bottom:16px">
     <label style="font-size:13px;font-weight:700">👤 Admin: View Any Member's Ledger</label>
-    <select style="margin-top:6px" onchange="lastSelectedMember=this.value;render()">
+    <select style="margin-top:5px" onchange="lastSelectedMember=this.value;render()">
       ${data.members.map(m=>`<option value="${m}" ${m===activeMember?'selected':''}>${m}</option>`).join('')}
     </select></div>`;
   return`${picker}
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:7px">
         <h2 style="border:none;padding:0;margin:0">📒 Savings Timeline — ${activeMember}</h2>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
           <button class="gold sm" onclick="exportMemberCSV('${activeMember}')">📥 CSV</button>
           <button class="print-btn sm" onclick="triggerMemberPrint('${activeMember}')">🖨️ Print My Ledger</button>
         </div>
       </div>
-      <p style="font-size:11px;color:#888;margin-top:8px;margin-bottom:12px">Shortfall = unpaid savings gap + penalty charges for that month as of today.</p>
-      <div class="table-wrap">
-        <table>
-          <tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th><th>Shortfall (incl. penalty)</th></tr>
-          ${rows}
-        </table>
-      </div>
+      <p style="font-size:11px;color:#888;margin-top:7px;margin-bottom:11px">Shortfall = unpaid savings gap + penalty charges for that month.</p>
+      <div class="table-wrap"><table><tr><th>Month</th><th>Paid</th><th>Target</th><th>Status</th><th>Shortfall (incl. penalty)</th></tr>${rows}</table></div>
     </div>
-    <div class="card">
-      <h2>Loan & Repayment History — ${activeMember}</h2>
+    <div class="card"><h2>Loan & Repayment History — ${activeMember}</h2>
       ${!loans.length?'<p style="color:#999;font-size:13px">No loan records.</p>':''}
       <div class="table-wrap"><table>
         ${loans.length?'<tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th><th>Outstanding</th></tr>':''}
         ${loans.map((l,i)=>{
-          const lid=i+1,bal=calcLoanBalance(l,lid,activeMember);
-          if(!bal)return'';
+          const lid=i+1,bal=calcLoanBalance(l,lid,activeMember);if(!bal)return'';
           return`<tr style="background:#E3F2FD;font-weight:600"><td>${l.date}</td><td>LOAN #${lid}</td><td>—</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td style="color:${bal.isFullyPaid?'var(--green)':'var(--red)'};">${bal.isFullyPaid?'✅ CLEARED':'UGX '+bal.outstanding.toLocaleString()}</td></tr>`+
           data[activeMember].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid)).map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:var(--green)">UGX ${Number(r.amt).toLocaleString()}</td><td>—</td></tr>`).join('');
         }).join('')}
@@ -879,130 +686,178 @@ function renderLedger(isAdmin,activeMember){
     </div>`;
 }
 
-// ─────────────────────────────────────────────
-// SACCO ACTIVITY
-// ─────────────────────────────────────────────
+// ─── SACCO ACTIVITY ───────────────────────────
 function renderActivity(){
   const S=getGlobalStats();
-  return`
-    <div class="card"><h2>🏦 SACCO-Wide Totals</h2>
-      <div class="grid">
-        <div class="stat-box"><div class="stat-label">Net Cash Position</div><div class="stat-value">UGX ${S.netCash.toLocaleString()}</div></div>
-        <div class="stat-box"><div class="stat-label">Gross Savings</div><div class="stat-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
-        <div class="stat-box gold-border"><div class="stat-label">Interest Earned</div><div class="stat-value" style="color:var(--green)">UGX ${S.interestCollected.toLocaleString()}</div></div>
-        <div class="stat-box" style="background:#E3F2FD"><div class="stat-label">Cash In / Donations</div><div class="stat-value" style="color:var(--blue)">UGX ${S.cashIn.toLocaleString()}</div></div>
-        <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Total Expenses</div><div class="stat-value" style="color:var(--red)">UGX ${S.expenses.toLocaleString()}</div></div>
-        <div class="stat-box" style="background:#F3E5F5"><div class="stat-label">Total Investments</div><div class="stat-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
-        <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Active Loan Principal</div><div class="stat-value" style="color:var(--yellow)">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
-      </div>
+  return`<div class="card"><h2>🏦 SACCO-Wide Totals</h2>
+    <div class="grid">
+      <div class="stat-box"><div class="stat-label">Net Cash Position</div><div class="stat-value">UGX ${S.netCash.toLocaleString()}</div></div>
+      <div class="stat-box"><div class="stat-label">Gross Savings</div><div class="stat-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
+      <div class="stat-box gold-border"><div class="stat-label">Interest Earned</div><div class="stat-value" style="color:var(--green)">UGX ${S.interestCollected.toLocaleString()}</div></div>
+      <div class="stat-box" style="background:#E3F2FD"><div class="stat-label">Cash In / Donations</div><div class="stat-value" style="color:var(--blue)">UGX ${S.cashIn.toLocaleString()}</div></div>
+      <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Total Expenses</div><div class="stat-value" style="color:var(--red)">UGX ${S.expenses.toLocaleString()}</div></div>
+      <div class="stat-box" style="background:#F3E5F5"><div class="stat-label">Total Investments</div><div class="stat-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
+      <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Active Loan Principal</div><div class="stat-value" style="color:var(--yellow)">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
     </div>
-    <div class="card"><h2>📥 Cash In / Donations</h2>
-      ${!data.cashIn.length?'<p style="color:#999;font-size:13px">No records.</p>':''}
-      <div class="table-wrap"><table>
-        ${data.cashIn.length?'<tr><th>Date</th><th>Source</th><th>Amount</th></tr>':''}
-        ${data.cashIn.map(c=>`<tr><td>${c.date}</td><td>${c.source}</td><td style="color:var(--green);font-weight:600">UGX ${Number(c.amt).toLocaleString()}</td></tr>`).join('')}
-      </table></div>
-    </div>
-    <div class="card"><h2>💸 Expenses</h2>
-      ${!data.expenses.length?'<p style="color:#999;font-size:13px">No expenses.</p>':''}
-      <div class="table-wrap"><table>
-        ${data.expenses.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}
-        ${data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td style="color:var(--red);font-weight:600">UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join('')}
-      </table></div>
-    </div>
-    <div class="card"><h2>📈 Investments</h2>
-      ${!data.investments.length?'<p style="color:#999;font-size:13px">No investments.</p>':''}
-      <div class="table-wrap"><table>
-        ${data.investments.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}
-        ${data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td style="color:#6A1B9A;font-weight:600">UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join('')}
-      </table></div>
-    </div>`;
+  </div>
+  <div class="card"><h2>📥 Cash In / Donations</h2>${!data.cashIn.length?'<p style="color:#999;font-size:13px">No records.</p>':''}
+    <div class="table-wrap"><table>${data.cashIn.length?'<tr><th>Date</th><th>Source</th><th>Amount</th></tr>':''}${data.cashIn.map(c=>`<tr><td>${c.date}</td><td>${c.source}</td><td style="color:var(--green);font-weight:600">UGX ${Number(c.amt).toLocaleString()}</td></tr>`).join('')}</table></div>
+  </div>
+  <div class="card"><h2>💸 Expenses</h2>${!data.expenses.length?'<p style="color:#999;font-size:13px">No expenses.</p>':''}
+    <div class="table-wrap"><table>${data.expenses.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}${data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td style="color:var(--red);font-weight:600">UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join('')}</table></div>
+  </div>
+  <div class="card"><h2>📈 Investments</h2>${!data.investments.length?'<p style="color:#999;font-size:13px">No investments.</p>':''}
+    <div class="table-wrap"><table>${data.investments.length?'<tr><th>Date</th><th>Description</th><th>Amount</th></tr>':''}${data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td style="color:#6A1B9A;font-weight:600">UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join('')}</table></div>
+  </div>`;
 }
 
-// ─────────────────────────────────────────────
-// MONTHLY REPORT
-// ─────────────────────────────────────────────
-function renderMonthlyReport(){
-  const now=new Date();
-  const curMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  let previewMonths=[];
-  let previewTitle='';
-  if(reportMode==='single'){previewMonths=[reportMonth];previewTitle=`Month: ${reportMonth}`;}
-  else if(reportMode==='range'){previewMonths=reportStart&&reportEnd&&reportStart<=reportEnd?getMonthRange(reportStart,reportEnd):[];previewTitle=`Range: ${reportStart} → ${reportEnd}`;}
-  else{previewMonths=getMonthRange("2024-02",curMs);previewTitle=`All-time: Feb 2024 → ${curMs}`;}
+// ─── MEETING MINUTES ──────────────────────────
+function renderMinutes(isAdmin){
+  const mins=(data.minutes||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  let html=`<div class="card" style="border:2px solid var(--gold)">
+    <h2>📋 Meeting Minutes</h2>`;
+  if(isAdmin){
+    html+=`<details style="margin-bottom:16px"><summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--dark);padding:8px 0">➕ Add New Minutes Entry</summary>
+      <div style="margin-top:12px">
+        <label>Meeting Title</label><input type="text" id="minTitle" placeholder="e.g. Monthly General Meeting — January 2026">
+        <label>Meeting Date</label><input type="date" id="minDate" value="${new Date().toISOString().split('T')[0]}">
+        <label>Minutes (type or paste full text)</label>
+        <textarea id="minBody" placeholder="Type or paste the full meeting minutes here..."></textarea>
+        <button class="gold full" onclick="addMinutes()">💾 Save Minutes</button>
+      </div>
+    </details>`;
+  }
+  if(!mins.length){html+=`<p style="color:#999;font-size:13px;padding:10px 0">No meeting minutes have been recorded yet.</p>`;
+  }else{
+    mins.forEach((m,i)=>{
+      const key=`min_${i}`;
+      const isOpen=expandedMinutes[key];
+      html+=`<div class="minutes-card">
+        <div class="minutes-header" onclick="toggleMinutes('${key}')">
+          <div>
+            <div style="font-size:13px;font-weight:700">${m.title}</div>
+            <div style="font-size:11px;color:#888;font-weight:400;margin-top:2px">📅 ${m.date} &nbsp;·&nbsp; Added by admin</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${isAdmin?`<button class="del" onclick="event.stopPropagation();delMinutes(${i})">✕</button>`:''}
+            <span style="font-size:18px;color:#aaa">${isOpen?'▲':'▼'}</span>
+          </div>
+        </div>
+        <div class="minutes-body ${isOpen?'open':''}" id="${key}">${escapeHTML(m.body)}</div>
+      </div>`;
+    });
+  }
+  html+=`</div>`;
+  return html;
+}
+function toggleMinutes(key){expandedMinutes[key]=!expandedMinutes[key];render();}
+function escapeHTML(str){return(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function addMinutes(){
+  const title=document.getElementById('minTitle').value.trim();
+  const date=document.getElementById('minDate').value;
+  const body=document.getElementById('minBody').value.trim();
+  if(!title||!date||!body){showToast("⚠️ Fill in all fields","warn");return;}
+  if(!data.minutes)data.minutes=[];
+  data.minutes.push({title,date,body});
+  saveData();
+}
+function delMinutes(idx){
+  if(!confirm("Delete this minutes entry?"))return;
+  data.minutes.splice(idx,1);
+  saveData();
+}
 
-  let total=0;
-  const rows=data.members.map(m=>{
-    const paid=previewMonths.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
-    total+=paid;
-    const expected=previewMonths.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
-    const trueShortfall=getMemberShortfallWithPenalty(m);
-    const badge=paid>=expected?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
-    return`<tr><td>${m}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${expected.toLocaleString()}</td><td style="color:var(--red);font-weight:700">UGX ${trueShortfall.toLocaleString()}</td><td>${badge}</td></tr>`;
+// ─── MEMBER MANAGEMENT ────────────────────────
+function renderMemberMgmt(){
+  const memberRows=data.members.map((m,i)=>{
+    const ph=getPhoto(m);
+    return`<div class="member-mgmt-row">
+      <div class="member-mgmt-avatar">${ph?`<img src="${ph}" alt="${m}">`:'👤'}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px">${m}</div>
+        <div style="font-size:11px;color:#888">PIN: ${'•'.repeat((data[m].pin||'').length)} &nbsp;|&nbsp; Savings: UGX ${data[m].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div>
+      </div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+        <label style="cursor:pointer;display:inline-block">
+          <span class="edit-btn" style="padding:4px 8px;font-size:10px;border-radius:5px;background:#1976D2;color:#fff;font-weight:600">📷 Photo</span>
+          <input type="file" accept="image/*" style="display:none" onchange="uploadMemberPhoto(event,'${m}')">
+        </label>
+        <button class="edit-btn" onclick="resetMemberPin('${m}')">🔑 Reset PIN</button>
+        <button class="del" onclick="removeMember('${m}')">Remove</button>
+      </div>
+    </div>`;
   }).join('');
-  const paidCount=previewMonths.length?data.members.filter(m=>{
-    const paid=previewMonths.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
-    const expected=previewMonths.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
-    return paid>=expected;
-  }).length:0;
-  const S=getGlobalStats();
+
   return`
+    <div class="card">
+      <h2>👥 Current Members (${data.members.length})</h2>
+      ${memberRows||'<p style="color:#999">No members found.</p>'}
+    </div>
     <div class="card" style="border:2px solid var(--gold)">
-      <h2>📅 Monthly Report & Print Centre</h2>
-      <div style="margin-bottom:14px">
-        <label style="font-size:12px;font-weight:700;color:var(--dark);display:block;margin-bottom:8px">Select Report Type:</label>
-        <div class="report-mode-bar">
-          <button class="mode-btn ${reportMode==='single'?'active':''}" onclick="reportMode='single';render()">📆 Single Month</button>
-          <button class="mode-btn ${reportMode==='range'?'active':''}" onclick="reportMode='range';render()">📅 Date Range</button>
-          <button class="mode-btn ${reportMode==='overall'?'active':''}" onclick="reportMode='overall';render()">🗂️ Overall / All-Time</button>
+      <h2>➕ Add New Member</h2>
+      <div class="grid-2">
+        <div>
+          <label>Full Name</label><input type="text" id="newMName" placeholder="e.g. Okello James Peter">
+          <label>Initial PIN</label><input type="password" id="newMPin" placeholder="Set a PIN (min 4 characters)" maxlength="20">
+        </div>
+        <div style="text-align:center">
+          <div id="newMPhotoPreview" class="photo-preview">📷</div>
+          <label style="cursor:pointer;display:inline-block;margin-top:6px">
+            <span class="gold sm" style="padding:7px 14px;background:var(--gold);color:var(--dark);border-radius:8px;font-weight:600;font-size:12px">Upload Photo (optional)</span>
+            <input type="file" accept="image/*" style="display:none" onchange="previewNewMemberPhoto(event)">
+          </label>
         </div>
       </div>
-      ${reportMode==='single'?`
-        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
-          <div style="flex:1;min-width:180px"><label>Select Month</label><input type="month" style="margin:0" value="${reportMonth}" onchange="reportMonth=this.value;render()"></div>
-          <button class="print-btn" onclick="printSingleMonth()">🖨️ Print / Save PDF</button>
-        </div>`
-      :reportMode==='range'?`
-        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
-          <div style="flex:1;min-width:150px"><label>Start Month</label><input type="month" style="margin:0" value="${reportStart}" onchange="reportStart=this.value;render()"></div>
-          <div style="flex:1;min-width:150px"><label>End Month</label><input type="month" style="margin:0" value="${reportEnd}" onchange="reportEnd=this.value;render()"></div>
-          <button class="print-btn" onclick="printRange()">🖨️ Print / Save PDF</button>
-        </div>`
-      :`
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
-          <p style="font-size:13px;color:#666;flex:1">Covers all SACCO history from <strong>February 2024</strong> to <strong>present</strong> (${previewMonths.length} months).</p>
-          <button class="print-btn" onclick="printOverall()">🖨️ Print / Save PDF</button>
-        </div>`}
-      <div style="background:#f8f8f8;border:1px solid #eee;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#555">
-        <strong>Preview:</strong> ${previewTitle} — <strong>${previewMonths.length} month(s)</strong> | Period savings: <strong>UGX ${total.toLocaleString()}</strong> | Fully paid: <strong>${paidCount} / ${data.members.length}</strong>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Financial Summary (All-Time SACCO Position)</h2>
-      <div class="grid">
-        <div class="stat-box"><div class="stat-label">Net Cash Position</div><div class="stat-value">UGX ${S.netCash.toLocaleString()}</div></div>
-        <div class="stat-box"><div class="stat-label">Gross Savings</div><div class="stat-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
-        <div class="stat-box gold-border"><div class="stat-label">Interest Earned</div><div class="stat-value" style="color:var(--green)">UGX ${S.interestCollected.toLocaleString()}</div></div>
-        <div class="stat-box" style="background:#E3F2FD"><div class="stat-label">Cash In / Donations</div><div class="stat-value" style="color:var(--blue)">UGX ${S.cashIn.toLocaleString()}</div></div>
-        <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Expenses</div><div class="stat-value" style="color:var(--red)">UGX ${S.expenses.toLocaleString()}</div></div>
-        <div class="stat-box" style="background:#F3E5F5"><div class="stat-label">Investments</div><div class="stat-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
-        <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Active Loan Principal</div><div class="stat-value" style="color:var(--yellow)">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Member Savings — ${previewTitle}</h2>
-      <p style="font-size:11px;color:#888;margin-bottom:12px">Shortfall = unpaid savings gap + penalty charges as of today (total owed including fines).</p>
-      ${!previewMonths.length?'<p style="color:#999;font-size:13px">Select a valid period above.</p>':''}
-      ${previewMonths.length?`<div class="table-wrap"><table>
-        <tr><th>Member</th><th>Amount Paid</th><th>Expected</th><th>Total Shortfall (incl. penalties)</th><th>Status</th></tr>
-        ${rows}
-      </table></div>`:''}
+      <button class="gold full" onclick="addMember()" style="margin-top:6px">✅ Add Member</button>
     </div>`;
 }
 
-// ─────────────────────────────────────────────
-// ADMIN HUB
-// ─────────────────────────────────────────────
+let _newMemberPhoto=null;
+function previewNewMemberPhoto(e){
+  const file=e.target.files[0];if(!file)return;
+  compressPhoto(file,b64=>{
+    _newMemberPhoto=b64;
+    const prev=document.getElementById('newMPhotoPreview');
+    if(prev)prev.innerHTML=`<img src="${b64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  });
+}
+function uploadMemberPhoto(e,mName){
+  const file=e.target.files[0];if(!file)return;
+  showToast("⏳ Compressing photo…","info");
+  compressPhoto(file,b64=>{
+    if(!data.photos)data.photos={};
+    data.photos[mName]=b64;
+    saveData();
+  });
+}
+function addMember(){
+  const name=document.getElementById('newMName').value.trim();
+  const pin=document.getElementById('newMPin').value;
+  if(!name){showToast("⚠️ Enter a full name","warn");return;}
+  if(!pin||pin.length<4){showToast("⚠️ PIN must be at least 4 characters","warn");return;}
+  if(data.members.includes(name)){showToast("⚠️ Member already exists","warn");return;}
+  data.members.push(name);
+  data[name]={pin,contributions:[],loans:[]};
+  if(_newMemberPhoto){if(!data.photos)data.photos={};data.photos[name]=_newMemberPhoto;_newMemberPhoto=null;}
+  saveData();
+}
+function removeMember(mName){
+  if(!confirm(`Remove ${mName} from the SACCO?\n\nThis will delete all their savings, loan records and data. This CANNOT be undone.`))return;
+  data.members=data.members.filter(m=>m!==mName);
+  delete data[mName];
+  if(data.photos)delete data.photos[mName];
+  if(lastSelectedMember===mName)lastSelectedMember=null;
+  saveData();
+}
+function resetMemberPin(mName){
+  const np=prompt(`Set new PIN for ${mName} (min 4 characters):`);
+  if(!np)return;
+  if(np.length<4){showToast("⚠️ PIN must be at least 4 characters","warn");return;}
+  data[mName].pin=np;
+  saveData();
+}
+
+// ─── ADMIN HUB ────────────────────────────────
 function renderAdmin(activeMember){
   const nextLoanId=data[activeMember].loans.filter(l=>l.type==='LOAN').length+1;
   return`<div class="card" style="border:2px solid var(--gold)">
@@ -1030,7 +885,7 @@ function renderAdmin(activeMember){
         <button class="gold full" onclick="postInflow()">Post Inflow ↗</button>
       </div>
       <div>
-        <h3>📤 Post Outflow <span style="float:right;font-size:11px;color:var(--gold);font-weight:400">Next: Loan #${nextLoanId}</span></h3>
+        <h3>📤 Post Outflow <span style="float:right;font-size:10px;color:var(--gold);font-weight:400">Next: Loan #${nextLoanId}</span></h3>
         <label>Type</label>
         <select id="tO">
           <option value="L">Issue Loan #${nextLoanId} to ${activeMember}</option>
@@ -1048,44 +903,118 @@ function renderAdmin(activeMember){
   </div>`;
 }
 
-// ─────────────────────────────────────────────
-// GLOBAL AUDIT
-// ─────────────────────────────────────────────
+// ─── GLOBAL AUDIT ─────────────────────────────
 function renderAudit(){
   const arrRows=data.members.map(m=>{
-    const sav=data[m].contributions.reduce((a,b)=>a+Number(b.amt),0);
-    const arr=calcArrearsAndFines(m),debt=getMemberLoanDebt(m);
+    const sav=data[m].contributions.reduce((a,b)=>a+Number(b.amt),0),arr=calcArrearsAndFines(m),debt=getMemberLoanDebt(m);
     return`<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td><td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td><td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()}</td></tr>`;
   }).join('');
   const txRows=data.members.map(mem=>
     data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">✕</button></td></tr>`).join('')+
-    data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan Disbursed':'Repay Loan #'+l.loanId}</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`).join('')
+    data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Loan':'Repay #'+l.loanId}</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`).join('')
   ).join('');
   const sysRows=
     data.cashIn.map((c,i)=>`<tr><td>SYSTEM</td><td>Cash In</td><td>${c.source}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('C','',${i})">Edit</button><button class="del" onclick="del('C','',${i})">✕</button></td></tr>`).join('')+
     data.expenses.map((e,i)=>`<tr><td>SYSTEM</td><td>Expense</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('E','',${i})">Edit</button><button class="del" onclick="del('E','',${i})">✕</button></td></tr>`).join('')+
     data.investments.map((inv,i)=>`<tr><td>SYSTEM</td><td>Investment</td><td>${inv.reason}</td><td>UGX ${Number(inv.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('I','',${i})">Edit</button><button class="del" onclick="del('I','',${i})">✕</button></td></tr>`).join('');
-  return`
-    <div class="card"><h2>Member Arrears Overview</h2>
-      <div class="table-wrap"><table><tr><th>Member</th><th>Total Savings</th><th>Arrears + Fines</th><th>Loan Debt (incl. interest)</th></tr>${arrRows}</table></div>
-    </div>
-    <div class="card"><h2>Full Transaction Audit Log</h2>
-      <div class="table-wrap"><table><tr><th>Member</th><th>Type</th><th>Ref</th><th>Amount</th><th>Actions</th></tr>${txRows}${sysRows}</table></div>
-    </div>`;
+  return`<div class="card"><h2>Member Arrears Overview</h2>
+    <div class="table-wrap"><table><tr><th>Member</th><th>Total Savings</th><th>Arrears + Fines</th><th>Loan Debt</th></tr>${arrRows}</table></div>
+  </div>
+  <div class="card"><h2>Full Transaction Audit Log</h2>
+    <div class="table-wrap"><table><tr><th>Member</th><th>Type</th><th>Ref</th><th>Amount</th><th>Actions</th></tr>${txRows}${sysRows}</table></div>
+  </div>`;
 }
 
-// ─────────────────────────────────────────────
-// SETTINGS
-// ─────────────────────────────────────────────
+// ─── MONTHLY REPORT ───────────────────────────
+function renderMonthlyReport(){
+  const now=new Date(),curMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  let pm=[],pt='';
+  if(reportMode==='single'){pm=[reportMonth];pt=`Month: ${reportMonth}`;}
+  else if(reportMode==='range'){pm=reportStart&&reportEnd&&reportStart<=reportEnd?getMonthRange(reportStart,reportEnd):[];pt=`Range: ${reportStart} → ${reportEnd}`;}
+  else{pm=getMonthRange("2024-02",curMs);pt=`All-time: Feb 2024 → ${curMs}`;}
+  let total=0;
+  const rows=data.members.map(m=>{
+    const paid=pm.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
+    total+=paid;
+    const expected=pm.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
+    const ts=getMemberShortfall(m);
+    const badge=paid>=expected?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
+    return`<tr><td>${m}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${expected.toLocaleString()}</td><td style="color:var(--red);font-weight:700">UGX ${ts.toLocaleString()}</td><td>${badge}</td></tr>`;
+  }).join('');
+  const paidCount=pm.length?data.members.filter(m=>{
+    const paid=pm.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
+    return paid>=pm.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
+  }).length:0;
+  const S=getGlobalStats();
+  return`<div class="card" style="border:2px solid var(--gold)">
+    <h2>📅 Monthly Report & Print Centre</h2>
+    <div style="margin-bottom:12px"><label style="font-size:12px;font-weight:700;color:var(--dark);display:block;margin-bottom:7px">Select Report Type:</label>
+      <div class="report-mode-bar">
+        <button class="mode-btn ${reportMode==='single'?'active':''}" onclick="reportMode='single';render()">📆 Single Month</button>
+        <button class="mode-btn ${reportMode==='range'?'active':''}" onclick="reportMode='range';render()">📅 Date Range</button>
+        <button class="mode-btn ${reportMode==='overall'?'active':''}" onclick="reportMode='overall';render()">🗂️ Overall / All-Time</button>
+      </div>
+    </div>
+    ${reportMode==='single'?`<div style="display:flex;gap:11px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px"><div style="flex:1;min-width:175px"><label>Select Month</label><input type="month" style="margin:0" value="${reportMonth}" onchange="reportMonth=this.value;render()"></div><button class="print-btn" onclick="printSingleMonth()">🖨️ Print / Save PDF</button></div>`
+    :reportMode==='range'?`<div style="display:flex;gap:11px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px"><div style="flex:1;min-width:145px"><label>Start Month</label><input type="month" style="margin:0" value="${reportStart}" onchange="reportStart=this.value;render()"></div><div style="flex:1;min-width:145px"><label>End Month</label><input type="month" style="margin:0" value="${reportEnd}" onchange="reportEnd=this.value;render()"></div><button class="print-btn" onclick="printRange()">🖨️ Print / Save PDF</button></div>`
+    :`<div style="display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><p style="font-size:13px;color:#666;flex:1">Covers <strong>February 2024</strong> to <strong>present</strong> (${pm.length} months).</p><button class="print-btn" onclick="printOverall()">🖨️ Print / Save PDF</button></div>`}
+    <div style="background:#f8f8f8;border:1px solid #eee;border-radius:8px;padding:9px 13px;margin-bottom:14px;font-size:12px;color:#555">
+      <strong>Preview:</strong> ${pt} — <strong>${pm.length} month(s)</strong> | Period savings: <strong>UGX ${total.toLocaleString()}</strong> | Fully paid: <strong>${paidCount} / ${data.members.length}</strong>
+    </div>
+  </div>
+  <div class="card"><h2>Financial Summary (All-Time)</h2>
+    <div class="grid">
+      <div class="stat-box"><div class="stat-label">Net Cash Position</div><div class="stat-value">UGX ${S.netCash.toLocaleString()}</div></div>
+      <div class="stat-box"><div class="stat-label">Gross Savings</div><div class="stat-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
+      <div class="stat-box gold-border"><div class="stat-label">Interest Earned</div><div class="stat-value" style="color:var(--green)">UGX ${S.interestCollected.toLocaleString()}</div></div>
+      <div class="stat-box" style="background:#E3F2FD"><div class="stat-label">Cash In</div><div class="stat-value" style="color:var(--blue)">UGX ${S.cashIn.toLocaleString()}</div></div>
+      <div class="stat-box" style="background:#FFEBEE"><div class="stat-label">Expenses</div><div class="stat-value" style="color:var(--red)">UGX ${S.expenses.toLocaleString()}</div></div>
+      <div class="stat-box" style="background:#F3E5F5"><div class="stat-label">Investments</div><div class="stat-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
+      <div class="stat-box" style="background:#FFF9C4"><div class="stat-label">Active Loan Principal</div><div class="stat-value" style="color:var(--yellow)">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
+    </div>
+  </div>
+  <div class="card"><h2>Member Savings — ${pt}</h2>
+    <p style="font-size:11px;color:#888;margin-bottom:11px">Shortfall = unpaid savings gap + penalty charges as of today.</p>
+    ${!pm.length?'<p style="color:#999;font-size:13px">Select a valid period above.</p>':''}
+    ${pm.length?`<div class="table-wrap"><table><tr><th>Member</th><th>Paid</th><th>Expected</th><th>Total Shortfall (incl. penalties)</th><th>Status</th></tr>${rows}</table></div>`:''}
+  </div>`;
+}
+
+// ─── SETTINGS ─────────────────────────────────
 function renderSettings(){
-  return`<div class="card" style="max-width:420px;margin:auto">
-    <h2>🔐 Change My PIN</h2>
-    <p style="font-size:13px;color:#666;margin-bottom:16px">Enter current PIN then choose a new one (min 4 characters).</p>
+  const ph=getPhoto(user.name);
+  return`<div class="card" style="max-width:460px;margin:auto">
+    <h2>🔐 My Settings</h2>
+    <div style="text-align:center;margin-bottom:18px">
+      <div class="photo-preview">${ph?`<img src="${ph}" alt="${user.name}">`:'👤'}</div>
+      <div style="font-weight:700;margin-bottom:8px">${user.name}</div>
+      <label style="cursor:pointer;display:inline-block">
+        <span style="padding:8px 16px;background:var(--gold);color:var(--dark);border-radius:8px;font-weight:600;font-size:12px">📷 ${ph?'Change':'Upload'} My Photo</span>
+        <input type="file" accept="image/*" style="display:none" onchange="uploadMyPhoto(event)">
+      </label>
+      ${ph?`<br><button class="del" style="margin-top:8px" onclick="removeMyPhoto()">Remove Photo</button>`:''}
+    </div>
+    <hr class="divider">
+    <h3>Change PIN</h3>
     <label>Current PIN</label><input type="password" id="oldPin" placeholder="Current PIN" maxlength="20">
-    <label>New PIN</label><input type="password" id="newPin" placeholder="New PIN" maxlength="20">
+    <label>New PIN</label><input type="password" id="newPin" placeholder="New PIN (min 4 chars)" maxlength="20">
     <label>Confirm New PIN</label><input type="password" id="confPin" placeholder="Re-enter new PIN" maxlength="20">
     <button class="gold full" onclick="changePin()">Update PIN</button>
   </div>`;
+}
+function uploadMyPhoto(e){
+  const file=e.target.files[0];if(!file)return;
+  showToast("⏳ Compressing…","info");
+  compressPhoto(file,b64=>{
+    if(!data.photos)data.photos={};
+    data.photos[user.name]=b64;
+    saveData();
+  });
+}
+function removeMyPhoto(){
+  if(!data.photos)return;
+  delete data.photos[user.name];
+  saveData();
 }
 function changePin(){
   const o=document.getElementById('oldPin').value,n=document.getElementById('newPin').value,c=document.getElementById('confPin').value;
@@ -1095,9 +1024,7 @@ function changePin(){
   data[user.name].pin=n;saveData();
 }
 
-// ─────────────────────────────────────────────
-// EDIT MODAL
-// ─────────────────────────────────────────────
+// ─── EDIT MODAL ───────────────────────────────
 function openEdit(cat,mem,idx){
   let e;
   if(cat==='S')e={...data[mem].contributions[idx]};
@@ -1111,17 +1038,16 @@ function renderEditModal(){
   const{cat,mem,idx,entry}=editModalData;
   const labels={S:'Savings',L:'Loan/Repayment',C:'Cash In',E:'Expense',I:'Investment'};
   let fields='';
-  if(cat==='S') fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Month</label><input type="month" id="eMon" value="${entry.month}">`;
-  else if(cat==='L') fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}">`;
-  else if(cat==='C') fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Source</label><input type="text" id="eDesc" value="${entry.source||''}">`;
+  if(cat==='S')fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Month</label><input type="month" id="eMon" value="${entry.month}">`;
+  else if(cat==='L')fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}">`;
+  else if(cat==='C')fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Source</label><input type="text" id="eDesc" value="${entry.source||''}">`;
   else fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Description</label><input type="text" id="eDesc" value="${entry.reason||''}">`;
   return`<div class="modal-overlay" onclick="closeEdit(event)">
-    <div class="modal">
-      <button class="modal-close" onclick="editModalData=null;render()">✕</button>
+    <div class="modal"><button class="modal-close" onclick="editModalData=null;render()">✕</button>
       <h2>Edit Entry</h2>
-      <p style="font-size:12px;color:#666;margin-bottom:14px"><strong>${labels[cat]}</strong>${mem?' — '+mem:''}</p>
+      <p style="font-size:12px;color:#666;margin-bottom:12px"><strong>${labels[cat]}</strong>${mem?' — '+mem:''}</p>
       ${fields}
-      <button class="gold full" onclick="saveEdit()" style="margin-top:8px">💾 Save Changes</button>
+      <button class="gold full" onclick="saveEdit()" style="margin-top:7px">💾 Save Changes</button>
     </div>
   </div>`;
 }
@@ -1138,9 +1064,7 @@ function saveEdit(){
   editModalData=null;saveData();
 }
 
-// ─────────────────────────────────────────────
-// POST INFLOW / OUTFLOW
-// ─────────────────────────────────────────────
+// ─── POST INFLOW / OUTFLOW ────────────────────
 function postInflow(){
   const m=document.getElementById("mI").value,t=currentInflowType;
   const amt=Number(document.getElementById("amI").value),date=document.getElementById("daMan").value;
@@ -1171,9 +1095,7 @@ function postOutflow(){
   saveData();
 }
 
-// ─────────────────────────────────────────────
-// DELETE
-// ─────────────────────────────────────────────
+// ─── DELETE ───────────────────────────────────
 function del(cat,mem,idx){
   if(!confirm("Delete this entry?"))return;
   if(cat==='S')data[mem].contributions.splice(idx,1);
@@ -1184,9 +1106,7 @@ function del(cat,mem,idx){
   saveData();
 }
 
-// ─────────────────────────────────────────────
-// CSV EXPORTS
-// ─────────────────────────────────────────────
+// ─── CSV EXPORTS ──────────────────────────────
 function exportMemberCSV(name){
   const rows=[["Date","Type","Reference","Amount"]];
   data[name].contributions.forEach(c=>rows.push([c.date,"Savings",c.month,c.amt]));
@@ -1211,22 +1131,18 @@ function downloadCSV(filename,rows){
   document.body.appendChild(link);link.click();document.body.removeChild(link);
 }
 
-// ─────────────────────────────────────────────
-// TOAST
-// ─────────────────────────────────────────────
+// ─── TOAST ────────────────────────────────────
 function showToast(msg,type="success"){
   const ex=document.getElementById('toast');if(ex)ex.remove();
-  const colors={success:'#2E7D32',danger:'#C62828',warn:'#E65100'};
+  const colors={success:'#2E7D32',danger:'#C62828',warn:'#E65100',info:'#1565C0'};
   const t=document.createElement('div');
   t.id='toast';
-  t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${colors[type]||'#333'};color:#fff;padding:12px 22px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.25);font-family:'DM Sans',sans-serif`;
+  t.style.cssText=`position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${colors[type]||'#333'};color:#fff;padding:11px 20px;border-radius:30px;font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.25);font-family:'DM Sans',sans-serif`;
   t.textContent=msg;document.body.appendChild(t);
   setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity 0.4s';setTimeout(()=>t.remove(),400);},3000);
 }
 
-// ─────────────────────────────────────────────
-// BOOT
-// ─────────────────────────────────────────────
+// ─── BOOT ─────────────────────────────────────
 loadData();
 </script>
 </body>
