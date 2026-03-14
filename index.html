@@ -23,7 +23,7 @@
 body{font-family:'DM Sans',sans-serif;background:#f0ebe0;color:#1a1a1a;min-height:100vh;}
 
 /* ── APP SHELL ── */
-#appShell{display:flex;min-height:100vh;}
+#appShell{display:flex;min-height:100vh;width:100%;}
 
 /* ── SIDEBAR ── */
 #sidebar{
@@ -53,7 +53,7 @@ body{font-family:'DM Sans',sans-serif;background:#f0ebe0;color:#1a1a1a;min-heigh
 .sb-logout:hover{border-color:#444;color:#aaa;transform:none;}
 
 /* ── MAIN CONTENT ── */
-#mainContent{margin-left:240px;min-height:100vh;display:flex;flex-direction:column;}
+#mainContent{margin-left:240px;min-height:100vh;display:flex;flex-direction:column;flex:1;min-width:0;width:calc(100% - 240px);}
 
 /* ── MOBILE HEADER ── */
 #mobileHeader{display:none;background:var(--dark);border-bottom:2px solid var(--gold);padding:10px 16px;align-items:center;gap:12px;position:sticky;top:0;z-index:150;}
@@ -72,7 +72,7 @@ body{font-family:'DM Sans',sans-serif;background:#f0ebe0;color:#1a1a1a;min-heigh
 .page-subtitle{font-size:12px;color:#888;margin-top:2px;}
 
 /* ── CONTAINER ── */
-.container{padding:16px 20px 32px;max-width:1080px;}
+.container{padding:16px 20px 32px;width:100%;}
 
 /* ── CARDS ── */
 .card{background:var(--white);padding:20px;border-radius:var(--radius);margin-bottom:14px;box-shadow:var(--shadow);}
@@ -247,7 +247,7 @@ button.danger{background:var(--red);color:#fff;}
 @media(max-width:768px){
   #sidebar{transform:translateX(-240px);}
   #sidebar.open{transform:translateX(0);}
-  #mainContent{margin-left:0;}
+  #mainContent{margin-left:0;width:100%;}
   #mobileHeader{display:flex;}
   .grid-2{grid-template-columns:1fr;}
   .hero-amount{font-size:1.6rem;}
