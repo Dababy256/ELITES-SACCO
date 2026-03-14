@@ -309,6 +309,8 @@ let user=null,data={},lastSelectedMember=null,currentInflowType="S",activeTab="d
 let reportMode="single",reportMonth="",reportStart="",reportEnd="";
 let allMembersStart="",allMembersEnd="";
 let expandedMinutes={};
+let auditSearch="";
+let dividendYear=new Date().getFullYear();
 
 // ─── SIDEBAR MOBILE ───────────────────────────
 function toggleSidebar(){const sb=document.getElementById('sidebar'),ov=document.getElementById('sbOverlay');if(sb){sb.classList.toggle('open');ov.classList.toggle('show');}}
@@ -322,6 +324,8 @@ async function loadData(){
     const oN="OKULLO DAVID LAURENCE",nN="OKULLU DAVID LAURANCE";
     if(data[oN]){data[nN]=data[oN];delete data[oN];data.members=data.members.map(m=>m===oN?nN:m);}
     if(!data.expenses)data.expenses=[];if(!data.investments)data.investments=[];if(!data.cashIn)data.cashIn=[];if(!data.minutes)data.minutes=[];if(!data.photos)data.photos={};
+    if(!data.waivers)data.waivers=[];
+    if(!data.settings)data.settings={monthlyTarget:100000,targetOverrides:{}};
     const now=new Date();
     reportMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     reportStart="2024-02";reportEnd=reportMonth;allMembersStart="2024-02";allMembersEnd=reportMonth;
@@ -342,9 +346,21 @@ function compressPhoto(file,cb){
 function getPhoto(m){return(data.photos&&data.photos[m])||null;}
 
 // ─── CALCULATIONS ─────────────────────────────
-function getMonthlyTarget(ms){const y=parseInt(ms.split('-')[0]),m=parseInt(ms.split('-')[1]);return(y===2024&&m>=2&&m<=7)?80000:100000;}
+function getMonthlyTarget(ms){
+  // Per-month override takes first priority
+  if(data.settings&&data.settings.targetOverrides&&data.settings.targetOverrides[ms]) return Number(data.settings.targetOverrides[ms]);
+  // Legacy fixed period
+  const y=parseInt(ms.split('-')[0]),m=parseInt(ms.split('-')[1]);
+  if(y===2024&&m>=2&&m<=7) return 80000;
+  // Global configurable target (admin-set), default 100000
+  return(data.settings&&data.settings.monthlyTarget)?Number(data.settings.monthlyTarget):100000;
+}
 
+function isMonthWaived(mName,ms){
+  return(data.waivers||[]).some(w=>w.member===mName&&w.month===ms);
+}
 function calcMonthPenalty(mName,ms){
+  if(isMonthWaived(mName,ms))return 0; // penalty waived by admin
   const today=new Date(),curMs=today.toISOString().slice(0,7);
   const target=getMonthlyTarget(ms);
   const paid=data[mName].contributions.filter(c=>c.month===ms).reduce((a,b)=>a+Number(b.amt),0);
@@ -672,6 +688,14 @@ function renderDashboard(isAdmin,activeMember){
   if(myArrears>0)alerts+=`<div class="alert alert-warn"><span>⚠️</span><span>Arrears &amp; fines: <strong>UGX ${myArrears.toLocaleString()}</strong></span></div>`;
   if(myDebt>0)alerts+=`<div class="alert alert-danger"><span>🔴</span><span>Loan balance: <strong>UGX ${myDebt.toLocaleString()}</strong> (incl. compounded interest)</span></div>`;
   if(!myArrears&&!myDebt)alerts+=`<div class="alert alert-success"><span>✅</span><span>Fully up to date — no arrears or outstanding loans.</span></div>`;
+  // Countdown banner: days to 10th, only if this month not fully paid
+  const _today=new Date(),_curMs=`${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}`;
+  const _curPaid=data[activeMember].contributions.filter(c=>c.month===_curMs).reduce((a,b)=>a+Number(b.amt),0);
+  const _curTarget=getMonthlyTarget(_curMs);
+  if(_curPaid<_curTarget&&_today.getDate()<10){
+    const _daysLeft=10-_today.getDate();
+    alerts+=`<div class="alert alert-info"><span>⏰</span><span><strong>${_daysLeft} day${_daysLeft!==1?'s':''} until the 10th.</strong> Pay UGX ${(_curTarget-_curPaid).toLocaleString()} now to avoid the late penalty for ${_curMs}.</span></div>`;
+  }
   const now=new Date(),thisMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   const thisTarget=getMonthlyTarget(thisMonth),thisPaid=data[activeMember].contributions.filter(c=>c.month===thisMonth).reduce((a,b)=>a+Number(b.amt),0);
   const pct=Math.min(100,Math.round((thisPaid/thisTarget)*100));
@@ -753,7 +777,7 @@ function renderLoanCards(mName){
     }
     html+=`<div class="loan-card ${cls}">
       <div class="loan-card-header ${headerCls}">
-        <div><div style="font-weight:700;font-size:13px">Loan #${lid}</div><div style="font-size:11px;color:#888;margin-top:1px">Issued: ${loan.date} &nbsp;·&nbsp; ${bal.monthsElapsed} anniversary(ies) passed</div></div>
+        <div><div style="font-weight:700;font-size:13px">Loan #${lid}</div><div style="font-size:11px;color:#888;margin-top:1px">Issued: ${loan.date} &nbsp;·&nbsp; ${bal.monthsElapsed} anniversary(ies) passed${loan.purpose?` &nbsp;·&nbsp; <em>${loan.purpose}</em>`:''}</div></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${statusBadge}</div>
       </div>
       <div class="loan-card-body">
@@ -851,6 +875,17 @@ function toggleMinutes(k){expandedMinutes[k]=!expandedMinutes[k];render();}
 function escapeHTML(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function addMinutes(){const title=document.getElementById('minTitle').value.trim(),date=document.getElementById('minDate').value,body=document.getElementById('minBody').value.trim();if(!title||!date||!body){showToast("⚠️ Fill in all fields","warn");return;}if(!data.minutes)data.minutes=[];data.minutes.push({title,date,body});saveData();}
 function delMinutes(i){if(!confirm("Delete this entry?"))return;data.minutes.splice(i,1);saveData();}
+function addWaiver(){
+  const member=document.getElementById('wvMember').value;
+  const month=document.getElementById('wvMonth').value;
+  const reason=document.getElementById('wvReason').value.trim();
+  if(!member||!month||!reason){showToast("⚠️ Fill in all waiver fields","warn");return;}
+  if((data.waivers||[]).some(w=>w.member===member&&w.month===month)){showToast("⚠️ Waiver already exists for this member/month","warn");return;}
+  if(!data.waivers)data.waivers=[];
+  data.waivers.push({member,month,reason,date:new Date().toISOString().split('T')[0],by:user.name});
+  saveData();
+}
+function delWaiver(i){if(!confirm("Remove this waiver? Penalty will be reinstated."))return;data.waivers.splice(i,1);saveData();}
 
 // ─── MEMBER MANAGEMENT ────────────────────────
 function renderMemberMgmt(){
@@ -910,11 +945,28 @@ function renderAdmin(activeMember){
 
 // ─── AUDIT ────────────────────────────────────
 function renderAudit(){
-  const arrRows=data.members.map(m=>{const sav=data[m].contributions.reduce((a,b)=>a+Number(b.amt),0),arr=calcArrearsAndFines(m),debt=getMemberLoanDebt(m);return`<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td><td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td><td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()}</td></tr>`;}).join('');
-  const txRows=data.members.map(mem=>data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">✕</button></td></tr>`).join('')+data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.type==='LOAN'?'Disbursed':'Repay #'+l.loanId}</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`).join('')).join('');
+  // Search filter
+  const sq=(auditSearch||'').toLowerCase();
+  const arrRows=data.members.filter(m=>!sq||m.toLowerCase().includes(sq)).map(m=>{const sav=data[m].contributions.reduce((a,b)=>a+Number(b.amt),0),arr=calcArrearsAndFines(m),debt=getMemberLoanDebt(m);return`<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td><td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td><td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()}</td></tr>`;}).join('');
+  const txRows=data.members.filter(m=>!sq||m.toLowerCase().includes(sq)).map(mem=>data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">✕</button></td></tr>`).join('')+data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.type==='LOAN'?('Loan'+(l.purpose?' — '+l.purpose:'')):'Repay #'+l.loanId}</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`).join('')).join('');
   const sysRows=data.cashIn.map((c,i)=>`<tr><td>SYSTEM</td><td>Cash In</td><td>${c.source}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('C','',${i})">Edit</button><button class="del" onclick="del('C','',${i})">✕</button></td></tr>`).join('')+data.expenses.map((e,i)=>`<tr><td>SYSTEM</td><td>Expense</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('E','',${i})">Edit</button><button class="del" onclick="del('E','',${i})">✕</button></td></tr>`).join('')+data.investments.map((v,i)=>`<tr><td>SYSTEM</td><td>Investment</td><td>${v.reason}</td><td>UGX ${Number(v.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('I','',${i})">Edit</button><button class="del" onclick="del('I','',${i})">✕</button></td></tr>`).join('');
-  return`<div class="card"><div class="card-title">Member Arrears Overview</div><div class="table-wrap"><table><tr><th>Member</th><th>Total Savings</th><th>Arrears + Fines</th><th>Loan Debt</th></tr>${arrRows}</table></div></div>
-  <div class="card"><div class="card-title">Full Transaction Log</div><div class="table-wrap"><table><tr><th>Member</th><th>Type</th><th>Ref</th><th>Amount</th><th>Actions</th></tr>${txRows}${sysRows}</table></div></div>`;
+  // Waiver rows
+  const waiverRows=(data.waivers||[]).filter(w=>!sq||w.member.toLowerCase().includes(sq)||w.month.includes(sq)).map((w,i)=>`<tr><td>${w.member}</td><td>${w.month}</td><td>${w.reason}</td><td>${w.date}</td><td>${w.by||'Admin'}</td><td><button class="del" onclick="delWaiver(${i})">✕</button></td></tr>`).join('');
+  return`<div class="card"><div class="card-title">🔍 Audit Search</div>
+    <input type="text" placeholder="Filter by member name or type…" value="${auditSearch}" oninput="auditSearch=this.value;render()" style="margin-bottom:0">
+  </div>
+  <div class="card"><div class="card-title">Member Arrears Overview</div><div class="table-wrap"><table><tr><th>Member</th><th>Total Savings</th><th>Arrears + Fines</th><th>Loan Debt</th></tr>${arrRows}</table></div></div>
+  <div class="card"><div class="card-title">Full Transaction Log</div><div class="table-wrap"><table><tr><th>Member</th><th>Type</th><th>Ref</th><th>Amount</th><th>Actions</th></tr>${txRows}${sysRows}</table></div></div>
+  <div class="card" style="border:2px solid #2a2a2a"><div class="card-title">🚫 Penalty Waiver Log</div>
+    <p style="font-size:11px;color:#aaa;margin-bottom:12px">Waivers remove penalty charges for a specific member's month. Savings gap still applies.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+      <div style="flex:1;min-width:160px"><label>Member</label><select id="wvMember">${data.members.map(m=>`<option value="${m}">${m}</option>`).join('')}</select></div>
+      <div style="flex:1;min-width:130px"><label>Month</label><input type="month" id="wvMonth" value="${new Date().toISOString().slice(0,7)}" style="margin:0"></div>
+      <div style="flex:2;min-width:200px"><label>Reason</label><input type="text" id="wvReason" placeholder="e.g. Illness, agreed by committee" style="margin:0"></div>
+      <button class="gold" onclick="addWaiver()" style="margin:0;margin-top:20px">Grant Waiver</button>
+    </div>
+    ${waiverRows?`<div class="table-wrap"><table><tr><th>Member</th><th>Month</th><th>Reason</th><th>Date Granted</th><th>By</th><th></th></tr>${waiverRows}</table></div>`:'<p style="color:#aaa;font-size:13px">No waivers granted.</p>'}
+  </div>`;
 }
 
 // ─── MONTHLY REPORT ───────────────────────────
@@ -969,6 +1021,47 @@ function renderMonthlyReport(){
     ${pm.length?`<div class="table-wrap"><table><tr><th>Member</th><th>Paid</th><th>Expected</th><th>Total Shortfall (incl. penalties)</th><th>Status</th></tr>${rows}</table></div>`:'<p style="color:#aaa;font-size:13px">Select a valid period above.</p>'}
   </div>
 
+  <!-- Dividend Calculator -->
+  <div class="card" style="border:2px solid #1B5E20"><div class="card-title">💰 Year-End Dividend Calculator</div>
+    <p style="font-size:12px;color:#888;margin-bottom:12px">Calculates each member's share of interest collected in a given year, proportional to their savings that year. Interest collected = loan repayments received above the original principal.</p>
+    <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
+      <div style="flex:1;min-width:140px"><label>Select Year</label><select onchange="dividendYear=parseInt(this.value);render()">${[2024,2025,2026,2027].map(y=>`<option value="${y}" ${y===dividendYear?'selected':''}>${y}</option>`).join('')}</select></div>
+    </div>
+    ${(()=>{
+      // Total interest collected this year = sum of (repayments above principal) for loans repaid in this year
+      let totalInterestYear=0;
+      const memberSavingsYear={};
+      let totalSavingsYear=0;
+      data.members.forEach(m=>{
+        const ySavings=data[m].contributions.filter(c=>c.month&&c.month.startsWith(String(dividendYear))).reduce((a,b)=>a+Number(b.amt),0);
+        memberSavingsYear[m]=ySavings;totalSavingsYear+=ySavings;
+        // Interest collected this year from this member's loans
+        data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{
+          const principal=Number(loan.amt);
+          const repInYear=data[m].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(idx+1)&&r.date&&r.date.startsWith(String(dividendYear))).reduce((a,r)=>a+Number(r.amt),0);
+          const repAllTime=data[m].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(idx+1)).reduce((a,r)=>a+Number(r.amt),0);
+          // Only count interest portion of repayments in this year
+          const repBefore=repAllTime-repInYear;
+          const interestInYear=Math.max(0,Math.min(repInYear,Math.max(0,repAllTime-principal))-Math.max(0,repBefore-principal));
+          totalInterestYear+=Math.max(0,interestInYear);
+        });
+      });
+      if(totalSavingsYear===0) return `<div class="alert alert-info"><span>ℹ️</span><span>No savings recorded for ${dividendYear}.</span></div>`;
+      const rows=data.members.map(m=>{
+        const share=totalSavingsYear>0?memberSavingsYear[m]/totalSavingsYear:0;
+        const dividend=Math.round(totalInterestYear*share);
+        const pct=(share*100).toFixed(1);
+        return`<tr><td>${m}</td><td>UGX ${memberSavingsYear[m].toLocaleString()}</td><td>${pct}%</td><td style="font-weight:700;color:#2E7D32">UGX ${dividend.toLocaleString()}</td></tr>`;
+      }).join('');
+      return`<div style="background:#f5fff7;border:1px solid #C8E6C9;border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;gap:20px;flex-wrap:wrap">
+        <div><div class="stat-label">Total Interest Collected ${dividendYear}</div><div style="font-weight:700;font-size:1.1rem;color:#2E7D32">UGX ${totalInterestYear.toLocaleString()}</div></div>
+        <div><div class="stat-label">Total Savings (Base) ${dividendYear}</div><div style="font-weight:700;font-size:1.1rem">UGX ${totalSavingsYear.toLocaleString()}</div></div>
+      </div>
+      <div class="table-wrap"><table><tr><th>Member</th><th>Savings in ${dividendYear}</th><th>Share %</th><th>Dividend Entitlement</th></tr>${rows}</table></div>
+      <p style="font-size:10.5px;color:#aaa;margin-top:8px">ℹ️ This is a calculation guide. Record actual dividend payments as expenses in Admin Hub.</p>`;
+    })()}
+  </div>
+
   <!-- All Members Ledger PDF -->
   <div class="card" style="border:2px solid #333"><div class="card-title">📥 All Members Combined Ledger (PDF)</div>
     <p style="font-size:12px;color:#888;margin-bottom:12px">Downloads a combined PDF with every member's individual savings timeline and loan summary — each member on their own page(s). Choose a date range to scope the savings data.</p>
@@ -984,7 +1077,30 @@ function renderMonthlyReport(){
 // ─── SETTINGS ─────────────────────────────────
 function renderSettings(){
   const ph=getPhoto(user.name);
-  return`<div class="card" style="max-width:460px"><div class="card-title">🔐 My Settings</div>
+  const isAdmin=user.name===PRIMARY_ADMIN||user.name===SECONDARY_ADMIN;
+  const curTarget=(data.settings&&data.settings.monthlyTarget)?data.settings.monthlyTarget:100000;
+  const adminSection=isAdmin?`
+    <div class="divider"></div>
+    <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--gold)">⚙️ Admin — SACCO Settings</div>
+
+    <label>Default Monthly Target (UGX)</label>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input type="number" id="newTarget" value="${curTarget}" style="margin:0;flex:1">
+      <button class="gold" onclick="saveMonthlyTarget()" style="margin:0;white-space:nowrap">Save Target</button>
+    </div>
+    <p style="font-size:10.5px;color:#aaa;margin-bottom:14px">ℹ️ This applies to all future months. Historical months (Feb–Jul 2024 = 80K) are preserved.</p>
+
+    <div style="font-weight:700;font-size:13px;margin-bottom:10px">💾 Data Backup & Restore</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="ghost" onclick="downloadBackup()" style="flex:1">📥 Download Backup (JSON)</button>
+      <label style="flex:1;cursor:pointer">
+        <span style="display:block;padding:8px 15px;border:1.5px solid #e5e5e5;border-radius:8px;text-align:center;font-size:12px;font-weight:600;color:#666;background:#fff">📤 Restore from Backup</span>
+        <input type="file" accept=".json" style="display:none" onchange="restoreBackup(event)">
+      </label>
+    </div>
+    <p style="font-size:10.5px;color:#aaa;margin-top:8px">⚠️ Restore overwrites ALL data. Download a backup first.</p>
+  `:'';
+  return`<div class="card" style="max-width:520px"><div class="card-title">🔐 My Settings</div>
     <div style="text-align:center;margin-bottom:18px">
       <div class="photo-preview">${ph?`<img src="${ph}" alt="${user.name}">`:'👤'}</div>
       <div style="font-weight:700;margin-bottom:8px">${user.name}</div>
@@ -997,6 +1113,7 @@ function renderSettings(){
     <label>New PIN</label><input type="password" id="newPin" placeholder="New PIN (min 4 chars)" maxlength="20">
     <label>Confirm New PIN</label><input type="password" id="confPin" placeholder="Re-enter new PIN" maxlength="20">
     <button class="gold full" onclick="changePin()">Update PIN</button>
+    ${adminSection}
   </div>`;
 }
 function uploadMyPhoto(e){const f=e.target.files[0];if(!f)return;showToast("⏳ Compressing…","info");compressPhoto(f,b64=>{if(!data.photos)data.photos={};data.photos[user.name]=b64;saveData();});}
@@ -1035,7 +1152,7 @@ function saveEdit(){
 function postInflow(){
   const m=document.getElementById("mI").value,t=currentInflowType,amt=Number(document.getElementById("amI").value),date=document.getElementById("daMan").value;
   if(!amt||amt<=0){showToast("⚠️ Enter a valid amount","warn");return;}if(!date){showToast("⚠️ Enter a date","warn");return;}
-  if(t==='S'){const mStr=document.getElementById("moI").value;if(data[m].contributions.some(c=>c.month===mStr)){showToast("⚠️ Month already has an entry!","warn");return;}data[m].contributions.push({amt,date,month:mStr});}
+  if(t==='S'){const mStr=document.getElementById("moI").value;data[m].contributions.push({amt,date,month:mStr});}
   else if(t==='R'){const lID=document.getElementById("lID")?document.getElementById("lID").value:null;if(!lID){showToast("⚠️ No loan selected","warn");return;}data[m].loans.push({amt,date,type:'REPAYMENT',loanId:lID});}
   else if(t==='C'){const src=document.getElementById("descIn")?document.getElementById("descIn").value||"Donation":"Donation";data.cashIn.push({amt,date,source:src});}
   saveData();
@@ -1043,7 +1160,7 @@ function postInflow(){
 function postOutflow(){
   const t=document.getElementById("tO").value,amt=Number(document.getElementById("amO").value),desc=document.getElementById("reO").value,m=lastSelectedMember||user.name,date=document.getElementById("daOut").value;
   if(!amt||amt<=0){showToast("⚠️ Enter a valid amount","warn");return;}
-  if(t==='L')data[m].loans.push({amt,date,type:'LOAN'});else if(t==='E')data.expenses.push({amt,reason:desc,date});else if(t==='I')data.investments.push({amt,reason:desc,date});
+  if(t==='L')data[m].loans.push({amt,date,type:'LOAN',purpose:desc});else if(t==='E')data.expenses.push({amt,reason:desc,date});else if(t==='I')data.investments.push({amt,reason:desc,date});
   saveData();
 }
 function del(cat,mem,idx){if(!confirm("Delete this entry?"))return;if(cat==='S')data[mem].contributions.splice(idx,1);else if(cat==='L')data[mem].loans.splice(idx,1);else if(cat==='C')data.cashIn.splice(idx,1);else if(cat==='E')data.expenses.splice(idx,1);else if(cat==='I')data.investments.splice(idx,1);saveData();}
