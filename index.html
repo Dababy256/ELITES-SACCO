@@ -330,9 +330,12 @@ async function loadData(){
     if(data[oN]){data[nN]=data[oN];delete data[oN];data.members=data.members.map(m=>m===oN?nN:m);}
     if(!data.expenses)data.expenses=[];if(!data.investments)data.investments=[];if(!data.cashIn)data.cashIn=[];if(!data.minutes)data.minutes=[];if(!data.photos)data.photos={};
     if(!data.waivers)data.waivers=[];
-    if(!data.settings)data.settings={monthlyTarget:100000,targetOverrides:{}};
+    if(!data.settings)data.settings={monthlyTarget:100000,targetOverrides:{},membershipFee:50000,paymentInfo:''};
+    if(!data.settings.membershipFee)data.settings.membershipFee=50000;
+    if(!data.settings.paymentInfo)data.settings.paymentInfo='';
     if(!data.requests)data.requests=[];
     if(!data.editLog)data.editLog=[];
+    if(!data.membershipFees)data.membershipFees=[]; // {member, amt, date, _fromRequest?}
     const now=new Date();
     reportMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     reportStart="2024-02";reportEnd=reportMonth;allMembersStart="2024-02";allMembersEnd=reportMonth;
@@ -351,6 +354,9 @@ function compressPhoto(file,cb){
   const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const MAX=220;let w=img.width,h=img.height;if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);let q=0.85,b64=c.toDataURL('image/jpeg',q);while(b64.length>MAX_PHOTO_SIZE&&q>0.2){q-=0.1;b64=c.toDataURL('image/jpeg',q);}cb(b64);};img.src=e.target.result;};r.readAsDataURL(file);
 }
 function getPhoto(m){return(data.photos&&data.photos[m])||null;}
+function hasMembershipFeePaid(m){return(data.membershipFees||[]).some(f=>f.member===m);}
+function getMembershipFee(){return(data.settings&&data.settings.membershipFee)?Number(data.settings.membershipFee):50000;}
+function getMembershipFeesTotal(){return(data.membershipFees||[]).reduce((a,f)=>a+Number(f.amt),0);}
 
 // ─── CALCULATIONS ─────────────────────────────
 function getMonthlyTarget(ms){
@@ -437,7 +443,8 @@ function getGlobalStats(){
   const cashIn=data.cashIn.reduce((a,b)=>a+Number(b.amt),0);
   const expenses=data.expenses.reduce((a,b)=>a+Number(b.amt),0);
   const investments=data.investments.reduce((a,b)=>a+Number(b.amt),0);
-  return{grossSavings,interestCollected,cashIn,expenses,investments,activeLoanPrincipal,netCash:(grossSavings+interestCollected+cashIn)-(expenses+activeLoanPrincipal+investments)};
+  const membershipFees=getMembershipFeesTotal();
+  return{grossSavings,interestCollected,cashIn,expenses,investments,activeLoanPrincipal,membershipFees,netCash:(grossSavings+interestCollected+cashIn+membershipFees)-(expenses+activeLoanPrincipal+investments)};
 }
 
 function getMonthRange(s,e){
@@ -513,6 +520,7 @@ function buildSaccoPrintHTML(title,subtitle,rd){
         <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Total Expected (Period)</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right">UGX ${totalExpected.toLocaleString()}</td></tr>
         <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Collection Rate</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right;color:${collectionRate>=80?'#2E7D32':collectionRate>=50?'#E65100':'#C62828'}">${collectionRate}%</td></tr>
         <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Total Outstanding Shortfall</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right;color:#C62828">UGX ${totalShortfall.toLocaleString()}</td></tr>
+        <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Membership Fees Collected</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right;color:#F57F17">UGX ${S.membershipFees.toLocaleString()} <span style="font-size:8pt;color:#888">(${(data.membershipFees||[]).length}/${data.members.length})</span></td></tr>
         <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Active Loans Outstanding</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right">UGX ${tO.toLocaleString()}</td></tr>
         <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">SACCO Net Cash Position</td><td style="border:none;padding:4px 6px;font-size:11pt;font-weight:900;text-align:right;color:#B08D57">UGX ${S.netCash.toLocaleString()}</td></tr>
       </table>
@@ -540,11 +548,12 @@ function buildSaccoPrintHTML(title,subtitle,rd){
   <!-- ════ PAGE 2: FINANCIAL POSITION ════ -->
   <div class="print-page">
     <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section A — Financial Position (All-Time)</div><div class="ph-sub">${title}</div></div>
-    <div class="print-net"><div class="pn-label">Net Cash Position</div><div class="pn-value">UGX ${S.netCash.toLocaleString()}</div><div class="print-formula">= (Gross Savings + Interest Earned + Cash In) − (Expenses + Active Loan Principal + Investments)</div></div>
+    <div class="print-net"><div class="pn-label">Net Cash Position</div><div class="pn-value">UGX ${S.netCash.toLocaleString()}</div><div class="print-formula">= (Gross Savings + Membership Fees + Interest Earned + Cash In) − (Expenses + Active Loan Principal + Investments)</div></div>
     <div class="print-section">
       <h2>1.1 Inflows</h2>
       <div class="print-grid">
         <div class="print-stat"><div class="ps-label">Gross Savings</div><div class="ps-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Membership Fees</div><div class="ps-value" style="color:#F57F17">UGX ${S.membershipFees.toLocaleString()}</div></div>
         <div class="print-stat"><div class="ps-label">Interest Earned</div><div class="ps-value" style="color:#2E7D32">UGX ${S.interestCollected.toLocaleString()}</div></div>
         <div class="print-stat"><div class="ps-label">Cash In / Donations</div><div class="ps-value" style="color:#1565C0">UGX ${S.cashIn.toLocaleString()}</div></div>
       </div>
@@ -597,7 +606,12 @@ function buildSaccoPrintHTML(title,subtitle,rd){
       <p style="font-size:9pt;color:#666;margin-bottom:6px">Total: <strong>UGX ${tI.toLocaleString()}</strong></p>
       <table><tr><th style="width:6%">#</th><th style="width:18%">Date</th><th>Description</th><th style="text-align:right;width:22%">Amount</th></tr>${iRows}</table>
     </div>
-    <div style="margin-top:14mm;background:#fafafa;border:1px solid #ddd;border-radius:4px;padding:14px 18px">
+    <div class="print-section">
+      <h2>D.3 Membership Fees Collected</h2>
+      <p style="font-size:9pt;color:#666;margin-bottom:6px">Total: <strong>UGX ${S.membershipFees.toLocaleString()}</strong> · ${(data.membershipFees||[]).length}/${data.members.length} members paid · Fixed fee: UGX ${getMembershipFee().toLocaleString()}</p>
+      ${(data.membershipFees||[]).length?`<table><tr><th style="width:6%">#</th><th style="width:18%">Date</th><th>Member</th><th style="text-align:right;width:22%">Amount</th></tr>${(data.membershipFees||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')).map((f,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${f.date}</td><td>${f.member}</td><td style="text-align:right">UGX ${Number(f.amt).toLocaleString()}</td></tr>`).join('')}</table>`:'<p style="color:#999;font-size:9pt">No membership fees recorded yet.</p>'}
+    </div>
+    <div style="margin-top:8mm;background:#fafafa;border:1px solid #ddd;border-radius:4px;padding:14px 18px">
       <div style="font-size:9pt;color:#555;font-weight:700;margin-bottom:10px">Authorisation</div>
       <div style="display:flex;gap:18px;margin-top:14px">
         <div style="flex:1"><div style="border-top:1px solid #888;margin-top:30px;padding-top:4px;font-size:8pt;color:#666">Treasurer Signature &amp; Date</div></div>
@@ -812,7 +826,11 @@ function renderDashboard(isAdmin,activeMember){
   let alerts='';
   if(myArrears>0)alerts+=`<div class="alert alert-warn"><span>⚠️</span><span>Arrears &amp; fines: <strong>UGX ${myArrears.toLocaleString()}</strong></span></div>`;
   if(myDebt>0)alerts+=`<div class="alert alert-danger"><span>🔴</span><span>Loan balance: <strong>UGX ${myDebt.toLocaleString()}</strong> (incl. compounded interest)</span></div>`;
-  if(!myArrears&&!myDebt)alerts+=`<div class="alert alert-success"><span>✅</span><span>Fully up to date — no arrears or outstanding loans.</span></div>`;
+  // Membership fee alert
+  if(!hasMembershipFeePaid(activeMember)){
+    alerts+=`<div class="alert alert-warn"><span>💳</span><span>Membership fee outstanding: <strong>UGX ${getMembershipFee().toLocaleString()}</strong> — pay via My Requests tab</span></div>`;
+  }
+  if(!myArrears&&!myDebt&&hasMembershipFeePaid(activeMember))alerts+=`<div class="alert alert-success"><span>✅</span><span>Fully up to date — no arrears, outstanding loans, or unpaid fees.</span></div>`;
   // Countdown banner: days to 10th, only if this month not fully paid
   const _today=new Date(),_curMs=`${_today.getFullYear()}-${String(_today.getMonth()+1).padStart(2,'0')}`;
   const _curPaid=data[activeMember].contributions.filter(c=>c.month===_curMs).reduce((a,b)=>a+Number(b.amt),0);
@@ -844,6 +862,7 @@ function renderDashboard(isAdmin,activeMember){
         <span class="f-pill" style="background:#1B4332;color:#81C784">Savings ${S.grossSavings.toLocaleString()}</span>
         <span class="f-op">+</span><span class="f-pill" style="background:#1A3A1A;color:#A5D6A7">Interest ${S.interestCollected.toLocaleString()}</span>
         <span class="f-op">+</span><span class="f-pill" style="background:#1A3A1A;color:#90CAF9">Cash In ${S.cashIn.toLocaleString()}</span>
+        <span class="f-op">+</span><span class="f-pill" style="background:#2A2A1A;color:#FFD54F">Member Fees ${S.membershipFees.toLocaleString()}</span>
         <span class="f-op" style="color:#555">−</span><span class="f-pill" style="background:#3B1A1A;color:#EF9A9A">Expenses ${S.expenses.toLocaleString()}</span>
         <span class="f-op" style="color:#555">−</span><span class="f-pill" style="background:#3B1A1A;color:#FFCC80">Loans ${S.activeLoanPrincipal.toLocaleString()}</span>
         <span class="f-op" style="color:#555">−</span><span class="f-pill" style="background:#2A1A3B;color:#CE93D8">Invest ${S.investments.toLocaleString()}</span>
@@ -852,6 +871,7 @@ function renderDashboard(isAdmin,activeMember){
     <!-- SACCO Stats -->
     <div class="stat-grid">
       <div class="stat-box"><div class="stat-label">Gross Savings</div><div class="stat-value">UGX ${S.grossSavings.toLocaleString()}</div><div class="stat-sub">All contributions</div></div>
+      <div class="stat-box" style="border-color:#FFD54F"><div class="stat-label">Membership Fees</div><div class="stat-value" style="color:#F57F17">UGX ${S.membershipFees.toLocaleString()}</div><div class="stat-sub">${(data.membershipFees||[]).length}/${data.members.length} paid</div></div>
       <div class="stat-box" style="border-color:#C8E6C9"><div class="stat-label">Interest Earned</div><div class="stat-value" style="color:var(--green)">UGX ${S.interestCollected.toLocaleString()}</div><div class="stat-sub">Cash collected above principal</div></div>
       <div class="stat-box" style="border-color:#BBDEFB"><div class="stat-label">Cash In / Donations</div><div class="stat-value" style="color:var(--blue)">UGX ${S.cashIn.toLocaleString()}</div><div class="stat-sub">External funds</div></div>
       <div class="stat-box" style="border-color:#FFCDD2"><div class="stat-label">Expenses</div><div class="stat-value" style="color:var(--red)">UGX ${S.expenses.toLocaleString()}</div><div class="stat-sub">Total outgoing</div></div>
@@ -1031,8 +1051,26 @@ function renderRequests(isAdmin){
   const myRequests=(data.requests||[]).filter(r=>r.member===user.name).slice().reverse();
   const myActiveLoans=(data[user.name]&&data[user.name].loans)?data[user.name].loans.filter(l=>l.type==='LOAN').map((l,idx)=>({...l,_lid:idx+1})).filter(l=>{const b=calcLoanBalance(l,l._lid,user.name);return b&&!b.isFullyPaid;}):[];
 
+  // Membership fee already paid? → don't offer M option
+  const myFeePaid=hasMembershipFeePaid(user.name);
+  // Already a pending fee request? → don't offer it again
+  const hasPendingFee=(data.requests||[]).some(r=>r.member===user.name&&r.type==='M'&&r.status==='PENDING');
+  // If user had M selected but now ineligible, fall back to S
+  if(requestType==='M'&&(myFeePaid||hasPendingFee))requestType='S';
+
   let formHTML='';
-  if(requestType==='S'){
+  if(requestType==='M'){
+    formHTML=`
+      <div class="alert alert-info" style="margin-bottom:12px"><span>💳</span><span>One-time membership fee: <strong>UGX ${getMembershipFee().toLocaleString()}</strong>. Pay via mobile money or bank, then upload your screenshot below.</span></div>
+      <label>Date of Payment</label>
+      <input type="date" id="rqDate" value="${new Date().toISOString().split('T')[0]}">
+      <label>Upload Screenshot of Transaction</label>
+      <div id="rqScreenshotPrev" style="margin-bottom:8px"></div>
+      <input type="file" accept="image/*" id="rqScreenshot" onchange="previewRequestScreenshot(event)">
+      <label>Optional Note (e.g. transaction reference)</label>
+      <input type="text" id="rqNote" placeholder="MTN ref XYZ123 or any note">
+    `;
+  } else if(requestType==='S'){
     formHTML=`
       <label>Month This Payment is For</label>
       <input type="month" id="rqMonth" value="${new Date().toISOString().slice(0,7)}">
@@ -1074,14 +1112,14 @@ function renderRequests(isAdmin){
   const reqRows=myRequests.length?myRequests.map((r,i)=>{
     const realIdx=data.requests.indexOf(r);
     const sb=r.status==='APPROVED'?'badge-comp':r.status==='REJECTED'?'badge-pend':'badge-part';
-    const typeLbl=r.type==='S'?'💰 Savings':r.type==='R'?'💳 Loan Repayment':'🏦 Loan Request';
+    const typeLbl=r.type==='M'?'💳 Membership Fee':r.type==='S'?'💰 Savings':r.type==='R'?'💳 Loan Repayment':'🏦 Loan Request';
     return`<div style="border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:8px;background:#fafafa">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
         <div><strong style="font-size:13px">${typeLbl}</strong> &nbsp;<small style="color:#888">submitted ${r.submittedAt}</small></div>
         <span class="badge ${sb}">${r.status}</span>
       </div>
       <div style="font-size:12px;color:#555;margin-bottom:4px">
-        ${r.type==='S'?`For month: <strong>${r.month}</strong> · `:''}${r.type==='R'?`Loan #${r.loanId} · `:''}Amount: <strong>UGX ${Number(r.amt).toLocaleString()}</strong>${r.date?` · Paid on: <strong>${r.date}</strong>`:''}
+        ${r.type==='M'?`<strong>Membership Fee</strong> · `:''}${r.type==='S'?`For month: <strong>${r.month}</strong> · `:''}${r.type==='R'?`Loan #${r.loanId} · `:''}Amount: <strong>UGX ${Number(r.amt).toLocaleString()}</strong>${r.date?` · Paid on: <strong>${r.date}</strong>`:''}
       </div>
       ${r.note?`<div style="font-size:12px;color:#666;font-style:italic">"${r.note}"</div>`:''}
       ${r.screenshot?`<button class="ghost sm" style="margin-top:6px" onclick="viewScreenshot(${realIdx})">📷 View Screenshot</button>`:''}
@@ -1091,16 +1129,21 @@ function renderRequests(isAdmin){
     </div>`;
   }).join(''):'<p style="color:#aaa;font-size:13px;padding:8px 0">You have not submitted any requests yet.</p>';
 
+  const payInfo=(data.settings&&data.settings.paymentInfo)||'';
   return`
+    ${payInfo?`<div class="card" style="border:1.5px solid #1565C0;background:#F5F9FF"><div class="card-title" style="color:#1565C0;border-color:#1565C0">📲 SACCO Payment Details</div><div style="font-size:13px;color:#333;line-height:1.7;white-space:pre-wrap">${escapeHTML(payInfo)}</div></div>`:''}
     <div class="card" style="border:2px solid var(--gold)">
       <div class="card-title">📝 Submit a New Request</div>
       <p style="font-size:12px;color:#666;margin-bottom:12px">After making payment via mobile money/bank, submit a request here with proof. Admin will verify and approve.</p>
       <label>Request Type</label>
       <select onchange="requestType=this.value;render()" style="margin-bottom:12px">
+        ${(!myFeePaid&&!hasPendingFee)?`<option value="M" ${requestType==='M'?'selected':''}>💳 Membership Fee Payment (UGX ${getMembershipFee().toLocaleString()})</option>`:''}
         <option value="S" ${requestType==='S'?'selected':''}>💰 Savings Contribution Claim</option>
         <option value="R" ${requestType==='R'?'selected':''}>💳 Loan Repayment Claim</option>
         <option value="L" ${requestType==='L'?'selected':''}>🏦 New Loan Request</option>
       </select>
+      ${myFeePaid?`<div style="background:#f5fff7;border:1px solid #C8E6C9;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:#2E7D32"><strong>✅ Membership fee paid</strong></div>`:''}
+      ${hasPendingFee?`<div style="background:#fffdf5;border:1px solid #FFE082;border-radius:6px;padding:8px 12px;margin-bottom:10px;font-size:11.5px;color:#E65100"><strong>⏳ Membership fee request pending admin approval</strong></div>`:''}
       ${formHTML}
       <button class="gold full" onclick="submitMyRequest()">Submit Request →</button>
     </div>
@@ -1138,15 +1181,23 @@ function previewRequestScreenshot(e){
 
 function submitMyRequest(){
   const t=requestType;
-  const amt=Number((document.getElementById('rqAmt')||{}).value||0);
-  if(!amt||amt<=0){showToast("⚠️ Enter a valid amount","warn");return;}
+  let amt;
+  if(t==='M'){amt=getMembershipFee();}
+  else{amt=Number((document.getElementById('rqAmt')||{}).value||0);if(!amt||amt<=0){showToast("⚠️ Enter a valid amount","warn");return;}}
   const note=((document.getElementById('rqNote')||{}).value||'').trim();
   const req={
     member:user.name,type:t,amt,note,
     submittedAt:new Date().toISOString().split('T')[0],
     status:'PENDING'
   };
-  if(t==='S'){
+  if(t==='M'){
+    if(hasMembershipFeePaid(user.name)){showToast("⚠️ You have already paid your membership fee","warn");return;}
+    if((data.requests||[]).some(r=>r.member===user.name&&r.type==='M'&&r.status==='PENDING')){showToast("⚠️ You already have a pending membership fee request","warn");return;}
+    const date=(document.getElementById('rqDate')||{}).value;
+    if(!date){showToast("⚠️ Enter the payment date","warn");return;}
+    if(!_rqShot){showToast("⚠️ Please upload a screenshot of the payment","warn");return;}
+    req.date=date;req.screenshot=_rqShot;
+  } else if(t==='S'){
     const month=(document.getElementById('rqMonth')||{}).value;
     const date=(document.getElementById('rqDate')||{}).value;
     if(!month||!date){showToast("⚠️ Fill in month and date","warn");return;}
@@ -1196,12 +1247,13 @@ function renderApprovals(){
   const recent=(data.requests||[]).map((r,i)=>({...r,_idx:i})).filter(r=>r.status!=='PENDING').slice(-15).reverse();
 
   const pendingRows=pending.length?pending.map(r=>{
-    const typeLbl=r.type==='S'?'💰 Savings Claim':r.type==='R'?'💳 Loan Repayment':'🏦 Loan Request';
+    const typeLbl=r.type==='M'?'💳 Membership Fee':r.type==='S'?'💰 Savings Claim':r.type==='R'?'💳 Loan Repayment':'🏦 Loan Request';
     return`<div style="border:1.5px solid #FFE082;border-radius:10px;padding:14px;margin-bottom:10px;background:#fffdf5">
       <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
         <div><strong style="font-size:14px">${r.member}</strong> · <span style="color:#666;font-size:12px">${typeLbl}</span><div style="font-size:11px;color:#999;margin-top:2px">Submitted ${r.submittedAt}</div></div>
         <div style="text-align:right">
           <div style="font-weight:800;font-size:1.05rem">UGX ${Number(r.amt).toLocaleString()}</div>
+          ${r.type==='M'?`<div style="font-size:11px;color:#666">One-time fee, paid ${r.date}</div>`:''}
           ${r.type==='S'?`<div style="font-size:11px;color:#666">For month ${r.month}, paid ${r.date}</div>`:''}
           ${r.type==='R'?`<div style="font-size:11px;color:#666">Loan #${r.loanId}, paid ${r.date}</div>`:''}
         </div>
@@ -1216,7 +1268,7 @@ function renderApprovals(){
   }).join(''):'<p style="color:#aaa;font-size:13px;padding:8px 0">No pending requests.</p>';
 
   const recentRows=recent.length?recent.map(r=>{
-    const typeLbl=r.type==='S'?'Savings':r.type==='R'?'Repayment':'Loan';
+    const typeLbl=r.type==='M'?'Member Fee':r.type==='S'?'Savings':r.type==='R'?'Repayment':'Loan';
     const sb=r.status==='APPROVED'?'badge-comp':'badge-pend';
     return`<tr>
       <td>${r.submittedAt}</td>
@@ -1252,7 +1304,9 @@ function closeApproveModal(){approveModal=null;render();}
 function renderApproveModal(){
   const m=approveModal;const r=data.requests[m.idx];if(!r)return'';
   let extraFields='';
-  if(r.type==='S'){
+  if(r.type==='M'){
+    extraFields=`<label>Payment Date</label><input type="date" id="apDate" value="${m.date}">`;
+  } else if(r.type==='S'){
     extraFields=`<label>Month</label><input type="month" id="apMonth" value="${m.month}">
                  <label>Payment Date</label><input type="date" id="apDate" value="${m.date}">`;
   } else if(r.type==='R'){
@@ -1266,7 +1320,7 @@ function renderApproveModal(){
     <div class="modal">
       <button class="modal-close" onclick="closeApproveModal()">✕</button>
       <div style="font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:4px">Approve Request</div>
-      <p style="font-size:12px;color:#888;margin-bottom:14px">${r.member} — ${r.type==='S'?'Savings':r.type==='R'?'Repayment':'Loan Issue'} · You can adjust the amount or date if needed.</p>
+      <p style="font-size:12px;color:#888;margin-bottom:14px">${r.member} — ${r.type==='M'?'Membership Fee':r.type==='S'?'Savings':r.type==='R'?'Repayment':'Loan Issue'} · You can adjust the amount or date if needed.</p>
       <label>Amount (UGX)</label>
       <input type="number" id="apAmt" value="${m.amt}">
       ${extraFields}
@@ -1283,7 +1337,10 @@ function confirmApprove(){
   if(!amt||amt<=0){showToast("⚠️ Invalid amount","warn");return;}
   if(!date){showToast("⚠️ Invalid date","warn");return;}
   const adjusted=(amt!==r.amt||(r.date&&date!==r.date))?` (adjusted from UGX ${Number(r.amt).toLocaleString()})`:'';
-  if(r.type==='S'){
+  if(r.type==='M'){
+    if(hasMembershipFeePaid(r.member)){showToast("⚠️ "+r.member+" already has a membership fee record","warn");return;}
+    data.membershipFees.push({member:r.member,amt,date,_fromRequest:m.idx});
+  } else if(r.type==='S'){
     const month=document.getElementById('apMonth').value;
     if(!month){showToast("⚠️ Pick a month","warn");return;}
     data[r.member].contributions.push({amt,date,month,_fromRequest:m.idx});
@@ -1370,10 +1427,19 @@ function postBulkEntries(){
 // ─── MEMBER MANAGEMENT ────────────────────────
 function renderMemberMgmt(){
   return`<div class="card"><div class="card-title">👥 Members (${data.members.length})</div>
-    ${data.members.map(m=>{const ph=getPhoto(m);return`<div class="member-mgmt-row">
+    ${data.members.map(m=>{
+      const ph=getPhoto(m);
+      const feePaid=hasMembershipFeePaid(m);
+      const feeRec=(data.membershipFees||[]).find(f=>f.member===m);
+      const feeBadge=feePaid?`<span class="badge badge-comp" style="font-size:9.5px">💳 Fee: ✅ ${feeRec.date}</span>`:`<span class="badge badge-pend" style="font-size:9.5px">💳 Fee: ⚠️ Unpaid</span>`;
+      return`<div class="member-mgmt-row">
       <div class="member-mgmt-avatar">${ph?`<img src="${ph}" alt="${m}">`:'👤'}</div>
-      <div style="flex:1"><div style="font-weight:700;font-size:13px">${m}</div><div style="font-size:11px;color:#aaa">Savings: UGX ${data[m].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()}</div></div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px">${m}</div>
+        <div style="font-size:11px;color:#aaa;margin-top:1px">Savings: UGX ${data[m].contributions.reduce((a,b)=>a+Number(b.amt),0).toLocaleString()} ${feeBadge}</div>
+      </div>
       <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+        ${!feePaid?`<button class="edit-btn" onclick="markFeePaid('${m}')" style="background:#F57F17">💳 Mark Fee Paid</button>`:`<button class="ghost sm" onclick="unmarkFeePaid('${m}')" style="font-size:10px;padding:4px 8px">↺ Unpaid</button>`}
         <label style="cursor:pointer"><span class="edit-btn" style="padding:4px 8px;font-size:10px;border-radius:5px;background:#1976D2;color:#fff;font-weight:600;display:inline-block">📷</span><input type="file" accept="image/*" style="display:none" onchange="uploadMemberPhoto(event,'${m}')"></label>
         <button class="edit-btn" onclick="resetMemberPin('${m}')">🔑 PIN</button>
         <button class="del" onclick="removeMember('${m}')">Remove</button>
@@ -1394,6 +1460,17 @@ function uploadMemberPhoto(e,mName){const f=e.target.files[0];if(!f)return;showT
 function addMember(){const name=document.getElementById('newMName').value.trim(),pin=document.getElementById('newMPin').value;if(!name){showToast("⚠️ Enter a full name","warn");return;}if(!pin||pin.length<4){showToast("⚠️ PIN must be ≥ 4 characters","warn");return;}if(data.members.includes(name)){showToast("⚠️ Member already exists","warn");return;}data.members.push(name);data[name]={pin,contributions:[],loans:[]};if(_nmp){if(!data.photos)data.photos={};data.photos[name]=_nmp;_nmp=null;}saveData();}
 function removeMember(mName){if(!confirm(`Remove ${mName}?\n\nThis permanently deletes ALL their data.`))return;data.members=data.members.filter(m=>m!==mName);delete data[mName];if(data.photos)delete data.photos[mName];if(lastSelectedMember===mName)lastSelectedMember=null;saveData();}
 function resetMemberPin(mName){const np=prompt(`New PIN for ${mName} (min 4 chars):`);if(!np)return;if(np.length<4){showToast("⚠️ PIN must be ≥ 4 characters","warn");return;}data[mName].pin=np;saveData();}
+function markFeePaid(mName){
+  if(hasMembershipFeePaid(mName)){showToast("Already marked paid","info");return;}
+  if(!confirm(`Mark ${mName} as having paid the UGX ${getMembershipFee().toLocaleString()} membership fee?`))return;
+  data.membershipFees.push({member:mName,amt:getMembershipFee(),date:new Date().toISOString().split('T')[0]});
+  saveData();
+}
+function unmarkFeePaid(mName){
+  if(!confirm(`Remove the membership fee record for ${mName}? This cannot be undone (record will need re-creating).`))return;
+  data.membershipFees=data.membershipFees.filter(f=>f.member!==mName);
+  saveData();
+}
 
 // ─── ADMIN HUB ────────────────────────────────
 function renderAdmin(activeMember){
@@ -1407,7 +1484,7 @@ function renderAdmin(activeMember){
         :currentInflowType==='S'?`<label>Month</label><input type="month" id="moI" value="${new Date().toISOString().slice(0,7)}">`
         :`<label>Description</label><input type="text" id="descIn" placeholder="e.g. Donation from sponsor">`}
         <label>Date</label><input type="date" id="daMan" value="${new Date().toISOString().split('T')[0]}">
-        <label>Amount (UGX)</label><input type="number" id="amI" placeholder="Enter amount">
+        <label>Amount (UGX)</label><input type="number" id="amI" placeholder="${currentInflowType==='M'?getMembershipFee():'Enter amount'}" value="${currentInflowType==='M'?getMembershipFee():''}">
         <button class="gold full" onclick="postInflow()">Post Inflow ↗</button>
       </div>
       <div><div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--red)">📤 Post Outflow <span style="font-size:10px;color:var(--gold);float:right">Next: Loan #${nextLoanId}</span></div>
@@ -1603,7 +1680,18 @@ function renderSettings(){
       <input type="number" id="newTarget" value="${curTarget}" style="margin:0;flex:1">
       <button class="gold" onclick="saveMonthlyTarget()" style="margin:0;white-space:nowrap">Save Target</button>
     </div>
-    <p style="font-size:10.5px;color:#aaa;margin-bottom:14px">ℹ️ This applies to all future months. Historical months (Feb–Jul 2024 = 80K) are preserved.</p>
+    <p style="font-size:10.5px;color:#aaa;margin-bottom:14px">ℹ️ Applies to all future months. Historical months (Feb–Jul 2024 = 80K) are preserved.</p>
+
+    <label>Membership Fee (UGX, one-time)</label>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <input type="number" id="newFee" value="${(data.settings&&data.settings.membershipFee)||50000}" style="margin:0;flex:1">
+      <button class="gold" onclick="saveMembershipFee()" style="margin:0;white-space:nowrap">Save Fee</button>
+    </div>
+    <p style="font-size:10.5px;color:#aaa;margin-bottom:14px">ℹ️ Existing fee records are not affected — only new payments use the new amount.</p>
+
+    <label>SACCO Payment Details (shown to all members on My Requests page)</label>
+    <textarea id="newPayInfo" placeholder="e.g.\nMTN MoMo: 0700-XXX-XXX (Treasurer Name)\nAirtel Money: 0750-XXX-XXX\nBank: Stanbic Bank, Acc 9030012345678\n\nUse your full name as reference." style="min-height:100px;margin-bottom:6px">${(data.settings&&data.settings.paymentInfo)||''}</textarea>
+    <button class="gold full" onclick="savePaymentInfo()" style="margin-bottom:14px">Save Payment Details</button>
 
     <div style="font-weight:700;font-size:13px;margin-bottom:10px">💾 Data Backup & Restore</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1686,6 +1774,10 @@ function postInflow(){
   if(!amt||amt<=0){showToast("⚠️ Enter a valid amount","warn");return;}if(!date){showToast("⚠️ Enter a date","warn");return;}
   if(t==='S'){const mStr=document.getElementById("moI").value;data[m].contributions.push({amt,date,month:mStr});}
   else if(t==='R'){const lID=document.getElementById("lID")?document.getElementById("lID").value:null;if(!lID){showToast("⚠️ No loan selected","warn");return;}data[m].loans.push({amt,date,type:'REPAYMENT',loanId:lID});}
+  else if(t==='M'){
+    if(hasMembershipFeePaid(m)){if(!confirm(m+" already has a membership fee on record. Post another? (will appear as duplicate)"))return;}
+    data.membershipFees.push({member:m,amt,date});
+  }
   else if(t==='C'){const src=document.getElementById("descIn")?document.getElementById("descIn").value||"Donation":"Donation";data.cashIn.push({amt,date,source:src});}
   saveData();
 }
