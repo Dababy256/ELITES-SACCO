@@ -311,6 +311,11 @@ let allMembersStart="",allMembersEnd="";
 let expandedMinutes={};
 let auditSearch="";
 let dividendYear=new Date().getFullYear();
+let requestType="S"; // member-side: S=savings claim, R=repayment claim, L=loan request
+let viewingScreenshot=null;
+let approveModal=null; // {requestIdx, amt, date, ...}
+let bulkMonth=new Date().toISOString().slice(0,7);
+let bulkDate=new Date().toISOString().split('T')[0];
 
 // ─── SIDEBAR MOBILE ───────────────────────────
 function toggleSidebar(){const sb=document.getElementById('sidebar'),ov=document.getElementById('sbOverlay');if(sb){sb.classList.toggle('open');ov.classList.toggle('show');}}
@@ -326,6 +331,8 @@ async function loadData(){
     if(!data.expenses)data.expenses=[];if(!data.investments)data.investments=[];if(!data.cashIn)data.cashIn=[];if(!data.minutes)data.minutes=[];if(!data.photos)data.photos={};
     if(!data.waivers)data.waivers=[];
     if(!data.settings)data.settings={monthlyTarget:100000,targetOverrides:{}};
+    if(!data.requests)data.requests=[];
+    if(!data.editLog)data.editLog=[];
     const now=new Date();
     reportMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     reportStart="2024-02";reportEnd=reportMonth;allMembersStart="2024-02";allMembersEnd=reportMonth;
@@ -443,12 +450,21 @@ function getMonthRange(s,e){
 function buildReportData(months){
   let savingsInRange=0;
   const memberRows=data.members.map(m=>{
-    const paid=months.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
+    let paid=0,expected=0,shortfall=0;let mC=0,mP=0,mN=0;
+    months.forEach(ms=>{
+      const monthPaid=data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0);
+      const monthTarget=getMonthlyTarget(ms);
+      paid+=monthPaid;expected+=monthTarget;
+      shortfall+=Math.max(0,monthTarget-monthPaid)+calcMonthPenalty(m,ms);
+      if(monthPaid>=monthTarget)mC++;else if(monthPaid>0)mP++;else mN++;
+    });
     savingsInRange+=paid;
-    const expected=months.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
-    const trueShortfall=calcArrearsAndFines(m);
-    const status=paid>=expected?'COMPLETE':paid>0?'PARTIAL':'PENDING';
-    return{name:m,paid,expected,trueShortfall,status};
+    let status;
+    if(months.length===0)status='PENDING';
+    else if(mC===months.length)status='COMPLETE';
+    else if(mC===0&&mP===0)status='PENDING';
+    else status='PARTIAL';
+    return{name:m,paid,expected,trueShortfall:shortfall,status,monthsComplete:mC,monthsPartial:mP,monthsPending:mN};
   });
   const S=getGlobalStats();
   const loanRows=[];
@@ -457,36 +473,138 @@ function buildReportData(months){
 }
 
 function buildSaccoPrintHTML(title,subtitle,rd){
-  const{S,memberRows,loanRows,savingsInRange}=rd;
+  const{S,memberRows,loanRows,savingsInRange,months}=rd;
   const gen=new Date().toLocaleString('en-UG',{dateStyle:'full',timeStyle:'short'});
-  const mRows=memberRows.map(r=>{const bc=r.status==='COMPLETE'?'badge-comp':r.status==='PARTIAL'?'badge-part':'badge-pend';return`<tr><td>${r.name}</td><td>UGX ${r.paid.toLocaleString()}</td><td>UGX ${r.expected.toLocaleString()}</td><td style="color:#C62828;font-weight:700">UGX ${r.trueShortfall.toLocaleString()}</td><td><span class="badge ${bc}">${r.status}</span></td></tr>`;}).join('');
-  const lRows=loanRows.length?loanRows.map(r=>`<tr><td>${r.member}</td><td>#${r.loanId}</td><td>${r.date}</td><td>UGX ${r.principal.toLocaleString()}</td><td>UGX ${r.totalRepaid.toLocaleString()}</td><td>UGX ${r.interestAccrued.toLocaleString()}</td><td style="font-weight:700;color:#C62828">UGX ${r.outstanding.toLocaleString()}</td><td>${r.isOverdue?'<span class="badge badge-pend">OVERDUE</span>':'<span class="badge badge-comp">'+r.loanStatus+'</span>'}</td></tr>`).join(''):'<tr><td colspan="8" style="text-align:center;color:#999">No active loans</td></tr>';
-  const eRows=data.expenses.length?data.expenses.map(e=>`<tr><td>${e.date}</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#999">None</td></tr>';
-  const iRows=data.investments.length?data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td>UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:#999">None</td></tr>';
+  const completeC=memberRows.filter(r=>r.status==='COMPLETE').length;
+  const partialC=memberRows.filter(r=>r.status==='PARTIAL').length;
+  const pendingC=memberRows.filter(r=>r.status==='PENDING').length;
+  const totalShortfall=memberRows.reduce((a,r)=>a+r.trueShortfall,0);
+  const totalExpected=memberRows.reduce((a,r)=>a+r.expected,0);
+  const collectionRate=totalExpected>0?Math.round((savingsInRange/totalExpected)*100):0;
+
+  const mRows=memberRows.map((r,i)=>{
+    const bc=r.status==='COMPLETE'?'badge-comp':r.status==='PARTIAL'?'badge-part':'badge-pend';
+    const monthBreakdown=months.length>1?` <span style="font-size:7pt;color:#888">(${r.monthsComplete}/${months.length} met)</span>`:'';
+    return`<tr><td style="text-align:center">${i+1}</td><td>${r.name}${monthBreakdown}</td><td style="text-align:right">UGX ${r.paid.toLocaleString()}</td><td style="text-align:right">UGX ${r.expected.toLocaleString()}</td><td style="text-align:right;color:#C62828;font-weight:700">UGX ${r.trueShortfall.toLocaleString()}</td><td style="text-align:center"><span class="badge ${bc}">${r.status}</span></td></tr>`;
+  }).join('');
+
+  const lRows=loanRows.length?loanRows.map((r,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${r.member}</td><td>#${r.loanId}</td><td>${r.date}</td><td style="text-align:right">UGX ${r.principal.toLocaleString()}</td><td style="text-align:right">UGX ${r.totalRepaid.toLocaleString()}</td><td style="text-align:right">UGX ${r.interestAccrued.toLocaleString()}</td><td style="text-align:right;font-weight:700;color:#C62828">UGX ${r.outstanding.toLocaleString()}</td><td style="text-align:center">${r.isOverdue?'<span class="badge badge-pend">OVERDUE</span>':'<span class="badge badge-comp">'+r.loanStatus+'</span>'}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:#999">No active loans</td></tr>';
+
+  const eRows=data.expenses.length?data.expenses.map((e,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${e.date}</td><td>${e.reason}</td><td style="text-align:right">UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center;color:#999">None recorded</td></tr>';
+  const iRows=data.investments.length?data.investments.map((i,idx)=>`<tr><td style="text-align:center">${idx+1}</td><td>${i.date}</td><td>${i.reason}</td><td style="text-align:right">UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center;color:#999">None recorded</td></tr>';
   const tE=data.expenses.reduce((a,b)=>a+Number(b.amt),0),tI=data.investments.reduce((a,b)=>a+Number(b.amt),0),tO=loanRows.reduce((a,r)=>a+r.outstanding,0);
-  return`<div class="print-page">
-    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">${title}</div><div class="ph-sub">${subtitle}</div><div class="ph-sub">Generated: ${gen}</div></div>
-    <div class="print-net"><div class="pn-label">Net Cash Position</div><div class="pn-value">UGX ${S.netCash.toLocaleString()}</div><div class="print-formula">(Gross Savings + Interest Earned + Cash In) − (Expenses + Active Loan Principal + Investments)</div></div>
-    <div class="print-section"><h2>Financial Summary</h2><div class="print-grid">
-      <div class="print-stat"><div class="ps-label">Gross Savings</div><div class="ps-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
-      <div class="print-stat"><div class="ps-label">Interest Earned</div><div class="ps-value" style="color:#2E7D32">UGX ${S.interestCollected.toLocaleString()}</div></div>
-      <div class="print-stat"><div class="ps-label">Cash In</div><div class="ps-value" style="color:#1565C0">UGX ${S.cashIn.toLocaleString()}</div></div>
-      <div class="print-stat"><div class="ps-label">Expenses</div><div class="ps-value" style="color:#C62828">UGX ${S.expenses.toLocaleString()}</div></div>
-      <div class="print-stat"><div class="ps-label">Active Loan Principal</div><div class="ps-value" style="color:#B08D57">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
-      <div class="print-stat"><div class="ps-label">Investments</div><div class="ps-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
-    </div></div>
-    <div class="print-section"><h2>Member Savings — ${title}</h2>
-      <p style="font-size:7.5pt;color:#666;margin-bottom:5px">Period: <strong>UGX ${savingsInRange.toLocaleString()}</strong>. Shortfall includes penalties. Partial payments do not exempt from penalty.</p>
-      <table><tr><th>Member</th><th>Paid</th><th>Expected</th><th>Shortfall (incl. penalties)</th><th>Status</th></tr>${mRows}</table>
-    </div>
-    <div class="print-footer">ELITES SACCO — Confidential — Page 1 of 2</div>
-  </div>
+
+  return`
+  <!-- ════ PAGE 1: COVER ════ -->
   <div class="print-page">
-    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">${title} — Loans, Expenses & Investments</div></div>
-    <div class="print-section"><h2>Active Loan Portfolio</h2><p style="font-size:7.5pt;color:#666;margin-bottom:5px">Outstanding: <strong>UGX ${tO.toLocaleString()}</strong>. Status: OUTSTANDING = no payments; PARTIAL = some paid; PAID = cleared.</p><table><tr><th>Member</th><th>Loan</th><th>Issued</th><th>Principal</th><th>Repaid</th><th>Interest</th><th>Outstanding</th><th>Status</th></tr>${lRows}</table></div>
-    <div class="print-section"><h2>Expenses</h2><p style="font-size:7.5pt;color:#666;margin-bottom:5px">Total: <strong>UGX ${tE.toLocaleString()}</strong></p><table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${eRows}</table></div>
-    <div class="print-section"><h2>Investments</h2><p style="font-size:7.5pt;color:#666;margin-bottom:5px">Total: <strong>UGX ${tI.toLocaleString()}</strong></p><table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${iRows}</table></div>
-    <div class="print-footer">ELITES SACCO — Page 2 of 2 | Printed: ${gen}</div>
+    <div style="text-align:center;padding-top:30mm">
+      <div style="font-family:'Playfair Display',serif;font-size:36pt;color:#B08D57;font-weight:900;letter-spacing:3px">ELITES SACCO</div>
+      <div style="font-size:10pt;color:#888;letter-spacing:2px;text-transform:uppercase;margin-top:4px">Member Savings &amp; Credit Cooperative</div>
+      <div style="border-top:2px solid #B08D57;width:60mm;margin:20px auto"></div>
+      <div style="font-size:18pt;font-weight:700;color:#111;margin-top:12mm">${title}</div>
+      <div style="font-size:11pt;color:#666;margin-top:6px">${subtitle}</div>
+    </div>
+    <div style="margin-top:30mm;background:#fafafa;border:2px solid #B08D57;border-radius:8px;padding:14px 18px">
+      <div style="font-size:9pt;color:#888;text-transform:uppercase;font-weight:700;margin-bottom:8px;letter-spacing:1px">Report at a Glance</div>
+      <table style="width:100%;border:none">
+        <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Reporting Period</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right">${months.length} month${months.length!==1?'s':''}</td></tr>
+        <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Total Members</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right">${memberRows.length}</td></tr>
+        <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Total Savings Collected (Period)</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right">UGX ${savingsInRange.toLocaleString()}</td></tr>
+        <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Total Expected (Period)</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right">UGX ${totalExpected.toLocaleString()}</td></tr>
+        <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Collection Rate</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right;color:${collectionRate>=80?'#2E7D32':collectionRate>=50?'#E65100':'#C62828'}">${collectionRate}%</td></tr>
+        <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Total Outstanding Shortfall</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right;color:#C62828">UGX ${totalShortfall.toLocaleString()}</td></tr>
+        <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">Active Loans Outstanding</td><td style="border:none;padding:4px 6px;font-size:10pt;font-weight:700;text-align:right">UGX ${tO.toLocaleString()}</td></tr>
+        <tr style="border:none"><td style="border:none;padding:4px 6px;font-size:10pt;color:#555">SACCO Net Cash Position</td><td style="border:none;padding:4px 6px;font-size:11pt;font-weight:900;text-align:right;color:#B08D57">UGX ${S.netCash.toLocaleString()}</td></tr>
+      </table>
+    </div>
+    <div style="margin-top:10mm">
+      <div style="font-size:9pt;color:#888;text-transform:uppercase;font-weight:700;margin-bottom:8px;letter-spacing:1px">Member Status Breakdown</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div style="flex:1;min-width:30%;border:1px solid #C8E6C9;background:#f5fff7;padding:10px 12px;border-radius:6px"><div style="font-size:8pt;color:#2E7D32;font-weight:700;text-transform:uppercase">Complete</div><div style="font-size:18pt;font-weight:900;color:#2E7D32">${completeC}</div><div style="font-size:8pt;color:#888">members</div></div>
+        <div style="flex:1;min-width:30%;border:1px solid #FFE082;background:#fffdf5;padding:10px 12px;border-radius:6px"><div style="font-size:8pt;color:#E65100;font-weight:700;text-transform:uppercase">Partial</div><div style="font-size:18pt;font-weight:900;color:#E65100">${partialC}</div><div style="font-size:8pt;color:#888">members</div></div>
+        <div style="flex:1;min-width:30%;border:1px solid #FFCDD2;background:#fff8f8;padding:10px 12px;border-radius:6px"><div style="font-size:8pt;color:#C62828;font-weight:700;text-transform:uppercase">Pending</div><div style="font-size:18pt;font-weight:900;color:#C62828">${pendingC}</div><div style="font-size:8pt;color:#888">members</div></div>
+      </div>
+    </div>
+    <div style="margin-top:10mm;background:#f5f5f5;border-left:3px solid #888;padding:10px 14px;border-radius:0 4px 4px 0">
+      <div style="font-size:9pt;color:#555;font-weight:700;margin-bottom:5px">📖 Status Definitions</div>
+      <div style="font-size:8.5pt;color:#666;line-height:1.6">
+        <strong style="color:#2E7D32">COMPLETE</strong> — Every month in the selected period was paid in full.<br>
+        <strong style="color:#E65100">PARTIAL</strong> — At least one month received some payment, but not every month met its full target.<br>
+        <strong style="color:#C62828">PENDING</strong> — No payment was made in any month of the selected period.<br>
+        <strong>SHORTFALL</strong> — Sum of unpaid contribution gap plus any penalty charges (UGX 5,000 per week late, max 15,000 per month). Waived months excluded.
+      </div>
+    </div>
+    <div class="print-footer" style="position:absolute;bottom:14mm;left:14mm;right:14mm">ELITES SACCO — Confidential | Generated ${gen} | Page 1</div>
+  </div>
+
+  <!-- ════ PAGE 2: FINANCIAL POSITION ════ -->
+  <div class="print-page">
+    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section A — Financial Position (All-Time)</div><div class="ph-sub">${title}</div></div>
+    <div class="print-net"><div class="pn-label">Net Cash Position</div><div class="pn-value">UGX ${S.netCash.toLocaleString()}</div><div class="print-formula">= (Gross Savings + Interest Earned + Cash In) − (Expenses + Active Loan Principal + Investments)</div></div>
+    <div class="print-section">
+      <h2>1.1 Inflows</h2>
+      <div class="print-grid">
+        <div class="print-stat"><div class="ps-label">Gross Savings</div><div class="ps-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Interest Earned</div><div class="ps-value" style="color:#2E7D32">UGX ${S.interestCollected.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Cash In / Donations</div><div class="ps-value" style="color:#1565C0">UGX ${S.cashIn.toLocaleString()}</div></div>
+      </div>
+    </div>
+    <div class="print-section">
+      <h2>1.2 Outflows / Encumbered Funds</h2>
+      <div class="print-grid">
+        <div class="print-stat"><div class="ps-label">Total Expenses</div><div class="ps-value" style="color:#C62828">UGX ${S.expenses.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Active Loan Principal</div><div class="ps-value" style="color:#B08D57">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
+        <div class="print-stat"><div class="ps-label">Investments</div><div class="ps-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
+      </div>
+    </div>
+    <div class="print-footer">ELITES SACCO — Confidential | Page 2</div>
+  </div>
+
+  <!-- ════ PAGE 3: MEMBER SAVINGS ════ -->
+  <div class="print-page">
+    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section B — Member Savings Status</div><div class="ph-sub">${title}</div></div>
+    <p style="font-size:9pt;color:#666;margin-bottom:8px">Status reflects the SELECTED PERIOD only. A member is COMPLETE only if every month in the period was fully paid. Shortfall = period gap + period penalty charges.</p>
+    <table>
+      <tr><th style="width:8%">#</th><th>Member Name</th><th style="text-align:right">Amount Paid</th><th style="text-align:right">Expected</th><th style="text-align:right">Shortfall (incl. penalty)</th><th style="text-align:center">Status</th></tr>
+      ${mRows}
+      <tr style="background:#f0f0f0!important;font-weight:700"><td colspan="2" style="text-align:right">TOTALS</td><td style="text-align:right">UGX ${savingsInRange.toLocaleString()}</td><td style="text-align:right">UGX ${totalExpected.toLocaleString()}</td><td style="text-align:right;color:#C62828">UGX ${totalShortfall.toLocaleString()}</td><td style="text-align:center">${completeC}/${memberRows.length}</td></tr>
+    </table>
+    <div class="print-footer">ELITES SACCO — Confidential | Page 3</div>
+  </div>
+
+  <!-- ════ PAGE 4: LOANS ════ -->
+  <div class="print-page">
+    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section C — Active Loan Portfolio</div><div class="ph-sub">${title}</div></div>
+    <p style="font-size:9pt;color:#666;margin-bottom:8px">Total outstanding: <strong>UGX ${tO.toLocaleString()}</strong>. Interest: 5% applied immediately on issue, then compounds on each exact monthly anniversary.</p>
+    <p style="font-size:8.5pt;color:#777;margin-bottom:8px"><strong>Status key:</strong> OUTSTANDING — no repayments yet · PARTIAL — some repayments made, balance remains · PAID — fully cleared · OVERDUE — flagged additionally when 1+ anniversary passed with no payments.</p>
+    <table>
+      <tr><th style="width:6%">#</th><th>Member</th><th>Loan</th><th>Issued</th><th style="text-align:right">Principal</th><th style="text-align:right">Repaid</th><th style="text-align:right">Interest</th><th style="text-align:right">Outstanding</th><th style="text-align:center">Status</th></tr>
+      ${lRows}
+    </table>
+    <div class="print-footer">ELITES SACCO — Confidential | Page 4</div>
+  </div>
+
+  <!-- ════ PAGE 5: EXPENSES & INVESTMENTS ════ -->
+  <div class="print-page">
+    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section D — Expenses &amp; Investments</div><div class="ph-sub">${title}</div></div>
+    <div class="print-section">
+      <h2>D.1 Expenses</h2>
+      <p style="font-size:9pt;color:#666;margin-bottom:6px">Total: <strong>UGX ${tE.toLocaleString()}</strong></p>
+      <table><tr><th style="width:6%">#</th><th style="width:18%">Date</th><th>Description</th><th style="text-align:right;width:22%">Amount</th></tr>${eRows}</table>
+    </div>
+    <div class="print-section">
+      <h2>D.2 Investments</h2>
+      <p style="font-size:9pt;color:#666;margin-bottom:6px">Total: <strong>UGX ${tI.toLocaleString()}</strong></p>
+      <table><tr><th style="width:6%">#</th><th style="width:18%">Date</th><th>Description</th><th style="text-align:right;width:22%">Amount</th></tr>${iRows}</table>
+    </div>
+    <div style="margin-top:14mm;background:#fafafa;border:1px solid #ddd;border-radius:4px;padding:14px 18px">
+      <div style="font-size:9pt;color:#555;font-weight:700;margin-bottom:10px">Authorisation</div>
+      <div style="display:flex;gap:18px;margin-top:14px">
+        <div style="flex:1"><div style="border-top:1px solid #888;margin-top:30px;padding-top:4px;font-size:8pt;color:#666">Treasurer Signature &amp; Date</div></div>
+        <div style="flex:1"><div style="border-top:1px solid #888;margin-top:30px;padding-top:4px;font-size:8pt;color:#666">Chairperson Signature &amp; Date</div></div>
+      </div>
+    </div>
+    <div class="print-footer" style="margin-top:8mm"><strong>END OF REPORT</strong> · ELITES SACCO · Generated ${gen}</div>
   </div>`;
 }
 
@@ -587,23 +705,29 @@ function render(){
   const activeMember=(isAdmin&&lastSelectedMember)?lastSelectedMember:user.name;
   const ph=getPhoto(user.name);
 
+  const pendingCount=(data.requests||[]).filter(r=>r.status==='PENDING').length;
   const adminNav=isAdmin?`
     <div class="sb-section">Admin</div>
+    <div class="sb-item ${activeTab==='approvals'?'active':''}" onclick="switchTab('approvals')"><span class="sb-item-icon">✅</span>Approvals${pendingCount?` <span style="background:#FF1744;color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:800;margin-left:4px">${pendingCount}</span>`:''}</div>
     <div class="sb-item ${activeTab==='admin'?'active':''}" onclick="switchTab('admin')"><span class="sb-item-icon">⚙️</span>Admin Hub</div>
+    <div class="sb-item ${activeTab==='bulk'?'active':''}" onclick="switchTab('bulk')"><span class="sb-item-icon">📋</span>Bulk Entry</div>
     <div class="sb-item ${activeTab==='members'?'active':''}" onclick="switchTab('members')"><span class="sb-item-icon">👥</span>Members</div>
     <div class="sb-item ${activeTab==='audit'?'active':''}" onclick="switchTab('audit')"><span class="sb-item-icon">🔍</span>Audit</div>
     <div class="sb-item ${activeTab==='monthly'?'active':''}" onclick="switchTab('monthly')"><span class="sb-item-icon">📅</span>Reports</div>`:'';
 
   let content='';
-  if      (activeTab==='dashboard')         content=renderDashboard(isAdmin,activeMember);
-  else if (activeTab==='ledger')            content=renderLedger(isAdmin,activeMember);
-  else if (activeTab==='activity')          content=renderActivity();
-  else if (activeTab==='minutes')           content=renderMinutes(isAdmin);
-  else if (activeTab==='admin'  &&isAdmin)  content=renderAdmin(activeMember);
-  else if (activeTab==='members'&&isAdmin)  content=renderMemberMgmt();
-  else if (activeTab==='audit'  &&isAdmin)  content=renderAudit();
-  else if (activeTab==='monthly'&&isAdmin)  content=renderMonthlyReport();
-  else if (activeTab==='settings')          content=renderSettings();
+  if      (activeTab==='dashboard')          content=renderDashboard(isAdmin,activeMember);
+  else if (activeTab==='ledger')             content=renderLedger(isAdmin,activeMember);
+  else if (activeTab==='requests')           content=renderRequests(isAdmin);
+  else if (activeTab==='activity')           content=renderActivity();
+  else if (activeTab==='minutes')            content=renderMinutes(isAdmin);
+  else if (activeTab==='approvals'&&isAdmin) content=renderApprovals();
+  else if (activeTab==='admin'    &&isAdmin) content=renderAdmin(activeMember);
+  else if (activeTab==='bulk'     &&isAdmin) content=renderBulkEntry();
+  else if (activeTab==='members'  &&isAdmin) content=renderMemberMgmt();
+  else if (activeTab==='audit'    &&isAdmin) content=renderAudit();
+  else if (activeTab==='monthly'  &&isAdmin) content=renderMonthlyReport();
+  else if (activeTab==='settings')           content=renderSettings();
 
   const tabLabels={dashboard:'Dashboard',ledger:'Ledger',activity:'SACCO Activity',minutes:'Minutes',admin:'Admin Hub',members:'Members',audit:'Audit',monthly:'Reports',settings:'Settings'};
 
@@ -618,6 +742,7 @@ function render(){
         <div class="sb-section">Main</div>
         <div class="sb-item ${activeTab==='dashboard'?'active':''}" onclick="switchTab('dashboard')"><span class="sb-item-icon">📊</span>Dashboard</div>
         <div class="sb-item ${activeTab==='ledger'?'active':''}" onclick="switchTab('ledger')"><span class="sb-item-icon">📒</span>My Ledger</div>
+        <div class="sb-item ${activeTab==='requests'?'active':''}" onclick="switchTab('requests')"><span class="sb-item-icon">📝</span>My Requests${(()=>{const myPending=(data.requests||[]).filter(r=>r.member===user.name&&r.status==='PENDING').length;return myPending?` <span style="background:var(--gold);color:#111;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:800;margin-left:4px">${myPending}</span>`:'';})()}</div>
         <div class="sb-item ${activeTab==='activity'?'active':''}" onclick="switchTab('activity')"><span class="sb-item-icon">🏦</span>SACCO Activity</div>
         <div class="sb-item ${activeTab==='minutes'?'active':''}" onclick="switchTab('minutes')"><span class="sb-item-icon">📋</span>Minutes</div>
         <div class="sb-item ${activeTab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="sb-item-icon">🔐</span>Settings</div>
@@ -834,7 +959,21 @@ function renderLedger(isAdmin,activeMember){
           data[activeMember].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid)).map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:var(--green)">UGX ${Number(r.amt).toLocaleString()}</td><td>—</td></tr>`).join('');
         }).join('')}
       </table></div>`:''}
-    </div>`;
+    </div>
+    ${(()=>{
+      const myLog=(data.editLog||[]).filter(e=>e.member===activeMember).slice().reverse().slice(0,15);
+      if(!myLog.length)return '';
+      return`<div class="card"><div class="card-title">🔍 Recent Changes to My Records</div>
+        <p style="font-size:11px;color:#aaa;margin-bottom:10px">Last 15 edits or deletions affecting your records, for full transparency.</p>
+        <div class="table-wrap"><table><tr><th>When</th><th>Admin</th><th>Action</th><th>Category</th><th>What Changed</th></tr>
+          ${myLog.map(e=>{
+            const w=new Date(e.when).toLocaleString('en-UG',{dateStyle:'short',timeStyle:'short'});
+            const ba=e.action==='DELETE'?`<span style="color:#C62828;font-size:10.5px">DELETED: ${escapeHTML(e.before||'').slice(0,90)}</span>`:`<span style="font-size:10.5px;color:#888">${escapeHTML(e.before||'').slice(0,70)}</span><br><span style="font-size:10.5px;color:#1565C0">→ ${escapeHTML(e.after||'').slice(0,70)}</span>`;
+            return`<tr><td>${w}</td><td>${e.by}</td><td><span class="badge ${e.action==='DELETE'?'badge-pend':'badge-info'}">${e.action}</span></td><td>${e.category}</td><td>${ba}</td></tr>`;
+          }).join('')}
+        </table></div>
+      </div>`;
+    })()}`;
 }
 
 // ─── ACTIVITY ─────────────────────────────────
@@ -886,6 +1025,347 @@ function addWaiver(){
   saveData();
 }
 function delWaiver(i){if(!confirm("Remove this waiver? Penalty will be reinstated."))return;data.waivers.splice(i,1);saveData();}
+
+// ─── MY REQUESTS (member submits) ─────────────
+function renderRequests(isAdmin){
+  const myRequests=(data.requests||[]).filter(r=>r.member===user.name).slice().reverse();
+  const myActiveLoans=(data[user.name]&&data[user.name].loans)?data[user.name].loans.filter(l=>l.type==='LOAN').map((l,idx)=>({...l,_lid:idx+1})).filter(l=>{const b=calcLoanBalance(l,l._lid,user.name);return b&&!b.isFullyPaid;}):[];
+
+  let formHTML='';
+  if(requestType==='S'){
+    formHTML=`
+      <label>Month This Payment is For</label>
+      <input type="month" id="rqMonth" value="${new Date().toISOString().slice(0,7)}">
+      <label>Amount Paid (UGX)</label>
+      <input type="number" id="rqAmt" placeholder="e.g. 100000">
+      <label>Date of Payment</label>
+      <input type="date" id="rqDate" value="${new Date().toISOString().split('T')[0]}">
+      <label>Upload Screenshot of Transaction (MTN/Airtel/Bank)</label>
+      <div id="rqScreenshotPrev" style="margin-bottom:8px"></div>
+      <input type="file" accept="image/*" id="rqScreenshot" onchange="previewRequestScreenshot(event)">
+      <label>Optional Note (e.g. transaction reference)</label>
+      <input type="text" id="rqNote" placeholder="MTN ref XYZ123 or any note">
+    `;
+  } else if(requestType==='R'){
+    formHTML=`
+      ${myActiveLoans.length===0?`<div class="alert alert-info"><span>ℹ️</span><span>You have no active loans to repay.</span></div>`:`
+      <label>Select Loan to Repay</label>
+      <select id="rqLoanId">${myActiveLoans.map(l=>`<option value="${l._lid}">Loan #${l._lid} (issued ${l.date}) — UGX ${Number(l.amt).toLocaleString()}</option>`).join('')}</select>
+      <label>Amount Paid (UGX)</label>
+      <input type="number" id="rqAmt" placeholder="Repayment amount">
+      <label>Date of Payment</label>
+      <input type="date" id="rqDate" value="${new Date().toISOString().split('T')[0]}">
+      <label>Upload Screenshot of Transaction</label>
+      <div id="rqScreenshotPrev" style="margin-bottom:8px"></div>
+      <input type="file" accept="image/*" id="rqScreenshot" onchange="previewRequestScreenshot(event)">
+      <label>Optional Note</label>
+      <input type="text" id="rqNote" placeholder="Reference / note">`}
+    `;
+  } else { // L
+    formHTML=`
+      <label>Loan Amount Requested (UGX)</label>
+      <input type="number" id="rqAmt" placeholder="e.g. 500000">
+      <label>Purpose / Reason for Loan</label>
+      <textarea id="rqNote" placeholder="Explain what the loan will be used for..." style="min-height:80px"></textarea>
+      <p style="font-size:11px;color:#888;margin-bottom:8px">ℹ️ Loan requests don't need a screenshot. Admin will review and may adjust the amount before approval.</p>
+    `;
+  }
+
+  const reqRows=myRequests.length?myRequests.map((r,i)=>{
+    const realIdx=data.requests.indexOf(r);
+    const sb=r.status==='APPROVED'?'badge-comp':r.status==='REJECTED'?'badge-pend':'badge-part';
+    const typeLbl=r.type==='S'?'💰 Savings':r.type==='R'?'💳 Loan Repayment':'🏦 Loan Request';
+    return`<div style="border:1px solid #eee;border-radius:8px;padding:12px;margin-bottom:8px;background:#fafafa">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:6px">
+        <div><strong style="font-size:13px">${typeLbl}</strong> &nbsp;<small style="color:#888">submitted ${r.submittedAt}</small></div>
+        <span class="badge ${sb}">${r.status}</span>
+      </div>
+      <div style="font-size:12px;color:#555;margin-bottom:4px">
+        ${r.type==='S'?`For month: <strong>${r.month}</strong> · `:''}${r.type==='R'?`Loan #${r.loanId} · `:''}Amount: <strong>UGX ${Number(r.amt).toLocaleString()}</strong>${r.date?` · Paid on: <strong>${r.date}</strong>`:''}
+      </div>
+      ${r.note?`<div style="font-size:12px;color:#666;font-style:italic">"${r.note}"</div>`:''}
+      ${r.screenshot?`<button class="ghost sm" style="margin-top:6px" onclick="viewScreenshot(${realIdx})">📷 View Screenshot</button>`:''}
+      ${r.status==='REJECTED'&&r.rejectReason?`<div class="alert alert-danger" style="margin-top:8px;font-size:11.5px;padding:7px 10px">❌ Rejected: ${r.rejectReason}</div>`:''}
+      ${r.status==='APPROVED'?`<div style="font-size:11px;color:var(--green);margin-top:6px">✅ Approved by ${r.approvedBy||'Admin'} on ${r.approvedAt||''}${r.adjustedNote?' · '+r.adjustedNote:''}</div>`:''}
+      ${r.status==='PENDING'?`<div style="margin-top:6px"><button class="del sm" onclick="cancelMyRequest(${realIdx})">Cancel Request</button></div>`:''}
+    </div>`;
+  }).join(''):'<p style="color:#aaa;font-size:13px;padding:8px 0">You have not submitted any requests yet.</p>';
+
+  return`
+    <div class="card" style="border:2px solid var(--gold)">
+      <div class="card-title">📝 Submit a New Request</div>
+      <p style="font-size:12px;color:#666;margin-bottom:12px">After making payment via mobile money/bank, submit a request here with proof. Admin will verify and approve.</p>
+      <label>Request Type</label>
+      <select onchange="requestType=this.value;render()" style="margin-bottom:12px">
+        <option value="S" ${requestType==='S'?'selected':''}>💰 Savings Contribution Claim</option>
+        <option value="R" ${requestType==='R'?'selected':''}>💳 Loan Repayment Claim</option>
+        <option value="L" ${requestType==='L'?'selected':''}>🏦 New Loan Request</option>
+      </select>
+      ${formHTML}
+      <button class="gold full" onclick="submitMyRequest()">Submit Request →</button>
+    </div>
+    <div class="card">
+      <div class="card-title">📂 My Request History</div>
+      ${reqRows}
+    </div>
+    ${viewingScreenshot!==null?renderScreenshotModal():''}
+  `;
+}
+
+let _rqShot=null;
+function previewRequestScreenshot(e){
+  const f=e.target.files[0];if(!f)return;
+  if(f.size>3*1024*1024){showToast("⚠️ Image too large (max 3MB)","warn");return;}
+  // compress to ~80KB target
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=900;let w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      let q=0.7,b64=c.toDataURL('image/jpeg',q);
+      while(b64.length>120000&&q>0.2){q-=0.1;b64=c.toDataURL('image/jpeg',q);}
+      _rqShot=b64;
+      const p=document.getElementById('rqScreenshotPrev');
+      if(p)p.innerHTML=`<img src="${b64}" style="max-width:240px;max-height:160px;border-radius:8px;border:1px solid #ddd"><br><small style="color:#888">${(b64.length/1024).toFixed(0)}KB compressed</small>`;
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(f);
+}
+
+function submitMyRequest(){
+  const t=requestType;
+  const amt=Number((document.getElementById('rqAmt')||{}).value||0);
+  if(!amt||amt<=0){showToast("⚠️ Enter a valid amount","warn");return;}
+  const note=((document.getElementById('rqNote')||{}).value||'').trim();
+  const req={
+    member:user.name,type:t,amt,note,
+    submittedAt:new Date().toISOString().split('T')[0],
+    status:'PENDING'
+  };
+  if(t==='S'){
+    const month=(document.getElementById('rqMonth')||{}).value;
+    const date=(document.getElementById('rqDate')||{}).value;
+    if(!month||!date){showToast("⚠️ Fill in month and date","warn");return;}
+    if(!_rqShot){showToast("⚠️ Please upload a screenshot of the payment","warn");return;}
+    req.month=month;req.date=date;req.screenshot=_rqShot;
+  } else if(t==='R'){
+    const loanId=(document.getElementById('rqLoanId')||{}).value;
+    const date=(document.getElementById('rqDate')||{}).value;
+    if(!loanId){showToast("⚠️ Select a loan","warn");return;}
+    if(!date){showToast("⚠️ Enter a payment date","warn");return;}
+    if(!_rqShot){showToast("⚠️ Please upload a screenshot of the payment","warn");return;}
+    req.loanId=loanId;req.date=date;req.screenshot=_rqShot;
+  } else {
+    if(!note){showToast("⚠️ Please explain the purpose of the loan","warn");return;}
+    // No screenshot for loan requests
+  }
+  if(!data.requests)data.requests=[];
+  data.requests.push(req);
+  _rqShot=null;
+  saveData();
+  showToast("✅ Request submitted — admin will review","success");
+}
+
+function cancelMyRequest(idx){
+  if(!confirm("Cancel this request?"))return;
+  data.requests.splice(idx,1);
+  saveData();
+}
+
+function viewScreenshot(idx){viewingScreenshot=idx;render();}
+function closeScreenshot(){viewingScreenshot=null;render();}
+function renderScreenshotModal(){
+  const r=data.requests[viewingScreenshot];if(!r||!r.screenshot)return'';
+  return`<div class="modal-overlay" onclick="if(event.target.classList.contains('modal-overlay'))closeScreenshot()">
+    <div class="modal" style="max-width:600px;text-align:center">
+      <button class="modal-close" onclick="closeScreenshot()">✕</button>
+      <div style="font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:12px">Payment Screenshot</div>
+      <p style="font-size:12px;color:#888;margin-bottom:12px">${r.member} — ${r.type==='S'?'Savings':'Loan Repayment'} · UGX ${Number(r.amt).toLocaleString()}</p>
+      <img src="${r.screenshot}" style="max-width:100%;max-height:65vh;border-radius:8px;border:1px solid #ddd">
+    </div>
+  </div>`;
+}
+
+// ─── APPROVALS (admin) ────────────────────────
+function renderApprovals(){
+  const pending=(data.requests||[]).map((r,i)=>({...r,_idx:i})).filter(r=>r.status==='PENDING').reverse();
+  const recent=(data.requests||[]).map((r,i)=>({...r,_idx:i})).filter(r=>r.status!=='PENDING').slice(-15).reverse();
+
+  const pendingRows=pending.length?pending.map(r=>{
+    const typeLbl=r.type==='S'?'💰 Savings Claim':r.type==='R'?'💳 Loan Repayment':'🏦 Loan Request';
+    return`<div style="border:1.5px solid #FFE082;border-radius:10px;padding:14px;margin-bottom:10px;background:#fffdf5">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div><strong style="font-size:14px">${r.member}</strong> · <span style="color:#666;font-size:12px">${typeLbl}</span><div style="font-size:11px;color:#999;margin-top:2px">Submitted ${r.submittedAt}</div></div>
+        <div style="text-align:right">
+          <div style="font-weight:800;font-size:1.05rem">UGX ${Number(r.amt).toLocaleString()}</div>
+          ${r.type==='S'?`<div style="font-size:11px;color:#666">For month ${r.month}, paid ${r.date}</div>`:''}
+          ${r.type==='R'?`<div style="font-size:11px;color:#666">Loan #${r.loanId}, paid ${r.date}</div>`:''}
+        </div>
+      </div>
+      ${r.note?`<div style="font-size:12px;color:#555;font-style:italic;background:#fff;padding:7px 10px;border-radius:5px;border:1px solid #f0f0f0;margin-bottom:8px">"${r.note}"</div>`:''}
+      ${r.screenshot?`<button class="ghost sm" onclick="viewScreenshot(${r._idx})">📷 View Screenshot</button>`:'<span style="font-size:11px;color:#aaa;font-style:italic">No screenshot (loan request)</span>'}
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <button class="gold sm" onclick="openApproveModal(${r._idx})">✅ Approve</button>
+        <button class="del sm" onclick="rejectRequest(${r._idx})" style="padding:7px 12px;font-size:11px">❌ Reject</button>
+      </div>
+    </div>`;
+  }).join(''):'<p style="color:#aaa;font-size:13px;padding:8px 0">No pending requests.</p>';
+
+  const recentRows=recent.length?recent.map(r=>{
+    const typeLbl=r.type==='S'?'Savings':r.type==='R'?'Repayment':'Loan';
+    const sb=r.status==='APPROVED'?'badge-comp':'badge-pend';
+    return`<tr>
+      <td>${r.submittedAt}</td>
+      <td>${r.member}</td>
+      <td>${typeLbl}</td>
+      <td>UGX ${Number(r.amt).toLocaleString()}</td>
+      <td><span class="badge ${sb}">${r.status}</span></td>
+      <td style="font-size:10.5px;color:#666">${r.status==='REJECTED'?(r.rejectReason||''):(r.approvedBy||'')}</td>
+      <td>${r.screenshot?`<button class="ghost sm" onclick="viewScreenshot(${r._idx})">📷</button>`:''} <button class="del" onclick="deleteRequest(${r._idx})">✕</button></td>
+    </tr>`;
+  }).join(''):'';
+
+  return`
+    <div class="card" style="border:2px solid #FFE082;background:#fffef8">
+      <div class="card-title">⏳ Pending Approvals (${pending.length})</div>
+      ${pendingRows}
+    </div>
+    <div class="card">
+      <div class="card-title">📜 Recent Approvals / Rejections</div>
+      ${recent.length?`<div class="table-wrap"><table><tr><th>Submitted</th><th>Member</th><th>Type</th><th>Amount</th><th>Status</th><th>By/Reason</th><th></th></tr>${recentRows}</table></div>`:'<p style="color:#aaa;font-size:13px">No history yet.</p>'}
+    </div>
+    ${viewingScreenshot!==null?renderScreenshotModal():''}
+    ${approveModal!==null?renderApproveModal():''}
+  `;
+}
+
+function openApproveModal(idx){
+  const r=data.requests[idx];if(!r)return;
+  approveModal={idx,amt:r.amt,date:r.date||new Date().toISOString().split('T')[0],month:r.month,loanId:r.loanId,purpose:r.note||''};
+  render();
+}
+function closeApproveModal(){approveModal=null;render();}
+function renderApproveModal(){
+  const m=approveModal;const r=data.requests[m.idx];if(!r)return'';
+  let extraFields='';
+  if(r.type==='S'){
+    extraFields=`<label>Month</label><input type="month" id="apMonth" value="${m.month}">
+                 <label>Payment Date</label><input type="date" id="apDate" value="${m.date}">`;
+  } else if(r.type==='R'){
+    extraFields=`<label>Loan ID</label><input type="number" id="apLoanId" value="${m.loanId}" style="background:#f5f5f5" readonly>
+                 <label>Payment Date</label><input type="date" id="apDate" value="${m.date}">`;
+  } else {
+    extraFields=`<label>Issue Date</label><input type="date" id="apDate" value="${m.date}">
+                 <label>Purpose / Note</label><input type="text" id="apPurpose" value="${(m.purpose||'').replace(/"/g,'&quot;')}">`;
+  }
+  return`<div class="modal-overlay" onclick="if(event.target.classList.contains('modal-overlay'))closeApproveModal()">
+    <div class="modal">
+      <button class="modal-close" onclick="closeApproveModal()">✕</button>
+      <div style="font-family:'Playfair Display',serif;font-size:1.2rem;margin-bottom:4px">Approve Request</div>
+      <p style="font-size:12px;color:#888;margin-bottom:14px">${r.member} — ${r.type==='S'?'Savings':r.type==='R'?'Repayment':'Loan Issue'} · You can adjust the amount or date if needed.</p>
+      <label>Amount (UGX)</label>
+      <input type="number" id="apAmt" value="${m.amt}">
+      ${extraFields}
+      <button class="gold full" onclick="confirmApprove()" style="margin-top:6px">✅ Approve &amp; Post</button>
+    </div>
+  </div>`;
+}
+
+function confirmApprove(){
+  const m=approveModal;if(!m)return;
+  const r=data.requests[m.idx];if(!r)return;
+  const amt=Number(document.getElementById('apAmt').value);
+  const date=document.getElementById('apDate').value;
+  if(!amt||amt<=0){showToast("⚠️ Invalid amount","warn");return;}
+  if(!date){showToast("⚠️ Invalid date","warn");return;}
+  const adjusted=(amt!==r.amt||(r.date&&date!==r.date))?` (adjusted from UGX ${Number(r.amt).toLocaleString()})`:'';
+  if(r.type==='S'){
+    const month=document.getElementById('apMonth').value;
+    if(!month){showToast("⚠️ Pick a month","warn");return;}
+    data[r.member].contributions.push({amt,date,month,_fromRequest:m.idx});
+  } else if(r.type==='R'){
+    data[r.member].loans.push({amt,date,type:'REPAYMENT',loanId:r.loanId,_fromRequest:m.idx});
+  } else {
+    const purpose=document.getElementById('apPurpose').value.trim();
+    data[r.member].loans.push({amt,date,type:'LOAN',purpose,_fromRequest:m.idx});
+  }
+  r.status='APPROVED';
+  r.approvedBy=user.name;
+  r.approvedAt=new Date().toISOString().split('T')[0];
+  if(adjusted)r.adjustedNote=adjusted;
+  approveModal=null;
+  saveData();
+  showToast("✅ Approved &amp; posted to ledger","success");
+}
+
+function rejectRequest(idx){
+  const reason=prompt("Reason for rejection (optional, but helpful for the member):");
+  if(reason===null)return;
+  data.requests[idx].status='REJECTED';
+  data.requests[idx].rejectReason=reason||'';
+  data.requests[idx].rejectedBy=user.name;
+  data.requests[idx].rejectedAt=new Date().toISOString().split('T')[0];
+  saveData();
+  showToast("Request rejected","info");
+}
+
+function deleteRequest(idx){
+  if(!confirm("Permanently delete this request record? Note: this does NOT undo any approved transactions."))return;
+  data.requests.splice(idx,1);saveData();
+}
+
+// ─── BULK SAVINGS ENTRY (admin) ───────────────
+function renderBulkEntry(){
+  const rows=data.members.map((m,i)=>{
+    const existing=data[m].contributions.filter(c=>c.month===bulkMonth);
+    const existingTotal=existing.reduce((a,b)=>a+Number(b.amt),0);
+    return`<tr>
+      <td style="text-align:center;color:#aaa;font-size:11px">${i+1}</td>
+      <td style="font-weight:600">${m}</td>
+      <td><input type="number" id="bulk_${i}" placeholder="0" style="margin:0;text-align:right;font-size:13px" min="0"></td>
+      <td style="font-size:11px;color:${existingTotal>0?'#888':'#ccc'};text-align:right">${existingTotal>0?'UGX '+existingTotal.toLocaleString():'—'}</td>
+    </tr>`;
+  }).join('');
+  return`
+    <div class="card" style="border:2px solid var(--gold)">
+      <div class="card-title">📋 Bulk Monthly Savings Entry</div>
+      <p style="font-size:12px;color:#666;margin-bottom:12px">Post savings for all members at once — useful at meetings. Leave a row blank to skip that member. Existing entries for the month are shown but won't be replaced (new entries stack alongside them).</p>
+      <div class="grid-2">
+        <div><label>Month This Is For</label><input type="month" value="${bulkMonth}" onchange="bulkMonth=this.value;render()" style="margin-bottom:0"></div>
+        <div><label>Payment Date</label><input type="date" value="${bulkDate}" onchange="bulkDate=this.value;render()" style="margin-bottom:0"></div>
+      </div>
+      <div class="table-wrap" style="margin-top:14px">
+        <table>
+          <tr><th style="width:6%">#</th><th>Member</th><th style="width:30%">Amount (UGX)</th><th style="width:22%;text-align:right">Already paid this month</th></tr>
+          ${rows}
+        </table>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        <button class="gold" onclick="postBulkEntries()" style="flex:1;min-width:200px">✅ Post All Entries</button>
+        <button class="ghost" onclick="render()">Clear / Reset</button>
+      </div>
+    </div>`;
+}
+
+function postBulkEntries(){
+  if(!bulkMonth||!bulkDate){showToast("⚠️ Pick month and date","warn");return;}
+  let postedCount=0;
+  data.members.forEach((m,i)=>{
+    const v=Number((document.getElementById('bulk_'+i)||{}).value||0);
+    if(v>0){
+      data[m].contributions.push({amt:v,date:bulkDate,month:bulkMonth});
+      postedCount++;
+    }
+  });
+  if(postedCount===0){showToast("⚠️ No amounts entered","warn");return;}
+  if(!confirm(`Post ${postedCount} contribution${postedCount!==1?'s':''} for ${bulkMonth}?`))return;
+  saveData();
+  showToast(`✅ ${postedCount} entries posted`,"success");
+}
 
 // ─── MEMBER MANAGEMENT ────────────────────────
 function renderMemberMgmt(){
@@ -966,6 +1446,19 @@ function renderAudit(){
       <button class="gold" onclick="addWaiver()" style="margin:0;margin-top:20px">Grant Waiver</button>
     </div>
     ${waiverRows?`<div class="table-wrap"><table><tr><th>Member</th><th>Month</th><th>Reason</th><th>Date Granted</th><th>By</th><th></th></tr>${waiverRows}</table></div>`:'<p style="color:#aaa;font-size:13px">No waivers granted.</p>'}
+  </div>
+  <div class="card"><div class="card-title">📜 Edit History Log (last 500 changes)</div>
+    <p style="font-size:11px;color:#aaa;margin-bottom:10px">Every edit and deletion is recorded for transparency. Members can also view their own changes on their Ledger page.</p>
+    ${(()=>{
+      const log=(data.editLog||[]).slice().reverse();
+      const filtered=log.filter(e=>!sq||(e.member||'').toLowerCase().includes(sq)||(e.action||'').toLowerCase().includes(sq)||(e.by||'').toLowerCase().includes(sq));
+      if(!filtered.length)return '<p style="color:#aaa;font-size:13px">No edits or deletions recorded.</p>';
+      return`<div class="table-wrap"><table><tr><th>When</th><th>Admin</th><th>Action</th><th>Member</th><th>Category</th><th>Before → After</th></tr>${filtered.slice(0,80).map(e=>{
+        const w=new Date(e.when).toLocaleString('en-UG',{dateStyle:'short',timeStyle:'short'});
+        const ba=e.action==='DELETE'?`<span style="color:#C62828;font-size:10.5px">DELETED: ${escapeHTML(e.before||'').slice(0,80)}</span>`:`<span style="font-size:10.5px;color:#888">${escapeHTML(e.before||'').slice(0,60)}</span><br><span style="font-size:10.5px;color:#1565C0">→ ${escapeHTML(e.after||'').slice(0,60)}</span>`;
+        return`<tr><td>${w}</td><td>${e.by}</td><td><span class="badge ${e.action==='DELETE'?'badge-pend':'badge-info'}">${e.action}</span></td><td>${e.member}</td><td>${e.category}</td><td>${ba}</td></tr>`;
+      }).join('')}</table></div>`;
+    })()}
   </div>`;
 }
 
@@ -977,13 +1470,35 @@ function renderMonthlyReport(){
   else if(reportMode==='range'){pm=reportStart&&reportEnd&&reportStart<=reportEnd?getMonthRange(reportStart,reportEnd):[];pt=`Range: ${reportStart} → ${reportEnd}`;}
   else{pm=getMonthRange("2024-02",curMs);pt=`All-time`;}
   let total=0;
+  // Per-month status check: a member is COMPLETE only if EVERY month in pm meets its target
+  function memberPeriodStatus(m){
+    if(!pm.length)return{paid:0,expected:0,shortfall:0,status:'PENDING',monthsComplete:0,monthsPartial:0,monthsPending:0};
+    let paid=0,expected=0,shortfall=0;
+    let mC=0,mP=0,mN=0;
+    pm.forEach(ms=>{
+      const monthPaid=data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0);
+      const monthTarget=getMonthlyTarget(ms);
+      paid+=monthPaid;expected+=monthTarget;
+      const monthGap=Math.max(0,monthTarget-monthPaid);
+      const monthPenalty=calcMonthPenalty(m,ms);
+      shortfall+=monthGap+monthPenalty;
+      if(monthPaid>=monthTarget)mC++;else if(monthPaid>0)mP++;else mN++;
+    });
+    let status;
+    if(mC===pm.length)status='COMPLETE';
+    else if(mC===0&&mP===0)status='PENDING';
+    else status='PARTIAL';
+    return{paid,expected,shortfall,status,monthsComplete:mC,monthsPartial:mP,monthsPending:mN};
+  }
   const rows=data.members.map(m=>{
-    const paid=pm.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);total+=paid;
-    const expected=pm.reduce((a,ms)=>a+getMonthlyTarget(ms),0),ts=calcArrearsAndFines(m);
-    const badge=paid>=expected?'<span class="badge badge-comp">COMPLETE</span>':paid>0?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
-    return`<tr><td>${m}</td><td>UGX ${paid.toLocaleString()}</td><td>UGX ${expected.toLocaleString()}</td><td style="color:var(--red);font-weight:700">UGX ${ts.toLocaleString()}</td><td>${badge}</td></tr>`;
+    const r=memberPeriodStatus(m);total+=r.paid;
+    const badge=r.status==='COMPLETE'?'<span class="badge badge-comp">COMPLETE</span>':r.status==='PARTIAL'?'<span class="badge badge-part">PARTIAL</span>':'<span class="badge badge-pend">PENDING</span>';
+    const monthBreakdown=pm.length>1?`<div style="font-size:10px;color:#888;margin-top:2px">${r.monthsComplete}/${pm.length} months met</div>`:'';
+    return`<tr><td>${m}${monthBreakdown}</td><td>UGX ${r.paid.toLocaleString()}</td><td>UGX ${r.expected.toLocaleString()}</td><td style="color:var(--red);font-weight:700">UGX ${r.shortfall.toLocaleString()}</td><td>${badge}</td></tr>`;
   }).join('');
-  const paidCount=pm.length?data.members.filter(m=>pm.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0)>=pm.reduce((a,ms)=>a+getMonthlyTarget(ms),0)).length:0;
+  const paidCount=pm.length?data.members.filter(m=>memberPeriodStatus(m).status==='COMPLETE').length:0;
+  const partialCount=pm.length?data.members.filter(m=>memberPeriodStatus(m).status==='PARTIAL').length:0;
+  const pendingCountM=pm.length?data.members.filter(m=>memberPeriodStatus(m).status==='PENDING').length:0;
   const S=getGlobalStats();
   return`
   <!-- SACCO Reports -->
@@ -998,7 +1513,7 @@ function renderMonthlyReport(){
     :reportMode==='range'?`<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap"><div style="flex:1;min-width:140px"><label>Start</label><input type="month" style="margin:0" value="${reportStart}" onchange="reportStart=this.value;render()"></div><div style="flex:1;min-width:140px"><label>End</label><input type="month" style="margin:0" value="${reportEnd}" onchange="reportEnd=this.value;render()"></div><button class="print-btn" onclick="printRange()">🖨️ Print / PDF</button></div>`
     :`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><p style="font-size:13px;color:#888;flex:1">Feb 2024 to present (${pm.length} months).</p><button class="print-btn" onclick="printOverall()">🖨️ Print / PDF</button></div>`}
     <div style="background:#fafafa;border:1px solid #f0f0f0;border-radius:8px;padding:8px 12px;margin-top:10px;font-size:12px;color:#888">
-      <strong style="color:#555">${pt}</strong> — ${pm.length} month(s) | Period savings: <strong>UGX ${total.toLocaleString()}</strong> | Fully paid: <strong>${paidCount}/${data.members.length}</strong>
+      <strong style="color:#555">${pt}</strong> — ${pm.length} month(s) | Period savings: <strong>UGX ${total.toLocaleString()}</strong> | <span style="color:var(--green)">Complete: ${paidCount}</span> · <span style="color:var(--yellow)">Partial: ${partialCount}</span> · <span style="color:var(--red)">Pending: ${pendingCountM}</span>
     </div>
   </div>
 
@@ -1017,7 +1532,7 @@ function renderMonthlyReport(){
 
   <!-- Member Savings Preview -->
   <div class="card"><div class="card-title">Member Savings — ${pt}</div>
-    <p style="font-size:11px;color:#aaa;margin-bottom:10px">Shortfall = unpaid gap + full penalty as of today.</p>
+    <p style="font-size:11px;color:#aaa;margin-bottom:10px">Status &amp; shortfall reflect the SELECTED PERIOD only. A member is COMPLETE only if every month in the period was fully paid. Shortfall = period gap + period penalties.</p>
     ${pm.length?`<div class="table-wrap"><table><tr><th>Member</th><th>Paid</th><th>Expected</th><th>Total Shortfall (incl. penalties)</th><th>Status</th></tr>${rows}</table></div>`:'<p style="color:#aaa;font-size:13px">Select a valid period above.</p>'}
   </div>
 
@@ -1137,14 +1652,31 @@ function renderEditModal(){
   return`<div class="modal-overlay" onclick="closeEdit(event)"><div class="modal"><button class="modal-close" onclick="editModalData=null;render()">✕</button><div style="font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:4px">Edit Entry</div><p style="font-size:12px;color:#aaa;margin-bottom:14px">${labels[cat]}${mem?' — '+mem:''}</p>${fields}<button class="gold full" onclick="saveEdit()" style="margin-top:6px">💾 Save Changes</button></div></div>`;
 }
 function closeEdit(e){if(e.target.classList.contains('modal-overlay')){editModalData=null;render();}}
+function logEdit(action,cat,mem,beforeObj,afterObj){
+  if(!data.editLog)data.editLog=[];
+  const labels={S:'Savings',L:'Loan/Repayment',C:'Cash In',E:'Expense',I:'Investment'};
+  data.editLog.push({
+    when:new Date().toISOString(),
+    by:user&&user.name?user.name:'?',
+    action, // 'EDIT' or 'DELETE'
+    category:labels[cat]||cat,
+    member:mem||'SYSTEM',
+    before:beforeObj?JSON.stringify(beforeObj):null,
+    after:afterObj?JSON.stringify(afterObj):null,
+  });
+  if(data.editLog.length>500)data.editLog.shift(); // keep last 500
+}
 function saveEdit(){
   const{cat,mem,idx,entry}=editModalData;const amt=Number(document.getElementById('eAmt').value),date=document.getElementById('eDate').value;
   if(!amt||!date){showToast("⚠️ Fill in all fields","warn");return;}
-  if(cat==='S'){const mon=document.getElementById('eMon').value;data[mem].contributions[idx]={...entry,amt,date,month:mon};}
-  else if(cat==='L'){data[mem].loans[idx]={...entry,amt,date};}
-  else if(cat==='C'){data.cashIn[idx]={...entry,amt,date,source:document.getElementById('eDesc').value};}
-  else if(cat==='E'){data.expenses[idx]={...entry,amt,date,reason:document.getElementById('eDesc').value};}
-  else if(cat==='I'){data.investments[idx]={...entry,amt,date,reason:document.getElementById('eDesc').value};}
+  const before={...entry};
+  let after;
+  if(cat==='S'){const mon=document.getElementById('eMon').value;after={...entry,amt,date,month:mon};data[mem].contributions[idx]=after;}
+  else if(cat==='L'){after={...entry,amt,date};data[mem].loans[idx]=after;}
+  else if(cat==='C'){after={...entry,amt,date,source:document.getElementById('eDesc').value};data.cashIn[idx]=after;}
+  else if(cat==='E'){after={...entry,amt,date,reason:document.getElementById('eDesc').value};data.expenses[idx]=after;}
+  else if(cat==='I'){after={...entry,amt,date,reason:document.getElementById('eDesc').value};data.investments[idx]=after;}
+  logEdit('EDIT',cat,mem,before,after);
   editModalData=null;saveData();
 }
 
@@ -1163,7 +1695,17 @@ function postOutflow(){
   if(t==='L')data[m].loans.push({amt,date,type:'LOAN',purpose:desc});else if(t==='E')data.expenses.push({amt,reason:desc,date});else if(t==='I')data.investments.push({amt,reason:desc,date});
   saveData();
 }
-function del(cat,mem,idx){if(!confirm("Delete this entry?"))return;if(cat==='S')data[mem].contributions.splice(idx,1);else if(cat==='L')data[mem].loans.splice(idx,1);else if(cat==='C')data.cashIn.splice(idx,1);else if(cat==='E')data.expenses.splice(idx,1);else if(cat==='I')data.investments.splice(idx,1);saveData();}
+function del(cat,mem,idx){
+  if(!confirm("Delete this entry?"))return;
+  let before;
+  if(cat==='S'){before={...data[mem].contributions[idx]};data[mem].contributions.splice(idx,1);}
+  else if(cat==='L'){before={...data[mem].loans[idx]};data[mem].loans.splice(idx,1);}
+  else if(cat==='C'){before={...data.cashIn[idx]};data.cashIn.splice(idx,1);}
+  else if(cat==='E'){before={...data.expenses[idx]};data.expenses.splice(idx,1);}
+  else if(cat==='I'){before={...data.investments[idx]};data.investments.splice(idx,1);}
+  logEdit('DELETE',cat,mem,before,null);
+  saveData();
+}
 
 // ─── CSV ──────────────────────────────────────
 function exportMemberCSV(name){const rows=[["Date","Type","Ref","Amount"]];data[name].contributions.forEach(c=>rows.push([c.date,"Savings",c.month,c.amt]));data[name].loans.forEach(l=>rows.push([l.date,l.type,l.loanId?'Loan '+l.loanId:'Principal',l.amt]));downloadCSV(`${name}_Statement.csv`,rows);}
