@@ -330,7 +330,7 @@ async function loadData(){
     if(data[oN]){data[nN]=data[oN];delete data[oN];data.members=data.members.map(m=>m===oN?nN:m);}
     if(!data.expenses)data.expenses=[];if(!data.investments)data.investments=[];if(!data.cashIn)data.cashIn=[];if(!data.minutes)data.minutes=[];if(!data.photos)data.photos={};
     if(!data.waivers)data.waivers=[];
-    if(!data.settings)data.settings={monthlyTarget:100000,targetOverrides:{},membershipFee:50000,paymentInfo:''};
+    if(!data.settings)data.settings={monthlyTarget:150000,targetOverrides:{},membershipFee:50000,paymentInfo:''};
     if(!data.settings.membershipFee)data.settings.membershipFee=50000;
     if(!data.settings.paymentInfo)data.settings.paymentInfo='';
     if(!data.requests)data.requests=[];
@@ -360,13 +360,15 @@ function getMembershipFeesTotal(){return(data.membershipFees||[]).reduce((a,f)=>
 
 // ─── CALCULATIONS ─────────────────────────────
 function getMonthlyTarget(ms){
-  // Per-month override takes first priority
+  // Per-month override takes first priority (admin can still manually override any single month)
   if(data.settings&&data.settings.targetOverrides&&data.settings.targetOverrides[ms]) return Number(data.settings.targetOverrides[ms]);
-  // Legacy fixed period
   const y=parseInt(ms.split('-')[0]),m=parseInt(ms.split('-')[1]);
+  // Period 1: Feb–Jul 2024 = UGX 80,000 (founding period, locked)
   if(y===2024&&m>=2&&m<=7) return 80000;
-  // Global configurable target (admin-set), default 100000
-  return(data.settings&&data.settings.monthlyTarget)?Number(data.settings.monthlyTarget):100000;
+  // Period 2: Aug 2024–Jun 2026 = UGX 100,000 (locked, do not change — history must be preserved)
+  if((y===2024&&m>=8)||(y===2025)||(y===2026&&m<=6)) return 100000;
+  // Period 3: Jul 2026 onward = UGX 150,000 default (R-01, Q2 2026 meeting) or admin-configured amount
+  return(data.settings&&data.settings.monthlyTarget&&Number(data.settings.monthlyTarget)>=100000)?Number(data.settings.monthlyTarget):150000;
 }
 
 function isMonthWaived(mName,ms){
@@ -399,25 +401,67 @@ function calcLoanBalance(loan,loanId,mName){
   if(!loan||loan.type!=='LOAN')return null;
   const principal=Number(loan.amt);
   const issueDate=new Date(loan.date);
-  const repayments=(data[mName].loans||[]).filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(loanId)).map(r=>({date:new Date(r.date),amt:Number(r.amt)})).sort((a,b)=>a.date-b.date);
-  const totalRepaid=repayments.reduce((a,r)=>a+r.amt,0);
   const today=new Date();today.setHours(23,59,59,999);
+  const repayments=(data[mName].loans||[])
+    .filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(loanId))
+    .map(r=>({date:new Date(r.date),amt:Number(r.amt)}))
+    .sort((a,b)=>a.date-b.date);
+  const totalRepaid=repayments.reduce((a,r)=>a+r.amt,0);
+
+  // ── FROZEN LOAN: interest stops, outstanding = frozenTotal − repaid ──
+  if(loan.frozenTotal&&Number(loan.frozenTotal)>0){
+    const frozen=Number(loan.frozenTotal);
+    const outstanding=Math.max(0,Math.round(frozen-totalRepaid));
+    const isFullyPaid=outstanding===0&&totalRepaid>0;
+    const pr=Math.min(totalRepaid,principal);
+    return{principal,outstanding,totalRepaid,
+      interestCollected:Math.max(0,totalRepaid-pr),
+      interestAccrued:Math.max(0,frozen-principal),
+      isFullyPaid,isOverdue:false,monthsElapsed:0,
+      loanStatus:isFullyPaid?'PAID':totalRepaid>0?'PARTIAL':'OUTSTANDING',
+      isFrozen:true,frozenTotal:frozen,interestModel:'FROZEN'};
+  }
+
+  // ── FLAT INTEREST: loans issued on or after 1 July 2026 (R-02, Q2 2026) ──
+  if(loan.date>='2026-07-01'){
+    const y1=issueDate.getFullYear(),m1=issueDate.getMonth();
+    const y2=today.getFullYear(),m2=today.getMonth();
+    const monthsElapsed=Math.max(0,(y2-y1)*12+(m2-m1));
+    const totalOwed=principal*(1+0.05*monthsElapsed);
+    const outstanding=Math.max(0,Math.round(totalOwed-totalRepaid));
+    const isFullyPaid=outstanding===0&&totalRepaid>0;
+    const isOverdue=!isFullyPaid&&monthsElapsed>=1&&totalRepaid===0;
+    const pr=Math.min(totalRepaid,principal);
+    return{principal,outstanding,totalRepaid,
+      interestCollected:Math.max(0,totalRepaid-pr),
+      interestAccrued:Math.max(0,Math.round(principal*0.05*monthsElapsed)),
+      isFullyPaid,isOverdue,monthsElapsed,
+      loanStatus:isFullyPaid?'PAID':totalRepaid>0?'PARTIAL':'OUTSTANDING',
+      isFrozen:false,interestModel:'FLAT'};
+  }
+
+  // ── COMPOUND INTEREST: loans before 1 July 2026 (existing policy) ──
   let balance=principal*1.05;
   repayments.filter(r=>r.date<=issueDate).forEach(r=>{balance-=r.amt;});
   if(balance<=0){
     const ic=Math.max(0,totalRepaid-principal);
-    return{principal,outstanding:0,totalRepaid,interestCollected:ic,interestAccrued:ic,isFullyPaid:true,isOverdue:false,monthsElapsed:0,loanStatus:'PAID'};
+    return{principal,outstanding:0,totalRepaid,interestCollected:ic,interestAccrued:ic,
+      isFullyPaid:true,isOverdue:false,monthsElapsed:0,
+      loanStatus:'PAID',isFrozen:false,interestModel:'COMPOUND'};
   }
   let aN=1;
   while(true){
-    const anniv=new Date(issueDate);anniv.setMonth(anniv.getMonth()+aN);if(anniv.getDate()!==issueDate.getDate())anniv.setDate(0);
+    const anniv=new Date(issueDate);anniv.setMonth(anniv.getMonth()+aN);
+    if(anniv.getDate()!==issueDate.getDate())anniv.setDate(0);
     if(anniv>today)break;
-    const pA=new Date(issueDate);pA.setMonth(pA.getMonth()+(aN-1));if(pA.getDate()!==issueDate.getDate())pA.setDate(0);
+    const pA=new Date(issueDate);pA.setMonth(pA.getMonth()+(aN-1));
+    if(pA.getDate()!==issueDate.getDate())pA.setDate(0);
     repayments.filter(r=>r.date>pA&&r.date<=anniv).forEach(r=>{balance-=r.amt;});
     if(balance<=0){balance=0;break;}
     balance*=1.05;aN++;
   }
-  const lA=new Date(issueDate);lA.setMonth(lA.getMonth()+(aN-1));if(lA.getDate()!==issueDate.getDate())lA.setDate(0);
+  const lA=new Date(issueDate);lA.setMonth(lA.getMonth()+(aN-1));
+  if(lA.getDate()!==issueDate.getDate())lA.setDate(0);
   repayments.filter(r=>r.date>lA&&r.date<=today).forEach(r=>{balance-=r.amt;});
   if(balance<0)balance=0;
   const outstanding=Math.max(0,Math.round(balance));
@@ -425,11 +469,12 @@ function calcLoanBalance(loan,loanId,mName){
   const monthsElapsed=aN-1;
   const isOverdue=!isFullyPaid&&monthsElapsed>=1&&totalRepaid===0;
   const pr=Math.min(totalRepaid,principal);
-  const interestCollected=Math.max(0,totalRepaid-pr);
-  const interestAccrued=Math.max(0,Math.round(outstanding+totalRepaid-principal));
-  // Loan status
-  const loanStatus=isFullyPaid?'PAID':totalRepaid>0?'PARTIAL':'OUTSTANDING';
-  return{principal,outstanding,totalRepaid,interestCollected,interestAccrued,isFullyPaid,isOverdue,monthsElapsed,loanStatus};
+  return{principal,outstanding,totalRepaid,
+    interestCollected:Math.max(0,totalRepaid-pr),
+    interestAccrued:Math.max(0,Math.round(outstanding+totalRepaid-principal)),
+    isFullyPaid,isOverdue,monthsElapsed,
+    loanStatus:isFullyPaid?'PAID':totalRepaid>0?'PARTIAL':'OUTSTANDING',
+    isFrozen:false,interestModel:'COMPOUND'};
 }
 
 function getMemberLoanDebt(mName){return data[mName].loans.filter(l=>l.type==='LOAN').reduce((s,loan,idx)=>{const b=calcLoanBalance(loan,idx+1,mName);return s+(b?b.outstanding:0);},0);}
@@ -475,7 +520,7 @@ function buildReportData(months){
   });
   const S=getGlobalStats();
   const loanRows=[];
-  data.members.forEach(m=>{data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{const bal=calcLoanBalance(loan,idx+1,m);if(bal&&!bal.isFullyPaid)loanRows.push({member:m,loanId:idx+1,date:loan.date,...bal});});});
+  data.members.forEach(m=>{data[m].loans.filter(l=>l.type==='LOAN').forEach((loan,idx)=>{const bal=calcLoanBalance(loan,idx+1,m);if(bal&&!bal.isFullyPaid)loanRows.push({member:m,loanId:idx+1,date:loan.date,loanType:loan.loanType||'REGULAR',...bal});});});
   return{S,memberRows,loanRows,savingsInRange,months};
 }
 
@@ -495,7 +540,7 @@ function buildSaccoPrintHTML(title,subtitle,rd){
     return`<tr><td style="text-align:center">${i+1}</td><td>${r.name}${monthBreakdown}</td><td style="text-align:right">UGX ${r.paid.toLocaleString()}</td><td style="text-align:right">UGX ${r.expected.toLocaleString()}</td><td style="text-align:right;color:#C62828;font-weight:700">UGX ${r.trueShortfall.toLocaleString()}</td><td style="text-align:center"><span class="badge ${bc}">${r.status}</span></td></tr>`;
   }).join('');
 
-  const lRows=loanRows.length?loanRows.map((r,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${r.member}</td><td>#${r.loanId}</td><td>${r.date}</td><td style="text-align:right">UGX ${r.principal.toLocaleString()}</td><td style="text-align:right">UGX ${r.totalRepaid.toLocaleString()}</td><td style="text-align:right">UGX ${r.interestAccrued.toLocaleString()}</td><td style="text-align:right;font-weight:700;color:#C62828">UGX ${r.outstanding.toLocaleString()}</td><td style="text-align:center">${r.isOverdue?'<span class="badge badge-pend">OVERDUE</span>':'<span class="badge badge-comp">'+r.loanStatus+'</span>'}</td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:#999">No active loans</td></tr>';
+  const lRows=loanRows.length?loanRows.map((r,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${r.member}${r.loanType==='DEVELOPMENTAL'?' 🏗️':''}</td><td>#${r.loanId}${r.isFrozen?' 🔒':''}</td><td>${r.date}</td><td style="text-align:right">UGX ${r.principal.toLocaleString()}</td><td style="text-align:right">UGX ${r.totalRepaid.toLocaleString()}</td><td style="text-align:right">UGX ${r.interestAccrued.toLocaleString()}</td><td style="text-align:right;font-weight:700;color:#C62828">UGX ${r.outstanding.toLocaleString()}</td><td style="text-align:center;font-size:8pt">${r.isFrozen?'FROZEN':r.interestModel}</td><td style="text-align:center">${r.isOverdue?'<span class="badge badge-pend">OVERDUE</span>':'<span class="badge badge-comp">'+r.loanStatus+'</span>'}</td></tr>`).join(''):'<tr><td colspan="10" style="text-align:center;color:#999">No active loans</td></tr>';
 
   const eRows=data.expenses.length?data.expenses.map((e,i)=>`<tr><td style="text-align:center">${i+1}</td><td>${e.date}</td><td>${e.reason}</td><td style="text-align:right">UGX ${Number(e.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center;color:#999">None recorded</td></tr>';
   const iRows=data.investments.length?data.investments.map((i,idx)=>`<tr><td style="text-align:center">${idx+1}</td><td>${i.date}</td><td>${i.reason}</td><td style="text-align:right">UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join(''):'<tr><td colspan="4" style="text-align:center;color:#999">None recorded</td></tr>';
@@ -587,7 +632,7 @@ function buildSaccoPrintHTML(title,subtitle,rd){
     <p style="font-size:9pt;color:#666;margin-bottom:8px">Total outstanding: <strong>UGX ${tO.toLocaleString()}</strong>. Interest: 5% applied immediately on issue, then compounds on each exact monthly anniversary.</p>
     <p style="font-size:8.5pt;color:#777;margin-bottom:8px"><strong>Status key:</strong> OUTSTANDING — no repayments yet · PARTIAL — some repayments made, balance remains · PAID — fully cleared · OVERDUE — flagged additionally when 1+ anniversary passed with no payments.</p>
     <table>
-      <tr><th style="width:6%">#</th><th>Member</th><th>Loan</th><th>Issued</th><th style="text-align:right">Principal</th><th style="text-align:right">Repaid</th><th style="text-align:right">Interest</th><th style="text-align:right">Outstanding</th><th style="text-align:center">Status</th></tr>
+      <tr><th style="width:5%">#</th><th>Member</th><th>Loan</th><th>Issued</th><th style="text-align:right">Principal</th><th style="text-align:right">Repaid</th><th style="text-align:right">Interest</th><th style="text-align:right">Outstanding</th><th style="text-align:center">Interest Model</th><th style="text-align:center">Status</th></tr>
       ${lRows}
     </table>
     <div class="print-footer">ELITES SACCO — Confidential | Page 4</div>
@@ -641,7 +686,7 @@ function buildMemberPrintHTML(mName){
     const lid=idx+1,bal=calcLoanBalance(loan,lid,mName);if(!bal)return'';
     const rRows=data[mName].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid)).map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:#2E7D32">UGX ${Number(r.amt).toLocaleString()}</td></tr>`).join('');
     return`<p style="font-size:9pt;font-weight:700;margin:9px 0 4px">Loan #${lid} — ${loan.date} — ${bal.loanStatus}${bal.isOverdue?' · OVERDUE':''}</p>
-    <table><tr><th>Principal</th><th>Repaid</th><th>Interest</th><th>Outstanding</th><th>Anniversaries</th></tr><tr><td>UGX ${bal.principal.toLocaleString()}</td><td style="color:#2E7D32">UGX ${bal.totalRepaid.toLocaleString()}</td><td>UGX ${bal.interestAccrued.toLocaleString()}</td><td style="font-weight:700;color:${bal.isFullyPaid?'#2E7D32':'#C62828'}">UGX ${bal.outstanding.toLocaleString()}</td><td>${bal.monthsElapsed}</td></tr></table>
+    <table><tr><th>Principal</th><th>Repaid</th><th>Interest</th><th>Outstanding</th><th>Model</th><th>Months</th></tr><tr><td>UGX ${bal.principal.toLocaleString()}</td><td style="color:#2E7D32">UGX ${bal.totalRepaid.toLocaleString()}</td><td>UGX ${bal.interestAccrued.toLocaleString()}</td><td style="font-weight:700;color:${bal.isFullyPaid?'#2E7D32':'#C62828'}">UGX ${bal.outstanding.toLocaleString()}</td><td>${bal.isFrozen?'🔒 FROZEN':bal.interestModel}</td><td>${bal.monthsElapsed}</td></tr></table>
     ${rRows?`<table><tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th></tr>${rRows}</table>`:''}`;
   }).join('');}
   return`<div class="print-page">
@@ -879,6 +924,27 @@ function renderDashboard(isAdmin,activeMember){
       <div class="stat-box" style="border-color:#E1BEE7"><div class="stat-label">Investments</div><div class="stat-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div><div class="stat-sub">Total invested</div></div>
     </div>
 
+    <!-- Social Fund Coming Soon -->
+    <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:1px solid #2a2a5e;border-radius:var(--radius);padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="font-size:22px">🤝</div>
+      <div style="flex:1">
+        <div style="color:#90CAF9;font-weight:700;font-size:13px">Social Fund — Coming Soon</div>
+        <div style="color:#666;font-size:11.5px;margin-top:3px">Resolved at Q2 2026 meeting: UGX 15,000/member/month from July 2026. Full policy (payout rules, eligible events, claims process) to be finalised at Q3 2026 meeting.</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:9px;color:#555;text-transform:uppercase;font-weight:700;margin-bottom:2px">Estimated pool so far</div>
+        <div style="font-weight:800;font-size:1.1rem;color:#90CAF9">${(()=>{
+          const now=new Date();
+          const startJul2026=new Date('2026-07-01');
+          if(now<startJul2026)return'UGX 0 — starts Jul 2026';
+          const monthsElapsed=(now.getFullYear()-2026)*12+(now.getMonth()-6);
+          const pool=Math.max(0,monthsElapsed)*data.members.length*15000;
+          return'UGX '+pool.toLocaleString();
+        })()}</div>
+        <div style="font-size:9px;color:#444;margin-top:1px">UGX 15,000 × ${data.members.length} members × months</div>
+      </div>
+    </div>
+
     <!-- Personal Summary -->
     <div class="card">
       <div class="card-title">👤 My Summary — ${activeMember}</div>
@@ -975,7 +1041,7 @@ function renderLedger(isAdmin,activeMember){
       ${!loans.length?'<p style="color:#aaa;font-size:13px">No loan records.</p>':''}
       ${loans.length?`<div class="table-wrap"><table><tr><th>Date</th><th>Type</th><th>Ref</th><th>Amount</th><th>Outstanding</th></tr>
         ${loans.map((l,i)=>{const lid=i+1,bal=calcLoanBalance(l,lid,activeMember);if(!bal)return'';
-          return`<tr style="background:#EFF7FF;font-weight:600"><td>${l.date}</td><td>LOAN #${lid}</td><td>—</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td style="color:${bal.isFullyPaid?'var(--green)':'var(--red)'};">${bal.isFullyPaid?'✅ CLEARED':'UGX '+bal.outstanding.toLocaleString()}</td></tr>`+
+          return`<tr style="background:#EFF7FF;font-weight:600"><td>${l.date}</td><td>LOAN #${lid} ${l.loanType==='DEVELOPMENTAL'?'🏗️':''} <span style="font-size:9px;font-weight:400;color:#888;background:#e8eaff;border-radius:3px;padding:1px 5px">${bal.isFrozen?'🔒FROZEN':bal.interestModel}</span></td><td>${l.purpose||'—'}</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td style="color:${bal.isFullyPaid?'var(--green)':'var(--red)'};">${bal.isFullyPaid?'✅ CLEARED':'UGX '+bal.outstanding.toLocaleString()}</td></tr>`+
           data[activeMember].loans.filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(lid)).map(r=>`<tr><td>${r.date}</td><td>REPAYMENT</td><td>Loan #${lid}</td><td style="color:var(--green)">UGX ${Number(r.amt).toLocaleString()}</td><td>—</td></tr>`).join('');
         }).join('')}
       </table></div>`:''}
@@ -1018,6 +1084,36 @@ function renderActivity(){
   </div>
   <div class="card"><div class="card-title">📈 Investments</div>${!data.investments.length?'<p style="color:#aaa;font-size:13px">None.</p>':''}
     ${data.investments.length?`<div class="table-wrap"><table><tr><th>Date</th><th>Description</th><th>Amount</th></tr>${data.investments.map(i=>`<tr><td>${i.date}</td><td>${i.reason}</td><td style="color:#6A1B9A;font-weight:600">UGX ${Number(i.amt).toLocaleString()}</td></tr>`).join('')}</table></div>`:''}
+  </div>
+  <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:1px solid #2a2a5e;border-radius:var(--radius);padding:18px 20px;margin-bottom:14px">
+    <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+      <div style="font-size:28px">🤝</div>
+      <div style="flex:1">
+        <div style="color:#90CAF9;font-weight:700;font-size:14px;margin-bottom:4px">Social Fund <span style="background:#2a2a5e;color:#90CAF9;font-size:9px;padding:2px 8px;border-radius:10px;margin-left:6px;font-weight:700">COMING Q3 2026</span></div>
+        <div style="color:#555;font-size:12px;line-height:1.6;margin-bottom:10px">Resolved at Q2 2026 meeting (May 2026). Monthly contribution: <strong style="color:#90CAF9">UGX 15,000 per member</strong> from July 2026. Full policy to be agreed at Q3 2026 meeting, including:<br>
+        &nbsp;· Eligible events (bereavement, medical, other)<br>
+        &nbsp;· Payout amounts and approval process<br>
+        &nbsp;· Claims procedure<br>
+        &nbsp;· Fund management and auditing</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="background:#111a2e;border:1px solid #2a2a5e;border-radius:8px;padding:10px 14px;min-width:140px">
+            <div style="font-size:9px;color:#444;text-transform:uppercase;font-weight:700;margin-bottom:3px">Monthly Contribution</div>
+            <div style="color:#90CAF9;font-weight:800;font-size:1rem">UGX 15,000</div>
+            <div style="font-size:10px;color:#444">per member</div>
+          </div>
+          <div style="background:#111a2e;border:1px solid #2a2a5e;border-radius:8px;padding:10px 14px;min-width:140px">
+            <div style="font-size:9px;color:#444;text-transform:uppercase;font-weight:700;margin-bottom:3px">Estimated Pool</div>
+            <div style="color:#90CAF9;font-weight:800;font-size:1rem">${(()=>{const now=new Date();const startJul2026=new Date('2026-07-01');if(now<startJul2026)return'Starts Jul 2026';const m=Math.max(0,(now.getFullYear()-2026)*12+(now.getMonth()-6));return'UGX '+(m*data.members.length*15000).toLocaleString();})()}</div>
+            <div style="font-size:10px;color:#444">${data.members.length} members × months</div>
+          </div>
+          <div style="background:#111a2e;border:1px solid #2a2a5e;border-radius:8px;padding:10px 14px;min-width:140px">
+            <div style="font-size:9px;color:#444;text-transform:uppercase;font-weight:700;margin-bottom:3px">Annual (full year)</div>
+            <div style="color:#90CAF9;font-weight:800;font-size:1rem">UGX ${(data.members.length*15000*12).toLocaleString()}</div>
+            <div style="font-size:10px;color:#444">if all 12 months run</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -1100,7 +1196,12 @@ function renderRequests(isAdmin){
       <input type="text" id="rqNote" placeholder="Reference / note">`}
     `;
   } else { // L
+    const nowStr=new Date().toISOString().split('T')[0];
+    const flatNote=nowStr>='2026-07-01'
+      ?`<div style="background:#f5fff7;border:1px solid #C8E6C9;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:11.5px;color:#2E7D32"><strong>📋 Interest Policy (from Q2 2026 meeting):</strong> All new loans carry a flat 5% per month on the original principal. No compounding. Monthly interest = 5% × principal, regardless of repayments made.</div>`
+      :`<div style="background:#f8f8f8;border:1px solid #eee;border-radius:6px;padding:8px 12px;margin-bottom:8px;font-size:11.5px;color:#666"><strong>📋 Interest Policy:</strong> Compound 5% per month (for loans issued before 1 July 2026). Flat 5% applies from 1 July 2026 onward.</div>`;
     formHTML=`
+      ${flatNote}
       <label>Loan Amount Requested (UGX)</label>
       <input type="number" id="rqAmt" placeholder="e.g. 500000">
       <label>Purpose / Reason for Loan</label>
@@ -1460,6 +1561,37 @@ function uploadMemberPhoto(e,mName){const f=e.target.files[0];if(!f)return;showT
 function addMember(){const name=document.getElementById('newMName').value.trim(),pin=document.getElementById('newMPin').value;if(!name){showToast("⚠️ Enter a full name","warn");return;}if(!pin||pin.length<4){showToast("⚠️ PIN must be ≥ 4 characters","warn");return;}if(data.members.includes(name)){showToast("⚠️ Member already exists","warn");return;}data.members.push(name);data[name]={pin,contributions:[],loans:[]};if(_nmp){if(!data.photos)data.photos={};data.photos[name]=_nmp;_nmp=null;}saveData();}
 function removeMember(mName){if(!confirm(`Remove ${mName}?\n\nThis permanently deletes ALL their data.`))return;data.members=data.members.filter(m=>m!==mName);delete data[mName];if(data.photos)delete data.photos[mName];if(lastSelectedMember===mName)lastSelectedMember=null;saveData();}
 function resetMemberPin(mName){const np=prompt(`New PIN for ${mName} (min 4 chars):`);if(!np)return;if(np.length<4){showToast("⚠️ PIN must be ≥ 4 characters","warn");return;}data[mName].pin=np;saveData();}
+// ─── LOAN FREEZE ──────────────────────────────
+function freezeLoanPrompt(mName,loanIdx){
+  const loan=data[mName].loans[loanIdx];
+  if(!loan||loan.type!=='LOAN'){showToast("❌ Not a loan record","danger");return;}
+  const bal=calcLoanBalance(loan,loanIdx+1,mName);
+  const suggestion=bal?Math.round(bal.outstanding+bal.totalRepaid):Number(loan.amt);
+  const input=prompt(
+    `Freeze Loan #${loanIdx+1} for ${mName}\n`+
+    `Current outstanding: UGX ${bal?bal.outstanding.toLocaleString():'?'}\n`+
+    `Total repaid so far: UGX ${bal?bal.totalRepaid.toLocaleString():'0'}\n\n`+
+    `Enter the TOTAL FIXED AMOUNT this member must pay (principal + frozen interest).\n`+
+    `e.g. Geoffrey's developmental loan = 2894062.50`,
+    suggestion
+  );
+  if(!input)return;
+  const frozen=Number(String(input).replace(/,/g,''));
+  if(!frozen||frozen<1000){showToast("⚠️ Enter a valid amount","warn");return;}
+  if(!confirm(`Freeze Loan #${loanIdx+1} (${mName}) at a total payable of UGX ${frozen.toLocaleString()}?\nNo further interest will accrue. This can be undone.`))return;
+  data[mName].loans[loanIdx].frozenTotal=frozen;
+  logEdit('FREEZE','L',mName,{...loan},{...loan,frozenTotal:frozen});
+  saveData();
+  showToast(`✅ Loan frozen at UGX ${frozen.toLocaleString()}`,"success");
+}
+function unfreezeLoan(mName,loanIdx){
+  if(!confirm("Remove the freeze? Compound/flat interest will resume from today."))return;
+  const before={...data[mName].loans[loanIdx]};
+  delete data[mName].loans[loanIdx].frozenTotal;
+  logEdit('UNFREEZE','L',mName,before,{...data[mName].loans[loanIdx]});
+  saveData();
+  showToast("✅ Freeze removed","success");
+}
 function markFeePaid(mName){
   if(hasMembershipFeePaid(mName)){showToast("Already marked paid","info");return;}
   if(!confirm(`Mark ${mName} as having paid the UGX ${getMembershipFee().toLocaleString()} membership fee?`))return;
@@ -1488,14 +1620,39 @@ function renderAdmin(activeMember){
         <button class="gold full" onclick="postInflow()">Post Inflow ↗</button>
       </div>
       <div><div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--red)">📤 Post Outflow <span style="font-size:10px;color:var(--gold);float:right">Next: Loan #${nextLoanId}</span></div>
-        <label>Type</label><select id="tO"><option value="L">Issue Loan #${nextLoanId} to ${activeMember}</option><option value="E">Expense</option><option value="I">Investment</option></select>
+        <label>Type</label><select id="tO" onchange="render()"><option value="L">Issue Loan #${nextLoanId} to ${activeMember}</option><option value="E">Expense</option><option value="I">Investment</option></select>
+        ${(()=>{
+          const tOel=document.getElementById('tO');
+          const tOval=tOel?tOel.value:'L';
+          if(tOval==='L'){
+            // Check if member has active unpaid loans
+            const activeLoans=data[activeMember].loans.filter(l=>l.type==='LOAN').filter((l,idx)=>{const b=calcLoanBalance(l,idx+1,activeMember);return b&&!b.isFullyPaid;});
+            const warn=activeLoans.length?`<div class="alert alert-warn" style="font-size:11.5px;margin-bottom:8px"><span>⚠️</span><span>${activeMember} already has <strong>${activeLoans.length}</strong> active unpaid loan(s). Per policy, all loans must be settled before a new one is issued. Admin override allowed.</span></div>`:'';
+            const loanDateWarn=new Date().toISOString().split('T')[0]>='2026-07-01'?`<div style="font-size:10.5px;color:#2E7D32;background:#f5fff7;border:1px solid #C8E6C9;border-radius:5px;padding:5px 8px;margin-bottom:7px">✅ Flat interest applies (issued on/after 1 July 2026): 5% flat per month on original principal</div>`:`<div style="font-size:10.5px;color:#666;background:#f8f8f8;border:1px solid #eee;border-radius:5px;padding:5px 8px;margin-bottom:7px">📌 Compound interest applies (issued before 1 July 2026)</div>`;
+            return warn+loanDateWarn+`<label>Loan Type</label><select id="loanType" style="margin-bottom:8px"><option value="REGULAR">Regular Loan</option><option value="DEVELOPMENTAL">🏗️ Developmental Loan</option></select>`;
+          }
+          return '';
+        })()}
         <label>Date</label><input type="date" id="daOut" value="${new Date().toISOString().split('T')[0]}">
-        <label>Description</label><input type="text" id="reO" placeholder="Reason / description">
+        <label>Description / Purpose</label><input type="text" id="reO" placeholder="${document.getElementById('tO')&&document.getElementById('tO').value==='L'?'Loan purpose (required for developmental)':'Reason / description'}">
         <label>Amount (UGX)</label><input type="number" id="amO" placeholder="Enter amount">
         <button class="full" style="background:var(--red)" onclick="postOutflow()">Post Outflow ↙</button>
       </div>
     </div>
     <div class="divider"></div>
+    <details style="margin-bottom:10px">
+      <summary style="cursor:pointer;font-weight:600;font-size:12px;color:var(--gold);padding:6px 0">📋 Q2 2026 Policy Reference (May 2026 Meeting)</summary>
+      <div style="margin-top:10px;background:#111;border:1px solid #222;border-radius:8px;padding:14px;font-size:11.5px;line-height:1.8;color:#aaa">
+        <div style="color:var(--gold);font-weight:700;margin-bottom:8px">Elites SACCO — Resolutions from Q2 Meeting, May 2026</div>
+        <div><strong style="color:#ccc">R-01 Monthly Contribution:</strong> Increased to UGX 150,000 from 1 July 2026 (was UGX 100,000). <span style="color:#2E7D32">✅ Applied in system</span></div>
+        <div><strong style="color:#ccc">R-02 Loan Interest:</strong> Changed to flat 5% per month on original principal for all loans issued from 1 July 2026. No compounding. <span style="color:#2E7D32">✅ Applied in system</span></div>
+        <div><strong style="color:#ccc">R-03 Regular Loan Cap:</strong> Maximum regular loan = UGX 1,000,000. Developmental loans handled separately. <span style="color:#2E7D32">✅ Warning in system</span></div>
+        <div><strong style="color:#ccc">R-04 Geoffrey's Loan:</strong> Developmental loan frozen at UGX 2,894,062.50 total payable (already compounded to that point). Apply freeze via Audit tab. <span style="color:#FFD54F">⏳ Manual admin action needed</span></div>
+        <div><strong style="color:#ccc">R-05 Membership Fee:</strong> UGX 50,000 one-time, deadline to be confirmed. <span style="color:#2E7D32">✅ In system</span></div>
+        <div><strong style="color:#ccc">R-06 Social Fund:</strong> UGX 15,000/member/month from July 2026. Full policy (payouts, claims) deferred to Q3 2026. <span style="color:#2E7D32">✅ Tracked informally</span></div>
+        <div style="margin-top:8px;color:#555;font-size:10.5px">Q3 2026 meeting to address: developmental loan 2.5% rate formalisation, social fund payout rules, new member onboarding.</div>
+      </div>
+    </details>
     <button class="gold full" onclick="exportMasterAudit()">📥 Download Master SACCO Audit (CSV)</button>
   </div>`;
 }
@@ -1504,8 +1661,23 @@ function renderAdmin(activeMember){
 function renderAudit(){
   // Search filter
   const sq=(auditSearch||'').toLowerCase();
-  const arrRows=data.members.filter(m=>!sq||m.toLowerCase().includes(sq)).map(m=>{const sav=data[m].contributions.reduce((a,b)=>a+Number(b.amt),0),arr=calcArrearsAndFines(m),debt=getMemberLoanDebt(m);return`<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td><td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td><td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()}</td></tr>`;}).join('');
-  const txRows=data.members.filter(m=>!sq||m.toLowerCase().includes(sq)).map(mem=>data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">✕</button></td></tr>`).join('')+data[mem].loans.map((l,i)=>`<tr><td>${mem}</td><td>${l.type}</td><td>${l.type==='LOAN'?('Loan'+(l.purpose?' — '+l.purpose:'')):'Repay #'+l.loanId}</td><td>UGX ${Number(l.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`).join('')).join('');
+  const arrRows=data.members.filter(m=>!sq||m.toLowerCase().includes(sq)).map(m=>{
+    const sav=data[m].contributions.reduce((a,b)=>a+Number(b.amt),0),arr=calcArrearsAndFines(m),debt=getMemberLoanDebt(m);
+    const activeLoans=data[m].loans.filter(l=>l.type==='LOAN').map((l,idx)=>({...calcLoanBalance(l,idx+1,m),loanType:l.loanType||'REGULAR',isFrozenL:!!l.frozenTotal})).filter(b=>b&&!b.isFullyPaid);
+    const loanTags=activeLoans.map(b=>`<span class="badge" style="font-size:8.5px;background:#f0f0f0;color:#555">${b.isFrozenL?'🔒':b.interestModel}${b.loanType==='DEVELOPMENTAL'?' 🏗️':''}</span>`).join(' ');
+    return`<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td><td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td><td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()} ${loanTags}</td></tr>`;
+  }).join('');
+  const txRows=data.members.filter(m=>!sq||m.toLowerCase().includes(sq)).map(mem=>data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">✕</button></td></tr>`).join('')+data[mem].loans.map((l,i)=>{
+  const lid=i+1;
+  const bal=l.type==='LOAN'?calcLoanBalance(l,lid,mem):null;
+  const freezeBtn=l.type==='LOAN'&&bal&&!bal.isFullyPaid?
+    (l.frozenTotal?
+      `<button class="edit-btn" style="background:#3949AB" onclick="unfreezeLoan('${mem}',${i})">🔓 Unfreeze</button>`
+      :`<button class="edit-btn" style="background:#5C35CC;color:#fff" onclick="freezeLoanPrompt('${mem}',${i})">🔒 Freeze</button>`)
+    :'';
+  const loanDesc=l.type==='LOAN'?`Loan #${lid}${l.loanType==='DEVELOPMENTAL'?' 🏗️':''} ${l.frozenTotal?'🔒':''} ${l.purpose?'— '+l.purpose:''} <span style="font-size:9.5px;color:#888;background:#f0f0f0;border-radius:4px;padding:1px 5px">${bal?bal.interestModel:''}</span>`:('Repay #'+l.loanId);
+  return`<tr><td>${mem}</td><td>${l.type}</td><td>${loanDesc}</td><td>UGX ${Number(l.amt).toLocaleString()}${bal&&l.frozenTotal?` <div style="font-size:9.5px;color:#3949AB">Frozen: UGX ${Number(l.frozenTotal).toLocaleString()}</div>`:''}</td><td>${freezeBtn} <button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`;
+}).join('')).join('');
   const sysRows=data.cashIn.map((c,i)=>`<tr><td>SYSTEM</td><td>Cash In</td><td>${c.source}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('C','',${i})">Edit</button><button class="del" onclick="del('C','',${i})">✕</button></td></tr>`).join('')+data.expenses.map((e,i)=>`<tr><td>SYSTEM</td><td>Expense</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('E','',${i})">Edit</button><button class="del" onclick="del('E','',${i})">✕</button></td></tr>`).join('')+data.investments.map((v,i)=>`<tr><td>SYSTEM</td><td>Investment</td><td>${v.reason}</td><td>UGX ${Number(v.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('I','',${i})">Edit</button><button class="del" onclick="del('I','',${i})">✕</button></td></tr>`).join('');
   // Waiver rows
   const waiverRows=(data.waivers||[]).filter(w=>!sq||w.member.toLowerCase().includes(sq)||w.month.includes(sq)).map((w,i)=>`<tr><td>${w.member}</td><td>${w.month}</td><td>${w.reason}</td><td>${w.date}</td><td>${w.by||'Admin'}</td><td><button class="del" onclick="delWaiver(${i})">✕</button></td></tr>`).join('');
@@ -1675,12 +1847,12 @@ function renderSettings(){
     <div class="divider"></div>
     <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--gold)">⚙️ Admin — SACCO Settings</div>
 
-    <label>Default Monthly Target (UGX)</label>
+    <label>Default Monthly Target from July 2026 onward (UGX)</label>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-      <input type="number" id="newTarget" value="${curTarget}" style="margin:0;flex:1">
+      <input type="number" id="newTarget" value="${curTarget||150000}" style="margin:0;flex:1" min="80000">
       <button class="gold" onclick="saveMonthlyTarget()" style="margin:0;white-space:nowrap">Save Target</button>
     </div>
-    <p style="font-size:10.5px;color:#aaa;margin-bottom:14px">ℹ️ Applies to all future months. Historical months (Feb–Jul 2024 = 80K) are preserved.</p>
+    <p style="font-size:10.5px;color:#aaa;margin-bottom:14px">ℹ️ Only applies from <strong>July 2026 onward</strong>. Locked history: Feb–Jul 2024 = UGX 80,000 · Aug 2024–Jun 2026 = UGX 100,000. Current rate set by Q2 2026 meeting: <strong>UGX 150,000</strong>.</p>
 
     <label>Membership Fee (UGX, one-time)</label>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
@@ -1782,9 +1954,39 @@ function postInflow(){
   saveData();
 }
 function postOutflow(){
-  const t=document.getElementById("tO").value,amt=Number(document.getElementById("amO").value),desc=document.getElementById("reO").value,m=lastSelectedMember||user.name,date=document.getElementById("daOut").value;
+  const t=document.getElementById("tO").value;
+  const amt=Number(document.getElementById("amO").value);
+  const desc=document.getElementById("reO").value;
+  const m=lastSelectedMember||user.name;
+  const date=document.getElementById("daOut").value;
   if(!amt||amt<=0){showToast("⚠️ Enter a valid amount","warn");return;}
-  if(t==='L')data[m].loans.push({amt,date,type:'LOAN',purpose:desc});else if(t==='E')data.expenses.push({amt,reason:desc,date});else if(t==='I')data.investments.push({amt,reason:desc,date});
+  if(!date){showToast("⚠️ Enter a date","warn");return;}
+  if(t==='L'){
+    const loanTypeEl=document.getElementById('loanType');
+    const loanType=loanTypeEl?loanTypeEl.value:'REGULAR';
+    // Cap warning for regular loans > 1,000,000 (R-03, Q2 2026 meeting)
+    if(loanType==='REGULAR'&&amt>1000000){
+      if(!confirm(`⚠️ UGX ${amt.toLocaleString()} exceeds the regular loan cap of UGX 1,000,000 (R-03, Q2 2026).
+
+Continue anyway?`))return;
+    }
+    // Eligibility warning — active unpaid loans
+    const activeLoans=data[m].loans.filter(l=>l.type==='LOAN').filter((l,idx)=>{
+      const b=calcLoanBalance(l,idx+1,m);return b&&!b.isFullyPaid;
+    });
+    if(activeLoans.length){
+      if(!confirm(`⚠️ ${m} already has ${activeLoans.length} active unpaid loan(s).
+
+Per policy all loans should be settled before a new one is issued.
+
+Override and issue anyway?`))return;
+    }
+    data[m].loans.push({amt,date,type:'LOAN',purpose:desc,loanType});
+  } else if(t==='E'){
+    data.expenses.push({amt,reason:desc,date});
+  } else if(t==='I'){
+    data.investments.push({amt,reason:desc,date});
+  }
   saveData();
 }
 function del(cat,mem,idx){
