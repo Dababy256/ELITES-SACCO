@@ -333,9 +333,12 @@ async function loadData(){
     if(!data.settings)data.settings={monthlyTarget:150000,targetOverrides:{},membershipFee:50000,paymentInfo:''};
     if(!data.settings.membershipFee)data.settings.membershipFee=50000;
     if(!data.settings.paymentInfo)data.settings.paymentInfo='';
+    if(!data.settings.targetOverrides)data.settings.targetOverrides={};
+    // Migrate 100K → 150K (Q2 2026 resolution R-01)
+    if(!data.settings.monthlyTarget||Number(data.settings.monthlyTarget)===100000)data.settings.monthlyTarget=150000;
     if(!data.requests)data.requests=[];
     if(!data.editLog)data.editLog=[];
-    if(!data.membershipFees)data.membershipFees=[]; // {member, amt, date, _fromRequest?}
+    if(!data.membershipFees)data.membershipFees=[];
     const now=new Date();
     reportMonth=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
     reportStart="2024-02";reportEnd=reportMonth;allMembersStart="2024-02";allMembersEnd=reportMonth;
@@ -368,7 +371,7 @@ function getMonthlyTarget(ms){
   // Period 2: Aug 2024–Jun 2026 = UGX 100,000 (locked, do not change — history must be preserved)
   if((y===2024&&m>=8)||(y===2025)||(y===2026&&m<=6)) return 100000;
   // Period 3: Jul 2026 onward = UGX 150,000 default (R-01, Q2 2026 meeting) or admin-configured amount
-  return(data.settings&&data.settings.monthlyTarget&&Number(data.settings.monthlyTarget)>=100000)?Number(data.settings.monthlyTarget):150000;
+  return(data.settings&&data.settings.monthlyTarget)?Number(data.settings.monthlyTarget):150000;
 }
 
 function isMonthWaived(mName,ms){
@@ -594,18 +597,47 @@ function buildSaccoPrintHTML(title,subtitle,rd){
   <div class="print-page">
     <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section A — Financial Position (All-Time)</div><div class="ph-sub">${title}</div></div>
     <div class="print-net"><div class="pn-label">Net Cash Position</div><div class="pn-value">UGX ${S.netCash.toLocaleString()}</div><div class="print-formula">= (Gross Savings + Membership Fees + Interest Earned + Cash In) − (Expenses + Active Loan Principal + Investments)</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <div style="font-size:9pt;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">A.1 Inflows</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${svgDonut([
+            {value:S.grossSavings,color:'#2E7D32',label:'Savings'},
+            {value:S.interestCollected,color:'#43A047',label:'Interest'},
+            {value:S.membershipFees,color:'#F57F17',label:'Fees'},
+            {value:S.cashIn,color:'#1565C0',label:'Cash In'},
+          ].filter(s=>s.value>0),55,55,43,14,'','')}
+          <div style="font-size:8pt;line-height:1.8">
+            <div><span style="color:#2E7D32">■</span> Savings: UGX ${S.grossSavings.toLocaleString()}</div>
+            <div><span style="color:#43A047">■</span> Interest: UGX ${S.interestCollected.toLocaleString()}</div>
+            <div><span style="color:#F57F17">■</span> Fees: UGX ${S.membershipFees.toLocaleString()}</div>
+            <div><span style="color:#1565C0">■</span> Cash In: UGX ${S.cashIn.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:9pt;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">A.2 Outflows</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${svgDonut([
+            {value:S.expenses,color:'#C62828',label:'Expenses'},
+            {value:S.activeLoanPrincipal,color:'#B08D57',label:'Loans'},
+            {value:S.investments,color:'#6A1B9A',label:'Invest'},
+          ].filter(s=>s.value>0),55,55,43,14,'','')}
+          <div style="font-size:8pt;line-height:1.8">
+            <div><span style="color:#C62828">■</span> Expenses: UGX ${S.expenses.toLocaleString()}</div>
+            <div><span style="color:#B08D57">■</span> Loans Out: UGX ${S.activeLoanPrincipal.toLocaleString()}</div>
+            <div><span style="color:#6A1B9A">■</span> Investments: UGX ${S.investments.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="print-section">
-      <h2>1.1 Inflows</h2>
+      <h2>A.3 Detailed Breakdown</h2>
       <div class="print-grid">
         <div class="print-stat"><div class="ps-label">Gross Savings</div><div class="ps-value">UGX ${S.grossSavings.toLocaleString()}</div></div>
         <div class="print-stat"><div class="ps-label">Membership Fees</div><div class="ps-value" style="color:#F57F17">UGX ${S.membershipFees.toLocaleString()}</div></div>
         <div class="print-stat"><div class="ps-label">Interest Earned</div><div class="ps-value" style="color:#2E7D32">UGX ${S.interestCollected.toLocaleString()}</div></div>
         <div class="print-stat"><div class="ps-label">Cash In / Donations</div><div class="ps-value" style="color:#1565C0">UGX ${S.cashIn.toLocaleString()}</div></div>
-      </div>
-    </div>
-    <div class="print-section">
-      <h2>1.2 Outflows / Encumbered Funds</h2>
-      <div class="print-grid">
         <div class="print-stat"><div class="ps-label">Total Expenses</div><div class="ps-value" style="color:#C62828">UGX ${S.expenses.toLocaleString()}</div></div>
         <div class="print-stat"><div class="ps-label">Active Loan Principal</div><div class="ps-value" style="color:#B08D57">UGX ${S.activeLoanPrincipal.toLocaleString()}</div></div>
         <div class="print-stat"><div class="ps-label">Investments</div><div class="ps-value" style="color:#6A1B9A">UGX ${S.investments.toLocaleString()}</div></div>
@@ -614,12 +646,54 @@ function buildSaccoPrintHTML(title,subtitle,rd){
     <div class="print-footer">ELITES SACCO — Confidential | Page 2</div>
   </div>
 
+  <!-- ════ PAGE 2b: COLLECTION TREND ════ -->
+  <div class="print-page">
+    <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section A.3 — Monthly Collection Trend</div><div class="ph-sub">${title}</div></div>
+    <p style="font-size:9pt;color:#666;margin-bottom:10px">Total savings collected by all members each month since February 2024.</p>
+    ${(()=>{
+      const trendPoints=[];
+      const now=new Date();
+      let cy=2024,cm=2;
+      while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth()+1)){
+        const ms=`${cy}-${String(cm).padStart(2,'0')}`;
+        const total=data.members.reduce((a,m)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
+        trendPoints.push({label:ms,value:total});
+        cm++;if(cm>12){cm=1;cy++;}
+      }
+      return trendPoints.length>=2?`<div>${svgLine(trendPoints,480,200,'Monthly Savings Collected (UGX)','#B08D57')}</div>`:'<p style="color:#999;font-size:9pt">Not enough data yet.</p>';
+    })()}
+    <p style="font-size:8.5pt;color:#888;margin-top:12px">Note: Target line not shown. Member count and target amount have changed over the period (80K → 100K → 150K). See Section B for period-specific breakdown.</p>
+    <div class="print-footer">ELITES SACCO — Confidential | Page 2b</div>
+  </div>
+
   <!-- ════ PAGE 3: MEMBER SAVINGS ════ -->
   <div class="print-page">
     <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section B — Member Savings Status</div><div class="ph-sub">${title}</div></div>
-    <p style="font-size:9pt;color:#666;margin-bottom:8px">Status reflects the SELECTED PERIOD only. A member is COMPLETE only if every month in the period was fully paid. Shortfall = period gap + period penalty charges.</p>
+    <p style="font-size:9pt;color:#666;margin-bottom:8px">Status reflects the SELECTED PERIOD only. A member is COMPLETE only if every month in the period was fully paid.</p>
+    <!-- Status bar visual -->
+    <div style="margin-bottom:10px">
+      <div style="display:flex;border-radius:5px;overflow:hidden;height:18px;margin-bottom:5px">
+        ${completeC?`<div style="flex:${completeC};background:#2E7D32;display:flex;align-items:center;justify-content:center;color:#fff;font-size:8pt;font-weight:700">${completeC}</div>`:''}
+        ${partialC?`<div style="flex:${partialC};background:#E65100;display:flex;align-items:center;justify-content:center;color:#fff;font-size:8pt;font-weight:700">${partialC}</div>`:''}
+        ${pendingC?`<div style="flex:${pendingC};background:#C62828;display:flex;align-items:center;justify-content:center;color:#fff;font-size:8pt;font-weight:700">${pendingC}</div>`:''}
+      </div>
+      <div style="font-size:8pt;color:#555;display:flex;gap:12px">
+        <span><span style="color:#2E7D32">■</span> Complete: ${completeC}</span>
+        <span><span style="color:#E65100">■</span> Partial: ${partialC}</span>
+        <span><span style="color:#C62828">■</span> Pending: ${pendingC}</span>
+        <span style="margin-left:auto">Collection rate: <strong>${collectionRate}%</strong></span>
+      </div>
+    </div>
+    <!-- Member bar chart -->
+    <div style="margin-bottom:10px;overflow:hidden">
+      ${svgBar(memberRows.map(r=>({
+        label:r.name.split(' ')[0]+' '+r.name.split(' ').slice(-1)[0],
+        value:r.paid,
+        color:r.status==='COMPLETE'?'#2E7D32':r.status==='PARTIAL'?'#E65100':'#C62828'
+      })),480,memberRows.length*22+40,'Member Contributions (Period)')}
+    </div>
     <table>
-      <tr><th style="width:8%">#</th><th>Member Name</th><th style="text-align:right">Amount Paid</th><th style="text-align:right">Expected</th><th style="text-align:right">Shortfall (incl. penalty)</th><th style="text-align:center">Status</th></tr>
+      <tr><th style="width:6%">#</th><th>Member Name</th><th style="text-align:right">Amount Paid</th><th style="text-align:right">Expected</th><th style="text-align:right">Shortfall (incl. penalty)</th><th style="text-align:center">Status</th></tr>
       ${mRows}
       <tr style="background:#f0f0f0!important;font-weight:700"><td colspan="2" style="text-align:right">TOTALS</td><td style="text-align:right">UGX ${savingsInRange.toLocaleString()}</td><td style="text-align:right">UGX ${totalExpected.toLocaleString()}</td><td style="text-align:right;color:#C62828">UGX ${totalShortfall.toLocaleString()}</td><td style="text-align:center">${completeC}/${memberRows.length}</td></tr>
     </table>
@@ -1711,6 +1785,162 @@ function renderAudit(){
   </div>`;
 }
 
+
+// ════════════════════════════════════════════════════════
+// CHART ENGINE — pure SVG, no dependencies, prints cleanly
+// ════════════════════════════════════════════════════════
+
+function svgDonut(slices,cx,cy,r,strokeW,title,subtitle){
+  // slices: [{value, color, label}]
+  const total=slices.reduce((a,s)=>a+s.value,0);
+  if(!total)return`<svg width="${cx*2}" height="${cy*2+40}" xmlns="http://www.w3.org/2000/svg"><text x="${cx}" y="${cy}" text-anchor="middle" fill="#aaa" font-size="12">No data</text></svg>`;
+  let startAngle=-Math.PI/2;
+  const paths=slices.map(s=>{
+    const pct=s.value/total;
+    const endAngle=startAngle+pct*2*Math.PI;
+    const x1=cx+r*Math.cos(startAngle),y1=cy+r*Math.sin(startAngle);
+    const x2=cx+r*Math.cos(endAngle),y2=cy+r*Math.sin(endAngle);
+    const large=pct>0.5?1:0;
+    const d=`M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+    const path=`<path d="${d}" fill="${s.color}" stroke="#fff" stroke-width="2"/>`;
+    startAngle=endAngle;
+    return path;
+  }).join('');
+  // inner circle (donut hole)
+  const hole=`<circle cx="${cx}" cy="${cy}" r="${r*0.58}" fill="#fff"/>`;
+  // centre text
+  const cTitle=`<text x="${cx}" y="${cy-6}" text-anchor="middle" font-size="11" font-weight="700" fill="#111">${title}</text>`;
+  const cSub=subtitle?`<text x="${cx}" y="${cy+10}" text-anchor="middle" font-size="9" fill="#888">${subtitle}</text>`:'';
+  return`<svg width="${cx*2}" height="${cy*2}" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">${paths}${hole}${cTitle}${cSub}</svg>`;
+}
+
+function svgBar(items,w,h,title,barColor){
+  // items: [{label, value, color?, max?}]
+  if(!items.length)return'';
+  const maxVal=Math.max(...items.map(i=>i.value),1);
+  const padL=10,padR=10,padT=24,padB=8;
+  const barH=Math.max(14,Math.floor((h-padT-padB)/items.length)-4);
+  const totalH=padT+items.length*(barH+4)+padB;
+  const bars=items.map((item,idx)=>{
+    const y=padT+idx*(barH+4);
+    const barW=Math.round(((item.value||0)/maxVal)*(w-padL-padR-90));
+    const pct=Math.round((item.value||0)/maxVal*100);
+    const col=item.color||barColor||'#B08D57';
+    // background track
+    const track=`<rect x="${padL+90}" y="${y}" width="${w-padL-padR-90}" height="${barH}" rx="3" fill="#f0f0f0"/>`;
+    // bar
+    const bar=barW>0?`<rect x="${padL+90}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="${col}"/>`:'';
+    // label
+    const lbl=`<text x="${padL+85}" y="${y+barH/2+4}" text-anchor="end" font-size="9.5" fill="#555">${(item.label||'').slice(0,14)}</text>`;
+    // value
+    const val=`<text x="${padL+90+barW+4}" y="${y+barH/2+4}" font-size="9" fill="#333">${(item.value||0).toLocaleString()}</text>`;
+    return track+bar+lbl+val;
+  }).join('');
+  const titleEl=`<text x="${w/2}" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#111">${title}</text>`;
+  return`<svg width="${w}" height="${totalH}" xmlns="http://www.w3.org/2000/svg">${titleEl}${bars}</svg>`;
+}
+
+function svgLine(points,w,h,title,lineColor){
+  // points: [{label, value}]  — label=month string
+  if(!points||points.length<2)return'';
+  const padL=46,padR=16,padT=24,padB=28;
+  const vals=points.map(p=>p.value);
+  const maxV=Math.max(...vals,1);
+  const minV=0;
+  const range=maxV-minV||1;
+  const toX=(i)=>padL+(i/(points.length-1))*(w-padL-padR);
+  const toY=(v)=>padT+(1-(v-minV)/range)*(h-padT-padB);
+  // gridlines
+  const grids=[0,0.25,0.5,0.75,1].map(pct=>{
+    const yg=padT+pct*(h-padT-padB);
+    const vg=Math.round(maxV*(1-pct));
+    return`<line x1="${padL}" y1="${yg}" x2="${w-padR}" y2="${yg}" stroke="#f0f0f0" stroke-width="1"/>
+    <text x="${padL-4}" y="${yg+4}" text-anchor="end" font-size="8" fill="#aaa">${vg>=1000?Math.round(vg/1000)+'K':vg}</text>`;
+  }).join('');
+  // line path
+  const pts=points.map((p,i)=>`${i===0?'M':'L'} ${toX(i).toFixed(1)} ${toY(p.value).toFixed(1)}`).join(' ');
+  const fillPts=`${pts} L ${toX(points.length-1).toFixed(1)} ${(h-padB).toFixed(1)} L ${toX(0).toFixed(1)} ${(h-padB).toFixed(1)} Z`;
+  const fill=`<path d="${fillPts}" fill="${lineColor||'#B08D57'}" opacity="0.1"/>`;
+  const line=`<path d="${pts}" fill="none" stroke="${lineColor||'#B08D57'}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  // dots + labels (only show every Nth label if dense)
+  const step=points.length>18?3:points.length>10?2:1;
+  const dots=points.map((p,i)=>{
+    const x=toX(i),y=toY(p.value);
+    const dot=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="${lineColor||'#B08D57'}"/>`;
+    const lbl=i%step===0?`<text x="${x.toFixed(1)}" y="${h-padB+14}" text-anchor="middle" font-size="7.5" fill="#888" transform="rotate(-40,${x.toFixed(1)},${h-padB+14})">${p.label.slice(5)}</text>`:'';
+    return dot+lbl;
+  }).join('');
+  const titleEl=`<text x="${w/2}" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#111">${title}</text>`;
+  return`<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${titleEl}${grids}${fill}${line}${dots}</svg>`;
+}
+
+function svgLegend(items){
+  // items: [{color, label, value}]
+  return items.map(i=>`
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+      <div style="width:12px;height:12px;border-radius:3px;background:${i.color};flex-shrink:0"></div>
+      <div style="font-size:11px;color:#555;flex:1">${i.label}</div>
+      ${i.value!==undefined?`<div style="font-size:11px;font-weight:700;color:#111">UGX ${Number(i.value).toLocaleString()}</div>`:''}
+    </div>`).join('');
+}
+
+// Build all chart data for the selected period
+function buildChartData(pm){
+  const now=new Date();
+  const S=getGlobalStats();
+
+  // Chart 1: Member savings bar (period)
+  const memberBars=data.members.map(m=>{
+    const paid=pm.reduce((a,ms)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
+    const expected=pm.reduce((a,ms)=>a+getMonthlyTarget(ms),0);
+    let color='#C62828';
+    if(paid>=expected)color='#2E7D32';
+    else if(paid>0)color='#E65100';
+    return{label:m.split(' ')[0]+' '+m.split(' ').slice(-1)[0],value:paid,expected,color};
+  });
+
+  // Chart 2: Financial donut slices
+  const donutInflows=[
+    {value:S.grossSavings,color:'#2E7D32',label:'Savings'},
+    {value:S.interestCollected,color:'#43A047',label:'Interest'},
+    {value:S.membershipFees,color:'#F57F17',label:'Membership Fees'},
+    {value:S.cashIn,color:'#1565C0',label:'Cash In'},
+  ].filter(s=>s.value>0);
+
+  const donutOutflows=[
+    {value:S.expenses,color:'#C62828',label:'Expenses'},
+    {value:S.activeLoanPrincipal,color:'#B08D57',label:'Loans Out'},
+    {value:S.investments,color:'#6A1B9A',label:'Investments'},
+  ].filter(s=>s.value>0);
+
+  // Chart 3: Monthly collection trend (all-time)
+  const trendPoints=[];
+  let cy=2024,cm=2;
+  while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth()+1)){
+    const ms=`${cy}-${String(cm).padStart(2,'0')}`;
+    const total=data.members.reduce((a,m)=>a+data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0),0);
+    trendPoints.push({label:ms,value:total});
+    cm++;if(cm>12){cm=1;cy++;}
+  }
+
+  // Chart 4: Status counts
+  const statusCounts={COMPLETE:0,PARTIAL:0,PENDING:0};
+  if(pm.length){
+    data.members.forEach(m=>{
+      let mC=0;
+      pm.forEach(ms=>{
+        const paid=data[m].contributions.filter(c=>c.month===ms).reduce((x,y)=>x+Number(y.amt),0);
+        if(paid>=getMonthlyTarget(ms))mC++;
+      });
+      if(mC===pm.length)statusCounts.COMPLETE++;
+      else if(mC===0)statusCounts.PENDING++;
+      else statusCounts.PARTIAL++;
+    });
+  }
+
+  return{memberBars,donutInflows,donutOutflows,trendPoints,statusCounts,S};
+}
+
 // ─── MONTHLY REPORT ───────────────────────────
 function renderMonthlyReport(){
   const now=new Date(),curMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
@@ -1842,7 +2072,7 @@ function renderMonthlyReport(){
 function renderSettings(){
   const ph=getPhoto(user.name);
   const isAdmin=user.name===PRIMARY_ADMIN||user.name===SECONDARY_ADMIN;
-  const curTarget=(data.settings&&data.settings.monthlyTarget)?data.settings.monthlyTarget:100000;
+  const curTarget=(data.settings&&data.settings.monthlyTarget)?Number(data.settings.monthlyTarget):150000;
   const adminSection=isAdmin?`
     <div class="divider"></div>
     <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--gold)">⚙️ Admin — SACCO Settings</div>
@@ -2002,6 +2232,56 @@ function del(cat,mem,idx){
 }
 
 // ─── CSV ──────────────────────────────────────
+// ─── SETTINGS SAVE FUNCTIONS ─────────────────
+function saveMonthlyTarget(){
+  const v=Number((document.getElementById('newTarget')||{}).value);
+  if(!v||v<80000){showToast("⚠️ Enter a valid amount (min 80,000)","warn");return;}
+  if(!data.settings)data.settings={targetOverrides:{}};
+  data.settings.monthlyTarget=v;
+  saveData();
+  showToast("✅ Monthly target updated to UGX "+v.toLocaleString(),"success");
+}
+function saveMembershipFee(){
+  const v=Number((document.getElementById('newFee')||{}).value);
+  if(!v||v<1000){showToast("⚠️ Enter a valid fee (min 1,000)","warn");return;}
+  if(!data.settings)data.settings={targetOverrides:{}};
+  data.settings.membershipFee=v;
+  saveData();
+  showToast("✅ Membership fee updated to UGX "+v.toLocaleString(),"success");
+}
+function savePaymentInfo(){
+  const v=((document.getElementById('newPayInfo')||{}).value)||'';
+  if(!data.settings)data.settings={targetOverrides:{}};
+  data.settings.paymentInfo=v.trim();
+  saveData();
+  showToast("✅ Payment details saved","success");
+}
+
+// ─── BACKUP / RESTORE ─────────────────────────
+function downloadBackup(){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`elites_sacco_backup_${new Date().toISOString().split('T')[0]}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  showToast("✅ Backup downloaded","success");
+}
+function restoreBackup(e){
+  const file=e.target.files[0];if(!file)return;
+  if(!confirm("⚠️ This will OVERWRITE all current data with the backup file. This cannot be undone. Continue?"))return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      const parsed=JSON.parse(ev.target.result);
+      if(!parsed.members||!Array.isArray(parsed.members)){showToast("❌ Invalid backup file","danger");return;}
+      data=parsed;
+      saveData();
+      showToast("✅ Data restored from backup","success");
+    }catch(err){showToast("❌ Could not parse backup file","danger");}
+  };
+  r.readAsText(file);
+}
+
 function exportMemberCSV(name){const rows=[["Date","Type","Ref","Amount"]];data[name].contributions.forEach(c=>rows.push([c.date,"Savings",c.month,c.amt]));data[name].loans.forEach(l=>rows.push([l.date,l.type,l.loanId?'Loan '+l.loanId:'Principal',l.amt]));downloadCSV(`${name}_Statement.csv`,rows);}
 function exportMasterAudit(){const rows=[["Entity","Date","Type","Ref","Amount"]];data.members.forEach(m=>{data[m].contributions.forEach(c=>rows.push([m,c.date,"Savings",c.month,c.amt]));data[m].loans.forEach(l=>rows.push([m,l.date,l.type,l.loanId?'Loan '+l.loanId:'Principal',l.amt]));});data.cashIn.forEach(c=>rows.push(["SYSTEM",c.date,"Cash In",c.source,c.amt]));data.expenses.forEach(e=>rows.push(["SYSTEM",e.date,"Expense",e.reason,e.amt]));data.investments.forEach(i=>rows.push(["SYSTEM",i.date,"Investment",i.reason,i.amt]));downloadCSV(`SACCO_AUDIT_${new Date().toISOString().split('T')[0]}.csv`,rows);}
 function downloadCSV(fn,rows){const a=document.createElement("a");a.setAttribute("href",encodeURI("data:text/csv;charset=utf-8,"+rows.map(r=>r.join(",")).join("\n")));a.setAttribute("download",fn);document.body.appendChild(a);a.click();document.body.removeChild(a);}
