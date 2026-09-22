@@ -426,14 +426,34 @@ function calcLoanBalance(loan,loanId,mName){
   }
 
   // ── FLAT INTEREST: loans issued on or after 1 July 2026 (R-02, Q2 2026) ──
+  // Rule: month 1 interest applies immediately on issue date.
+  // Each subsequent month's interest applies the day AFTER the monthly anniversary.
+  // e.g. issued 17 Jul → month 2 from 18 Aug, month 3 from 18 Sep.
+  // Repayments reduce outstanding but never affect the fixed monthly interest additions.
   if(loan.date>='2026-07-01'){
-    const y1=issueDate.getFullYear(),m1=issueDate.getMonth();
-    const y2=today.getFullYear(),m2=today.getMonth();
-    const monthsElapsed=Math.max(0,(y2-y1)*12+(m2-m1));
+    // Start at 1 — first month's interest is immediate
+    let monthsElapsed=1;
+    let n=1;
+    while(true){
+      // Compute the Nth monthly anniversary
+      const anniv=new Date(issueDate);
+      anniv.setMonth(anniv.getMonth()+n);
+      // Handle month-end overflow (e.g. Jan 31 + 1 month → Feb 28/29)
+      if(anniv.getDate()!==issueDate.getDate()){
+        anniv.setDate(0); // last day of previous month
+      }
+      // Next interest applies the day AFTER the anniversary
+      const trigger=new Date(anniv);
+      trigger.setDate(trigger.getDate()+1);
+      trigger.setHours(0,0,0,0);
+      if(trigger>today)break;
+      monthsElapsed++;
+      n++;
+    }
     const totalOwed=principal*(1+0.05*monthsElapsed);
     const outstanding=Math.max(0,Math.round(totalOwed-totalRepaid));
     const isFullyPaid=outstanding===0&&totalRepaid>0;
-    const isOverdue=!isFullyPaid&&monthsElapsed>=1&&totalRepaid===0;
+    const isOverdue=!isFullyPaid&&monthsElapsed>1&&totalRepaid===0;
     const pr=Math.min(totalRepaid,principal);
     return{principal,outstanding,totalRepaid,
       interestCollected:Math.max(0,totalRepaid-pr),
@@ -1694,21 +1714,33 @@ function renderAdmin(activeMember){
         <button class="gold full" onclick="postInflow()">Post Inflow ↗</button>
       </div>
       <div><div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--red)">📤 Post Outflow <span style="font-size:10px;color:var(--gold);float:right">Next: Loan #${nextLoanId}</span></div>
-        <label>Type</label><select id="tO" onchange="render()"><option value="L">Issue Loan #${nextLoanId} to ${activeMember}</option><option value="E">Expense</option><option value="I">Investment</option></select>
-        ${(()=>{
-          const tOel=document.getElementById('tO');
-          const tOval=tOel?tOel.value:'L';
-          if(tOval==='L'){
-            // Check if member has active unpaid loans
+        <label>Type</label>
+        <select id="tO" onchange="
+          var v=this.value;
+          document.getElementById('loanOnlyFields').style.display=v==='L'?'block':'none';
+        ">
+          <option value="L">Issue Loan #${nextLoanId} to ${activeMember}</option>
+          <option value="E">Expense</option>
+          <option value="I">Investment</option>
+        </select>
+        <!-- Loan-only fields: shown/hidden via JS, always in DOM -->
+        <div id="loanOnlyFields">
+          ${(()=>{
             const activeLoans=data[activeMember].loans.filter(l=>l.type==='LOAN').filter((l,idx)=>{const b=calcLoanBalance(l,idx+1,activeMember);return b&&!b.isFullyPaid;});
-            const warn=activeLoans.length?`<div class="alert alert-warn" style="font-size:11.5px;margin-bottom:8px"><span>⚠️</span><span>${activeMember} already has <strong>${activeLoans.length}</strong> active unpaid loan(s). Per policy, all loans must be settled before a new one is issued. Admin override allowed.</span></div>`:'';
-            const loanDateWarn=new Date().toISOString().split('T')[0]>='2026-07-01'?`<div style="font-size:10.5px;color:#2E7D32;background:#f5fff7;border:1px solid #C8E6C9;border-radius:5px;padding:5px 8px;margin-bottom:7px">✅ Flat interest applies (issued on/after 1 July 2026): 5% flat per month on original principal</div>`:`<div style="font-size:10.5px;color:#666;background:#f8f8f8;border:1px solid #eee;border-radius:5px;padding:5px 8px;margin-bottom:7px">📌 Compound interest applies (issued before 1 July 2026)</div>`;
-            return warn+loanDateWarn+`<label>Loan Type</label><select id="loanType" style="margin-bottom:8px"><option value="REGULAR">Regular Loan</option><option value="DEVELOPMENTAL">🏗️ Developmental Loan</option></select>`;
-          }
-          return '';
-        })()}
+            const warn=activeLoans.length?`<div class="alert alert-warn" style="font-size:11.5px;margin-bottom:8px"><span>⚠️</span><span>${activeMember} already has <strong>${activeLoans.length}</strong> active unpaid loan(s). Per policy all loans should be settled first. Admin can override.</span></div>`:'';
+            const policyNote=new Date().toISOString().split('T')[0]>='2026-07-01'
+              ?`<div style="font-size:10.5px;color:#2E7D32;background:#f5fff7;border:1px solid #C8E6C9;border-radius:5px;padding:5px 8px;margin-bottom:7px">✅ Flat interest (from 1 Jul 2026): 5% on original principal from day of issue. Next month's interest applies the day after each monthly anniversary.</div>`
+              :`<div style="font-size:10.5px;color:#666;background:#f8f8f8;border:1px solid #eee;border-radius:5px;padding:5px 8px;margin-bottom:7px">📌 Compound 5% interest applies (issued before 1 Jul 2026)</div>`;
+            return warn+policyNote;
+          })()}
+          <label>Loan Type</label>
+          <select id="loanType" style="margin-bottom:8px">
+            <option value="REGULAR">Regular Loan</option>
+            <option value="DEVELOPMENTAL">🏗️ Developmental Loan</option>
+          </select>
+        </div>
         <label>Date</label><input type="date" id="daOut" value="${new Date().toISOString().split('T')[0]}">
-        <label>Description / Purpose</label><input type="text" id="reO" placeholder="${document.getElementById('tO')&&document.getElementById('tO').value==='L'?'Loan purpose (required for developmental)':'Reason / description'}">
+        <label>Description / Purpose</label><input type="text" id="reO" placeholder="Reason / description">
         <label>Amount (UGX)</label><input type="number" id="amO" placeholder="Enter amount">
         <button class="full" style="background:var(--red)" onclick="postOutflow()">Post Outflow ↙</button>
       </div>
