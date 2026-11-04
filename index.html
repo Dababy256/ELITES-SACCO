@@ -431,25 +431,31 @@ function calcLoanBalance(loan,loanId,mName){
   // e.g. issued 17 Jul → month 2 from 18 Aug, month 3 from 18 Sep.
   // Repayments reduce outstanding but never affect the fixed monthly interest additions.
   if(loan.date>='2026-07-01'){
-    // Start at 1 — first month's interest is immediate
-    let monthsElapsed=1;
-    let n=1;
-    while(true){
-      // Compute the Nth monthly anniversary
-      const anniv=new Date(issueDate);
-      anniv.setMonth(anniv.getMonth()+n);
-      // Handle month-end overflow (e.g. Jan 31 + 1 month → Feb 28/29)
-      if(anniv.getDate()!==issueDate.getDate()){
-        anniv.setDate(0); // last day of previous month
+    // Months of flat interest in force on a given date:
+    // month 1 from the issue day, then one more the day after each monthly anniversary.
+    const monthsAt=(d)=>{
+      let k=1,n=1;
+      while(true){
+        const anniv=new Date(issueDate);
+        anniv.setMonth(anniv.getMonth()+n);
+        if(anniv.getDate()!==issueDate.getDate())anniv.setDate(0);
+        const trigger=new Date(anniv);
+        trigger.setDate(trigger.getDate()+1);
+        trigger.setHours(0,0,0,0);
+        if(trigger>d)break;
+        k++;n++;
       }
-      // Next interest applies the day AFTER the anniversary
-      const trigger=new Date(anniv);
-      trigger.setDate(trigger.getDate()+1);
-      trigger.setHours(0,0,0,0);
-      if(trigger>today)break;
-      monthsElapsed++;
-      n++;
+      return k;
+    };
+    // Interest stops the day payments reach the amount owed on that day.
+    // After that, new months must not add anything to a cleared loan.
+    let cum=0,clearedMonths=null;
+    for(const r of repayments){
+      cum+=r.amt;
+      const mAt=monthsAt(r.date);
+      if(cum>=principal*(1+0.05*mAt)-0.5){clearedMonths=mAt;break;}
     }
+    const monthsElapsed=clearedMonths!==null?clearedMonths:monthsAt(today);
     const totalOwed=principal*(1+0.05*monthsElapsed);
     const outstanding=Math.max(0,Math.round(totalOwed-totalRepaid));
     const isFullyPaid=outstanding===0&&totalRepaid>0;
