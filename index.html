@@ -254,6 +254,21 @@ button.danger{background:var(--red);color:#fff;}
   .stat-grid{grid-template-columns:1fr 1fr;}
   .container{padding:12px 14px 28px;}
 }
+.page-head{margin:2px 0 14px}.page-head h1{font-family:'Playfair Display',serif;font-size:1.5rem;margin:0;color:#111}.page-head p{color:#777;font-size:12.5px;margin:3px 0 0}
+.home-strip{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-bottom:14px}
+.hs-item{flex:1;min-width:130px;background:#fff;border:1px solid #eee;border-radius:12px;padding:10px 14px}
+.hs-l{font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.6px}.hs-v{font-size:1.15rem;font-weight:800;margin-top:2px}
+.home-strip button{min-height:48px;padding:0 18px;border-radius:12px;font-weight:800;flex:1;min-width:150px;margin:0}
+.seg{display:flex;gap:6px;background:#eee;border-radius:10px;padding:4px;margin-bottom:14px}
+.seg button{flex:1;margin:0;background:transparent;color:#555;border:none;padding:11px 8px;border-radius:8px;font-weight:700;font-size:12.5px;box-shadow:none}
+.seg button.on{background:#fff;color:#111;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+#bottomNav{display:none}
+@media(max-width:768px){#bottomNav{display:flex;position:fixed;left:0;right:0;bottom:0;height:60px;background:#111;border-top:1px solid #2a2a2a;z-index:90;padding-bottom:env(safe-area-inset-bottom)}
+#bottomNav>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#888;font-size:10px;font-weight:700;position:relative;cursor:pointer}
+#bottomNav .i{font-size:20px;line-height:1}#bottomNav>div.on{color:#B08D57}
+.bn-badge{position:absolute;top:5px;left:calc(50% + 8px);background:#FF1744;color:#fff;border-radius:10px;padding:0 5px;font-size:9px}
+.container{padding-bottom:84px!important}}
+@media print{#bottomNav{display:none!important}}
 </style>
 </head>
 <body>
@@ -316,6 +331,7 @@ let viewingScreenshot=null;
 let approveModal=null; // {requestIdx, amt, date, ...}
 let bulkMonth=new Date().toISOString().slice(0,7);
 let bulkDate=new Date().toISOString().split('T')[0];
+let postMode='single';
 
 // ─── SIDEBAR MOBILE ───────────────────────────
 function toggleSidebar(){const sb=document.getElementById('sidebar'),ov=document.getElementById('sbOverlay');if(sb){sb.classList.toggle('open');ov.classList.toggle('show');}}
@@ -411,6 +427,17 @@ function calcLoanBalance(loan,loanId,mName){
     .sort((a,b)=>a.date-b.date);
   const totalRepaid=repayments.reduce((a,r)=>a+r.amt,0);
 
+  // Admin override: loan marked complete by hand (fixes calculation or record errors)
+  if(loan.manualStatus==='COMPLETE'){
+    const pr0=Math.min(totalRepaid,principal);
+    return{principal,outstanding:0,totalRepaid,
+      interestCollected:Math.max(0,totalRepaid-pr0),
+      interestAccrued:Math.max(0,totalRepaid-principal),
+      isFullyPaid:true,isOverdue:false,monthsElapsed:0,loanStatus:'PAID',
+      isFrozen:!!loan.frozenTotal,
+      interestModel:loan.frozenTotal?'FROZEN':(loan.date>='2026-07-01'?'FLAT':'COMPOUND'),
+      manualOverride:true};
+  }
   // ── FROZEN LOAN: interest stops, outstanding = frozenTotal − repaid ──
   if(loan.frozenTotal&&Number(loan.frozenTotal)>0){
     const frozen=Number(loan.frozenTotal);
@@ -857,6 +884,10 @@ function printRange(){if(!reportStart||!reportEnd){showToast("⚠️ Select both
 function printOverall(){const now=new Date();const endMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;triggerSaccoPrint("Overall SACCO Report",`All-time: Feb 2024 to present`,getMonthRange("2024-02",endMs));}
 
 // ─── RENDER ───────────────────────────────────
+function renderPostEntries(m){
+  const seg=`<div class="seg"><button class="${postMode==='single'?'on':''}" onclick="postMode='single';render()">One entry</button><button class="${postMode==='bulk'?'on':''}" onclick="postMode='bulk';render()">Whole month, everyone</button></div>`;
+  return seg+(postMode==='bulk'?renderBulkEntry():renderAdmin(m));
+}
 function render(){
   const root=document.getElementById("root");
   if(!user){root.innerHTML=renderLogin();setTimeout(drawLoginIcon,80);return;}
@@ -881,12 +912,28 @@ function render(){
   else if (activeTab==='activity')           content=renderActivity();
   else if (activeTab==='minutes')            content=renderMinutes(isAdmin);
   else if (activeTab==='approvals'&&isAdmin) content=renderApprovals();
-  else if (activeTab==='admin'    &&isAdmin) content=renderAdmin(activeMember);
-  else if (activeTab==='bulk'     &&isAdmin) content=renderBulkEntry();
+  else if ((activeTab==='admin'||activeTab==='bulk')&&isAdmin){if(activeTab==='bulk'){postMode='bulk';activeTab='admin';}content=renderPostEntries(activeMember);}
   else if (activeTab==='members'  &&isAdmin) content=renderMemberMgmt();
   else if (activeTab==='audit'    &&isAdmin) content=renderAudit();
   else if (activeTab==='monthly'  &&isAdmin) content=renderMonthlyReport();
   else if (activeTab==='settings')           content=renderSettings();
+
+  const myPending=(data.requests||[]).filter(r=>r.member===user.name&&r.status==='PENDING').length;
+  const bdg=(n,c)=>n?` <span style="background:${c};color:#fff;border-radius:10px;padding:1px 7px;font-size:9px;font-weight:800;margin-left:6px">${n}</span>`:'';
+  const nav=(id,icon,label,badge='')=>`<div class="sb-item ${activeTab===id?'active':''}" onclick="switchTab('${id}')"><span class="sb-item-icon">${icon}</span>${label}${badge}</div>`;
+  const adminGroup=isAdmin?`<div class="sb-section">Admin tools</div>${nav('approvals','✅','Approvals',bdg(pendingCount,'#FF1744'))}${nav('admin','✍️','Post Entries')}${nav('members','👥','Members')}${nav('audit','🔍','Records &amp; Audit')}${nav('monthly','📅','Reports')}`:'';
+  const navHTML=adminGroup+`<div class="sb-section">My account</div>${nav('dashboard','🏠','Home')}${nav('requests','💳','Pay &amp; Requests',bdg(myPending,'#B08D57'))}${nav('ledger','📒','My Records')}<div class="sb-section">SACCO</div>${nav('activity','🏦','Overview')}${nav('minutes','📋','Minutes')}<div class="sb-section">&nbsp;</div>${nav('settings','⚙️','Settings')}`;
+  const bn=(id,icon,label,badge)=>`<div class="${activeTab===id?'on':''}" onclick="switchTab('${id}')"><span class="i">${icon}</span>${label}${badge?`<span class="bn-badge">${badge}</span>`:''}</div>`;
+  const bottomNav=`<div id="bottomNav">${isAdmin?bn('dashboard','🏠','Home')+bn('approvals','✅','Approvals',pendingCount)+bn('admin','✍️','Post'):bn('dashboard','🏠','Home')+bn('requests','💳','Pay',myPending)+bn('ledger','📒','Records')}<div onclick="toggleSidebar()"><span class="i">☰</span>More</div></div>`;
+  const info={dashboard:['Home','Where you stand: savings, loans and what is due.'],requests:['Pay &amp; Requests','Already paid? Upload your proof here. You can also ask for a loan.'],ledger:['My Records','Every contribution and loan, with a printable copy.'],activity:['SACCO Overview','How the whole SACCO is doing: cash, loans and fees.'],minutes:['Minutes','Notes from past meetings.'],settings:['Settings',isAdmin?'Your photo, PIN and the SACCO settings.':'Your photo and PIN.'],approvals:['Approvals','Check the payment proof, then approve or reject each request.'],admin:['Post Entries','Record savings, repayments, loans and expenses yourself, one by one or for everyone at once.'],members:['Members','Add members, photos, fee status and PINs.'],audit:['Records &amp; Audit','Every transaction, edit, waiver and arrear in one place.'],monthly:['Reports','Pick a period, preview it, then print or save as PDF.']};
+  const inf=info[activeTab];
+  const pageHead=inf?`<div class="page-head"><h1>${inf[0]}</h1><p>${inf[1]}</p></div>`:'';
+  let homeStrip='';
+  if(activeTab==='dashboard'){
+    const owe=calcArrearsAndFines(activeMember),debt=getMemberLoanDebt(activeMember);
+    homeStrip=`<div class="home-strip"><div class="hs-item"><div class="hs-l">Owed on savings</div><div class="hs-v" style="color:${owe>0?'var(--red)':'var(--green)'}">UGX ${owe.toLocaleString()}</div></div><div class="hs-item"><div class="hs-l">Loan balance</div><div class="hs-v" style="color:${debt>0?'var(--red)':'var(--green)'}">UGX ${debt.toLocaleString()}</div></div>${isAdmin?`<div class="hs-item" style="cursor:pointer" onclick="switchTab('approvals')"><div class="hs-l">Waiting for approval</div><div class="hs-v">${pendingCount}</div></div>`:''}<button class="gold" onclick="switchTab('requests')">Submit a payment</button></div>`;
+  }
+  content=pageHead+homeStrip+content;
 
   const tabLabels={dashboard:'Dashboard',ledger:'Ledger',activity:'SACCO Activity',minutes:'Minutes',admin:'Admin Hub',members:'Members',audit:'Audit',monthly:'Reports',settings:'Settings'};
 
@@ -897,16 +944,7 @@ function render(){
         <canvas class="sb-brand-icon" id="sbIcon" width="36" height="36"></canvas>
         <div><div class="sb-brand-text">ELITES SACCO</div><div class="sb-brand-sub">Member Portal</div></div>
       </div>
-      <div class="sb-nav">
-        <div class="sb-section">Main</div>
-        <div class="sb-item ${activeTab==='dashboard'?'active':''}" onclick="switchTab('dashboard')"><span class="sb-item-icon">📊</span>Dashboard</div>
-        <div class="sb-item ${activeTab==='ledger'?'active':''}" onclick="switchTab('ledger')"><span class="sb-item-icon">📒</span>My Ledger</div>
-        <div class="sb-item ${activeTab==='requests'?'active':''}" onclick="switchTab('requests')"><span class="sb-item-icon">📝</span>My Requests${(()=>{const myPending=(data.requests||[]).filter(r=>r.member===user.name&&r.status==='PENDING').length;return myPending?` <span style="background:var(--gold);color:#111;border-radius:10px;padding:1px 6px;font-size:9px;font-weight:800;margin-left:4px">${myPending}</span>`:'';})()}</div>
-        <div class="sb-item ${activeTab==='activity'?'active':''}" onclick="switchTab('activity')"><span class="sb-item-icon">🏦</span>SACCO Activity</div>
-        <div class="sb-item ${activeTab==='minutes'?'active':''}" onclick="switchTab('minutes')"><span class="sb-item-icon">📋</span>Minutes</div>
-        <div class="sb-item ${activeTab==='settings'?'active':''}" onclick="switchTab('settings')"><span class="sb-item-icon">🔐</span>Settings</div>
-        ${adminNav}
-      </div>
+      <div class="sb-nav">${navHTML}</div>
       <div class="sb-footer">
         <div class="sb-avatar">${ph?`<img src="${ph}" alt="">`:'👤'}</div>
         <div class="sb-user"><div class="sb-username">${user.name.split(' ')[0]} ${user.name.split(' ').slice(-1)[0]}</div><div class="sb-role">${isAdmin?'Administrator':'Member'}</div></div>
@@ -923,6 +961,7 @@ function render(){
         </div>
       </div>
       <div class="container">${content}</div>
+      ${bottomNav}
     </div>
   </div>
   ${editModalData?renderEditModal():''}`;
@@ -936,7 +975,7 @@ function render(){
   },30);
 }
 
-function switchTab(t){activeTab=t;closeSidebar();render();}
+function switchTab(t){activeTab=t;closeSidebar();render();window.scrollTo(0,0);const mc=document.getElementById('mainContent');if(mc)mc.scrollTop=0;}
 function logout(){user=null;activeTab='dashboard';lastSelectedMember=null;render();}
 
 // ─── LOGIN ────────────────────────────────────
@@ -1661,14 +1700,34 @@ function uploadMemberPhoto(e,mName){const f=e.target.files[0];if(!f)return;showT
 function addMember(){const name=document.getElementById('newMName').value.trim(),pin=document.getElementById('newMPin').value;if(!name){showToast("⚠️ Enter a full name","warn");return;}if(!pin||pin.length<4){showToast("⚠️ PIN must be ≥ 4 characters","warn");return;}if(data.members.includes(name)){showToast("⚠️ Member already exists","warn");return;}data.members.push(name);data[name]={pin,contributions:[],loans:[]};if(_nmp){if(!data.photos)data.photos={};data.photos[name]=_nmp;_nmp=null;}saveData();}
 function removeMember(mName){if(!confirm(`Remove ${mName}?\n\nThis permanently deletes ALL their data.`))return;data.members=data.members.filter(m=>m!==mName);delete data[mName];if(data.photos)delete data.photos[mName];if(lastSelectedMember===mName)lastSelectedMember=null;saveData();}
 function resetMemberPin(mName){const np=prompt(`New PIN for ${mName} (min 4 chars):`);if(!np)return;if(np.length<4){showToast("⚠️ PIN must be ≥ 4 characters","warn");return;}data[mName].pin=np;saveData();}
+// ─── LOAN NUMBER + MANUAL STATUS ──────────────
+function loanNo(mem,idx){return data[mem].loans.slice(0,idx+1).filter(x=>x.type==='LOAN').length;}
+function setLoanComplete(mName,idx){
+  const loan=data[mName].loans[idx];
+  if(!loan||loan.type!=='LOAN')return;
+  if(!confirm(`Mark ${mName}'s Loan #${loanNo(mName,idx)} as complete?\n\nIts balance will show zero and no more interest will be added. You can reopen it any time.`))return;
+  const before={...loan};
+  loan.manualStatus='COMPLETE';loan.manualBy=user.name;loan.manualAt=new Date().toISOString().split('T')[0];
+  logEdit('MARK COMPLETE','L',mName,before,{...loan});
+  editModalData=null;saveData();
+}
+function reopenLoan(mName,idx){
+  const loan=data[mName].loans[idx];
+  if(!loan||loan.type!=='LOAN')return;
+  if(!confirm(`Reopen Loan #${loanNo(mName,idx)}? The system will work out the balance by itself again.`))return;
+  const before={...loan};
+  delete loan.manualStatus;delete loan.manualBy;delete loan.manualAt;
+  logEdit('REOPEN','L',mName,before,{...loan});
+  editModalData=null;saveData();
+}
 // ─── LOAN FREEZE ──────────────────────────────
 function freezeLoanPrompt(mName,loanIdx){
   const loan=data[mName].loans[loanIdx];
   if(!loan||loan.type!=='LOAN'){showToast("❌ Not a loan record","danger");return;}
-  const bal=calcLoanBalance(loan,loanIdx+1,mName);
+  const bal=calcLoanBalance(loan,loanNo(mName,loanIdx),mName);
   const suggestion=bal?Math.round(bal.outstanding+bal.totalRepaid):Number(loan.amt);
   const input=prompt(
-    `Freeze Loan #${loanIdx+1} for ${mName}\n`+
+    `Freeze Loan #${loanNo(mName,loanIdx)} for ${mName}\n`+
     `Current outstanding: UGX ${bal?bal.outstanding.toLocaleString():'?'}\n`+
     `Total repaid so far: UGX ${bal?bal.totalRepaid.toLocaleString():'0'}\n\n`+
     `Enter the TOTAL FIXED AMOUNT this member must pay (principal + frozen interest).\n`+
@@ -1678,7 +1737,7 @@ function freezeLoanPrompt(mName,loanIdx){
   if(!input)return;
   const frozen=Number(String(input).replace(/,/g,''));
   if(!frozen||frozen<1000){showToast("⚠️ Enter a valid amount","warn");return;}
-  if(!confirm(`Freeze Loan #${loanIdx+1} (${mName}) at a total payable of UGX ${frozen.toLocaleString()}?\nNo further interest will accrue. This can be undone.`))return;
+  if(!confirm(`Freeze Loan #${loanNo(mName,loanIdx)} (${mName}) at a total payable of UGX ${frozen.toLocaleString()}?\nNo further interest will accrue. This can be undone.`))return;
   data[mName].loans[loanIdx].frozenTotal=frozen;
   logEdit('FREEZE','L',mName,{...loan},{...loan,frozenTotal:frozen});
   saveData();
@@ -1780,15 +1839,18 @@ function renderAudit(){
     return`<tr><td>${m}</td><td>UGX ${sav.toLocaleString()}</td><td style="color:${arr>0?'var(--yellow)':'var(--green)'};font-weight:600">UGX ${arr.toLocaleString()}</td><td style="color:${debt>0?'var(--red)':'var(--green)'};font-weight:600">UGX ${debt.toLocaleString()} ${loanTags}</td></tr>`;
   }).join('');
   const txRows=data.members.filter(m=>!sq||m.toLowerCase().includes(sq)).map(mem=>data[mem].contributions.map((c,i)=>`<tr><td>${mem}</td><td>Savings</td><td>${c.month}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('S','${mem}',${i})">Edit</button><button class="del" onclick="del('S','${mem}',${i})">✕</button></td></tr>`).join('')+data[mem].loans.map((l,i)=>{
-  const lid=i+1;
+  const lid=loanNo(mem,i);
   const bal=l.type==='LOAN'?calcLoanBalance(l,lid,mem):null;
   const freezeBtn=l.type==='LOAN'&&bal&&!bal.isFullyPaid?
     (l.frozenTotal?
       `<button class="edit-btn" style="background:#3949AB" onclick="unfreezeLoan('${mem}',${i})">🔓 Unfreeze</button>`
       :`<button class="edit-btn" style="background:#5C35CC;color:#fff" onclick="freezeLoanPrompt('${mem}',${i})">🔒 Freeze</button>`)
     :'';
-  const loanDesc=l.type==='LOAN'?`Loan #${lid}${l.loanType==='DEVELOPMENTAL'?' 🏗️':''} ${l.frozenTotal?'🔒':''} ${l.purpose?'— '+l.purpose:''} <span style="font-size:9.5px;color:#888;background:#f0f0f0;border-radius:4px;padding:1px 5px">${bal?bal.interestModel:''}</span>`:('Repay #'+l.loanId);
-  return`<tr><td>${mem}</td><td>${l.type}</td><td>${loanDesc}</td><td>UGX ${Number(l.amt).toLocaleString()}${bal&&l.frozenTotal?` <div style="font-size:9.5px;color:#3949AB">Frozen: UGX ${Number(l.frozenTotal).toLocaleString()}</div>`:''}</td><td>${freezeBtn} <button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`;
+  const completeBtn=l.type==='LOAN'?(l.manualStatus==='COMPLETE'
+    ?`<button class="edit-btn" style="background:#607D8B" onclick="reopenLoan('${mem}',${i})">Reopen</button>`
+    :(bal&&!bal.isFullyPaid?`<button class="edit-btn" style="background:#2E7D32" onclick="setLoanComplete('${mem}',${i})">Mark complete</button>`:'')):'';
+  const loanDesc=l.type==='LOAN'?`Loan #${lid}${l.loanType==='DEVELOPMENTAL'?' 🏗️':''} ${l.frozenTotal?'🔒':''} ${l.manualStatus==='COMPLETE'?'<span class="badge badge-comp" style="font-size:8.5px">MARKED COMPLETE</span>':''} ${l.purpose?'— '+l.purpose:''} <span style="font-size:9.5px;color:#888;background:#f0f0f0;border-radius:4px;padding:1px 5px">${bal?bal.interestModel:''}</span>`:('Repay #'+l.loanId);
+  return`<tr><td>${mem}</td><td>${l.type}</td><td>${loanDesc}</td><td>UGX ${Number(l.amt).toLocaleString()}${bal&&l.frozenTotal?` <div style="font-size:9.5px;color:#3949AB">Frozen: UGX ${Number(l.frozenTotal).toLocaleString()}</div>`:''}</td><td>${freezeBtn}${completeBtn} <button class="edit-btn" onclick="openEdit('L','${mem}',${i})">Edit</button><button class="del" onclick="del('L','${mem}',${i})">✕</button></td></tr>`;
 }).join('')).join('');
   const sysRows=data.cashIn.map((c,i)=>`<tr><td>SYSTEM</td><td>Cash In</td><td>${c.source}</td><td>UGX ${Number(c.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('C','',${i})">Edit</button><button class="del" onclick="del('C','',${i})">✕</button></td></tr>`).join('')+data.expenses.map((e,i)=>`<tr><td>SYSTEM</td><td>Expense</td><td>${e.reason}</td><td>UGX ${Number(e.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('E','',${i})">Edit</button><button class="del" onclick="del('E','',${i})">✕</button></td></tr>`).join('')+data.investments.map((v,i)=>`<tr><td>SYSTEM</td><td>Investment</td><td>${v.reason}</td><td>UGX ${Number(v.amt).toLocaleString()}</td><td><button class="edit-btn" onclick="openEdit('I','',${i})">Edit</button><button class="del" onclick="del('I','',${i})">✕</button></td></tr>`).join('');
   // Waiver rows
@@ -2177,7 +2239,8 @@ function renderEditModal(){
   else if(cat==='L')fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}">`;
   else if(cat==='C')fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Source</label><input type="text" id="eDesc" value="${entry.source||''}">`;
   else fields=`<label>Amount</label><input type="number" id="eAmt" value="${entry.amt}"><label>Date</label><input type="date" id="eDate" value="${entry.date}"><label>Description</label><input type="text" id="eDesc" value="${entry.reason||''}">`;
-  return`<div class="modal-overlay" onclick="closeEdit(event)"><div class="modal"><button class="modal-close" onclick="editModalData=null;render()">✕</button><div style="font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:4px">Edit Entry</div><p style="font-size:12px;color:#aaa;margin-bottom:14px">${labels[cat]}${mem?' — '+mem:''}</p>${fields}<button class="gold full" onclick="saveEdit()" style="margin-top:6px">💾 Save Changes</button></div></div>`;
+  const loanBox=(cat==='L'&&entry.type==='LOAN')?`<div style="border:1px solid #e6e6e6;background:#fafafa;border-radius:8px;padding:10px 12px;margin:10px 0"><div style="font-size:12px;font-weight:700;margin-bottom:4px">Loan status</div><div style="font-size:11.5px;color:#666;margin-bottom:8px">${entry.manualStatus==='COMPLETE'?'Marked complete by hand. The system is ignoring its own balance for this loan.':'The system works out the balance by itself. If it is wrong, mark the loan complete.'}</div>${entry.manualStatus==='COMPLETE'?`<button class="ghost full" onclick="reopenLoan('${mem}',${idx})">Reopen (back to automatic)</button>`:`<button class="full" style="background:var(--green)" onclick="setLoanComplete('${mem}',${idx})">Mark loan as complete</button>`}</div>`:'';
+  return`<div class="modal-overlay" onclick="closeEdit(event)"><div class="modal"><button class="modal-close" onclick="editModalData=null;render()">✕</button><div style="font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:4px">Edit Entry</div><p style="font-size:12px;color:#aaa;margin-bottom:14px">${labels[cat]}${mem?' — '+mem:''}</p>${fields}${loanBox}<button class="gold full" onclick="saveEdit()" style="margin-top:6px">💾 Save Changes</button></div></div>`;
 }
 function closeEdit(e){if(e.target.classList.contains('modal-overlay')){editModalData=null;render();}}
 function logEdit(action,cat,mem,beforeObj,afterObj){
