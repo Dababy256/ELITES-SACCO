@@ -269,6 +269,11 @@ button.danger{background:var(--red);color:#fff;}
 .bn-badge{position:absolute;top:5px;left:calc(50% + 8px);background:#FF1744;color:#fff;border-radius:10px;padding:0 5px;font-size:9px}
 .container{padding-bottom:84px!important}}
 @media print{#bottomNav{display:none!important}}
+.say{background:#fffdf5;border-left:3px solid #B08D57;padding:10px 14px;border-radius:0 8px 8px 0;font-size:13px;line-height:1.75;margin-bottom:14px;color:#333}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid #eee;border-radius:12px;padding:10px 14px}.kpi-s{font-size:10.5px;color:#999;margin-top:2px}
+.rnote{font-size:11.5px;color:#888;margin:2px 0 10px}
+.seg.scroll{overflow-x:auto}.seg.scroll button{flex:0 0 auto;white-space:nowrap;padding:11px 14px}
 </style>
 </head>
 <body>
@@ -416,11 +421,11 @@ function calcArrearsAndFines(mName){
   return total;
 }
 
-function calcLoanBalance(loan,loanId,mName){
+function calcLoanBalance(loan,loanId,mName,asOf){
   if(!loan||loan.type!=='LOAN')return null;
   const principal=Number(loan.amt);
   const issueDate=new Date(loan.date);
-  const today=new Date();today.setHours(23,59,59,999);
+  const today=asOf?new Date(asOf):new Date();today.setHours(23,59,59,999);
   const repayments=(data[mName].loans||[])
     .filter(r=>r.type==='REPAYMENT'&&String(r.loanId)===String(loanId))
     .map(r=>({date:new Date(r.date),amt:Number(r.amt)}))
@@ -765,6 +770,7 @@ function buildSaccoPrintHTML(title,subtitle,rd){
     <div class="print-footer">ELITES SACCO — Confidential | Page 4</div>
   </div>
 
+  ${printLoanImpact(title)}${printOutlook(title)}
   <!-- ════ PAGE 5: EXPENSES & INVESTMENTS ════ -->
   <div class="print-page">
     <div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section D — Expenses &amp; Investments</div><div class="ph-sub">${title}</div></div>
@@ -2042,6 +2048,100 @@ function buildChartData(pm){
 }
 
 // ─── MONTHLY REPORT ───────────────────────────
+let reportSection='overview';
+function reportSwitch(){
+  const t=[['overview','📌 Overview'],['savings','👥 Savings'],['loans','🏦 Loans'],['money','💵 Money'],['outlook','🔮 Outlook'],['tools','🧰 Tools']];
+  return`<div class="seg scroll">${t.map(([k,l])=>`<button class="${reportSection===k?'on':''}" onclick="reportSection='${k}';render()">${l}</button>`).join('')}</div>`;
+}
+function rs(k){return`style="display:${reportSection===k?'block':'none'}"`;}
+function svgMulti(series,labels,w,h){
+  const padL=58,padR=14,padT=14,padB=26,n=labels.length;
+  const all=series.flatMap(s=>s.values),mx=Math.max(...all,1),mn=Math.min(...all,0),rng=(mx-mn)||1;
+  const X=i=>padL+(n>1?i/(n-1):0)*(w-padL-padR),Y=v=>padT+(1-(v-mn)/rng)*(h-padT-padB);
+  const fmt=v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.round(v/1000)+'K';
+  const grid=[0,.5,1].map(f=>{const y=padT+f*(h-padT-padB);return`<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="#eee"/><text x="${padL-5}" y="${y+3}" text-anchor="end" font-size="8" fill="#999">${fmt(mx-f*rng)}</text>`;}).join('');
+  let band='';
+  if(series.length>1){const a=series[0].values.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`),b=series[1].values.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).reverse();band=`<polygon points="${a.concat(b).join(' ')}" fill="${series[1].color}" opacity="0.13"/>`;}
+  const lines=series.map(s=>`<path d="${s.values.map((v,i)=>`${i?'L':'M'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ')}" fill="none" stroke="${s.color}" stroke-width="2.5"${s.dash?' stroke-dasharray="6 4"':''}/>`+s.values.map((v,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.8" fill="${s.color}"/>`).join('')).join('');
+  const xl=labels.map((l,i)=>`<text x="${X(i).toFixed(1)}" y="${h-8}" text-anchor="middle" font-size="8.5" fill="#777">${l}</text>`).join('');
+  return`<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px" xmlns="http://www.w3.org/2000/svg">${grid}${band}${lines}${xl}</svg>`;
+}
+function svgStack(items,w){
+  const rowH=24,padL=118,padR=64,max=Math.max(...items.map(i=>i.parts.reduce((a,p)=>a+p.v,0)),1),h=items.length*rowH+8;
+  const bars=items.map((it,i)=>{let x=padL;const y=i*rowH+4,tot=it.parts.reduce((a,p)=>a+p.v,0);
+    const segs=it.parts.map(p=>{const bw=Math.max(0,p.v/max*(w-padL-padR));const r=`<rect x="${x.toFixed(1)}" y="${y}" width="${bw.toFixed(1)}" height="16" fill="${p.color}"/>`;x+=bw;return r;}).join('');
+    return`<text x="${padL-6}" y="${y+12}" text-anchor="end" font-size="9.5" fill="#444">${it.label}</text>${segs}<text x="${x+5}" y="${y+12}" font-size="9" fill="#333">${Math.round(tot/1000).toLocaleString()}K</text>`;}).join('');
+  return`<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`;
+}
+function loanSummary(){
+  const rows=[];
+  data.members.forEach(m=>{let n=0;data[m].loans.forEach(l=>{if(l.type!=='LOAN')return;n++;const b=calcLoanBalance(l,n,m);if(b&&!b.isFullyPaid)rows.push({member:m,no:n,loan:l,b});});});
+  let lent=0,repaid=0,out=0,pOut=0;
+  rows.forEach(r=>{lent+=r.b.principal;repaid+=r.b.totalRepaid;out+=r.b.outstanding;pOut+=Math.max(0,r.b.principal-Math.min(r.b.totalRepaid,r.b.principal));});
+  return{rows,lent,repaid,out,principalOut:pOut,intOwed:Math.max(0,out-pOut)};
+}
+function projection(n){
+  const now=new Date(),pts=[];let sav=0;
+  for(let k=0;k<=n;k++){
+    const d=new Date(now.getFullYear(),now.getMonth()+k,now.getDate(),12);
+    let owed=0;
+    data.members.forEach(m=>{let c=0;data[m].loans.forEach(l=>{if(l.type!=='LOAN')return;c++;const b=calcLoanBalance(l,c,m,d);if(b&&!b.isFullyPaid)owed+=b.outstanding;});});
+    if(k>0)sav+=data.members.length*getMonthlyTarget(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    pts.push({label:k?d.toLocaleString('en-UG',{month:'short',year:'2-digit'}):'Now',owed,savings:sav,date:d});
+  }
+  return pts;
+}
+function loanReportParts(){
+  const L=loanSummary(),S=getGlobalStats(),now=new Date();
+  if(!L.rows.length)return{say:'<p style="font-size:13px;color:#666">No loans are open right now, so there is nothing to explain here.</p>',chart:'',table:'',explain:''};
+  const d3=new Date(now.getFullYear(),now.getMonth()+3,now.getDate(),12),d6=new Date(now.getFullYear(),now.getMonth()+6,now.getDate(),12);
+  const rows=L.rows.map(r=>{const b=r.b,b3=calcLoanBalance(r.loan,r.no,r.member,d3),b6=calcLoanBalance(r.loan,r.no,r.member,d6);
+    const add=b.isFrozen?0:(b.interestModel==='FLAT'?Math.round(b.principal*0.05):Math.round(b.outstanding*0.05));
+    const pOut=Math.max(0,b.principal-Math.min(b.totalRepaid,b.principal));
+    return{...r,add,o3:b3.outstanding,o6:b6.outstanding,pOut,iOwed:Math.max(0,b.outstanding-pOut)};});
+  const grow=rows.reduce((a,r)=>a+r.add,0),funds=S.netCash+S.activeLoanPrincipal,share=funds>0?Math.round(S.activeLoanPrincipal/funds*100):0;
+  const nm=m=>m.split(' ')[0]+' '+m.split(' ').slice(-1)[0],f=v=>Math.round(Number(v)).toLocaleString();
+  const say=`<div class="say"><strong>In plain words</strong><br>• The SACCO has lent UGX ${f(L.lent)} in ${L.rows.length} open loan${L.rows.length>1?'s':''}. Members have paid back UGX ${f(L.repaid)} and still owe UGX ${f(L.out)}.<br>• Of what is owed, UGX ${f(L.principalOut)} is the original money and UGX ${f(L.intOwed)} is interest that has built up but is not paid yet. Interest only counts as cash once it is paid.<br>• About ${share}% of the SACCO's funds is out on loan right now. The rest is cash on hand.<br>• If nobody pays anything, the total owed grows by about UGX ${f(grow)} every month.</div>`;
+  const chart=`<div class="hs-l" style="margin-bottom:6px">Where each loan stands (K = thousand UGX)</div>${svgStack(rows.map(r=>({label:nm(r.member)+' #'+r.no,parts:[{v:r.b.totalRepaid,color:'#2E7D32'},{v:r.pOut,color:'#B08D57'},{v:r.iOwed,color:'#C62828'}]})),560)}${svgLegend([{color:'#2E7D32',label:'Paid back so far'},{color:'#B08D57',label:'Original money still owed'},{color:'#C62828',label:'Interest owed, not yet paid'}])}`;
+  const table=`<div class="table-wrap"><table><tr><th>Member</th><th>Loan</th><th>Rule</th><th>Lent</th><th>Paid</th><th>Owed now</th><th>Grows / month</th><th>In 3 months</th><th>In 6 months</th></tr>${rows.map(r=>`<tr><td>${nm(r.member)}</td><td>#${r.no}</td><td>${r.b.isFrozen?'Frozen':r.b.interestModel==='FLAT'?'Flat':'Compound'}</td><td>${f(r.b.principal)}</td><td>${f(r.b.totalRepaid)}</td><td><strong>${f(r.b.outstanding)}</strong></td><td>${r.add?'+'+f(r.add):'0'}</td><td>${f(r.o3)}</td><td>${f(r.o6)}</td></tr>`).join('')}</table></div><p class="rnote">The last two columns show what would be owed if nothing more is paid. All amounts in UGX.</p>`;
+  const explain=`<div class="say"><strong>How the interest works</strong><br>• <strong>Flat</strong> (loans from 1 July 2026): 5% of the original loan is added each month, starting on the day the loan is given. It never grows on itself.<br>• <strong>Compound</strong> (older loans): 5% is added each month on whatever is still owed, so it grows faster over time.<br>• <strong>Frozen</strong>: the committee fixed the amount and nothing more is added.<br>• Example, UGX 1,000,000 with 3 months passed and nothing paid: flat is UGX 1,200,000, compound is UGX 1,215,506.</div>`;
+  return{say,chart,table,explain};
+}
+function outlookParts(){
+  const P=projection(6),S=getGlobalStats(),f=v=>Math.round(v).toLocaleString();
+  const A=P.map(p=>S.netCash+p.savings),B=A.map((a,i)=>a+P[i].owed),labels=P.map(p=>p.label),last=P[P.length-1];
+  const tg=getMonthlyTarget(`${P[1].date.getFullYear()}-${String(P[1].date.getMonth()+1).padStart(2,'0')}`);
+  const chart=svgMulti([{color:'#2E7D32',values:A},{color:'#B08D57',values:B,dash:1}],labels,560,230)+svgLegend([{color:'#2E7D32',label:'Cash only: savings keep coming in, no loan is repaid'},{color:'#B08D57',label:'Cash if every loan were paid off that month'}]);
+  const table=`<div class="table-wrap"><table><tr><th>When</th><th>New savings (total)</th><th>Loans owed</th><th>Cash only</th><th>If loans cleared</th></tr>${P.map((p,i)=>`<tr><td>${p.label}</td><td>${f(p.savings)}</td><td>${f(p.owed)}</td><td>${f(A[i])}</td><td>${f(B[i])}</td></tr>`).join('')}</table></div><p class="rnote">All amounts in UGX.</p>`;
+  const say=`<div class="say"><strong>The next 6 months, in short</strong><br>• If every member pays the monthly target (UGX ${f(tg)} each, UGX ${f(tg*data.members.length)} together), savings add about UGX ${f(last.savings)}.<br>• Loans owed would move from UGX ${f(P[0].owed)} to UGX ${f(last.owed)} if nothing is repaid.<br>• Cash on hand would reach about UGX ${f(A[A.length-1])}. If every loan were cleared by then it would be about UGX ${f(B[B.length-1])}.<br>• This is an estimate. New loans, expenses, investments and penalties are not counted, and members may not all pay on time.</div>`;
+  return{chart,table,say};
+}
+function repOutlook(){const p=outlookParts();return`<div class="card"><div class="card-title">🔮 Outlook: the next 6 months</div>${p.say}${p.chart}</div><div class="card"><div class="card-title">Month by month</div>${p.table}</div>`;}
+function repLoans(){const p=loanReportParts();return`<div class="card"><div class="card-title">🏦 What the loans mean for the SACCO</div>${p.say}</div><div class="card"><div class="card-title">Loan by loan</div>${p.chart}${p.table}</div><div class="card">${p.explain}</div>`;}
+function printLoanImpact(title){const p=loanReportParts();return`<div class="print-page"><div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section C.2 — What the loans mean for the SACCO</div><div class="ph-sub">${title}</div></div>${p.say}${p.chart}${p.table}${p.explain}<div class="print-footer">ELITES SACCO — Confidential | Page 4b</div></div>`;}
+function printOutlook(title){const p=outlookParts();return`<div class="print-page"><div class="print-header"><h1>ELITES SACCO</h1><div class="ph-title">Section E — Outlook: the next 6 months</div><div class="ph-sub">${title}</div></div>${p.say}${p.chart}${p.table}<div class="print-footer">ELITES SACCO — Confidential | Page 4c</div></div>`;}
+function repOverview(pm,pt){
+  const rd=buildReportData(pm),S=rd.S,L=loanSummary(),R=rd.memberRows;
+  const c=R.filter(r=>r.status==='COMPLETE').length,p=R.filter(r=>r.status==='PARTIAL').length,n=R.filter(r=>r.status==='PENDING').length;
+  const exp=R.reduce((a,r)=>a+r.expected,0),rate=exp?Math.round(rd.savingsInRange/exp*100):0,over=L.rows.filter(r=>r.b.isOverdue).length,f=v=>Math.round(v).toLocaleString();
+  const k=(l,v,s,col)=>`<div class="kpi"><div class="hs-l">${l}</div><div class="hs-v" style="color:${col||'#111'}">${v}</div><div class="kpi-s">${s}</div></div>`;
+  const bar=`<div style="display:flex;height:22px;border-radius:6px;overflow:hidden;margin:6px 0 4px">${[[c,'#2E7D32'],[p,'#E65100'],[n,'#C62828']].map(([v,col])=>v?`<div style="flex:${v};background:${col};color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center">${v}</div>`:'').join('')}</div><div style="font-size:11px;color:#666">Green: paid in full · Orange: paid part · Red: paid nothing</div>`;
+  return`<div class="say"><strong>${pt}</strong><br>• ${c} of ${R.length} members paid in full${p?`, ${p} paid part`:''}${n?`, ${n} paid nothing`:''}.<br>• Collected UGX ${f(rd.savingsInRange)} of UGX ${f(exp)} expected (${rate}%).<br>• ${L.rows.length?`${L.rows.length} loan${L.rows.length>1?'s are':' is'} still open. Members owe UGX ${f(L.out)}, of which UGX ${f(L.intOwed)} is interest not yet paid.${over?` ${over} of them overdue with nothing repaid.`:''}`:'No loans are open right now.'}<br>• The SACCO's net cash position is UGX ${f(S.netCash)}.</div>
+  <div class="kpi-row">${k('Net cash','UGX '+f(S.netCash),'All-time')}${k('Collected',rate+'%','of what was expected',rate>=80?'#2E7D32':rate>=50?'#E65100':'#C62828')}${k('Loans still owed','UGX '+f(L.out),L.rows.length+' open loan(s)','#B08D57')}${k('Paid in full',c+' / '+R.length,'members')}</div>
+  <div class="card"><div class="card-title">Who paid in this period</div>${bar}</div>`;
+}
+function repSavingsCharts(pm){
+  const cd=buildChartData(pm);
+  const bars=svgBar(cd.memberBars,560,cd.memberBars.length*22+40,'Paid by each member in this period');
+  const trend=cd.trendPoints.length>1?svgLine(cd.trendPoints,Math.max(560,cd.trendPoints.length*30),210,'Total saved each month, all members','#B08D57'):'';
+  return`<div class="card"><div class="card-title">📊 Savings picture</div><p class="rnote">Green bars: paid in full. Orange: paid part. Red: paid nothing.</p><div style="overflow-x:auto">${bars}</div><div style="overflow-x:auto;margin-top:14px">${trend}</div></div>`;
+}
+function repMoneyCharts(){
+  const cd=buildChartData([]),S=cd.S;
+  const tIn=S.grossSavings+S.interestCollected+S.membershipFees+S.cashIn,tOut=S.expenses+S.activeLoanPrincipal+S.investments;
+  const blk=(t,sl,tot)=>`<div style="flex:1;min-width:240px"><div class="hs-l">${t}: UGX ${tot.toLocaleString()}</div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:8px">${svgDonut(sl,70,70,56,16,'','')}<div style="flex:1;min-width:130px">${svgLegend(sl)}</div></div></div>`;
+  return`<div class="card"><div class="card-title">💵 Where the money comes from and where it sits</div><p class="rnote">Left: money that came in. Right: money paid out or lent out (loans are still owed to the SACCO).</p><div style="display:flex;gap:20px;flex-wrap:wrap">${blk('Money in',cd.donutInflows,tIn)}${blk('Money out or lent',cd.donutOutflows,tOut)}</div></div>`;
+}
 function renderMonthlyReport(){
   const now=new Date(),curMs=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
   let pm=[],pt='';
@@ -2096,6 +2196,11 @@ function renderMonthlyReport(){
     </div>
   </div>
 
+  ${reportSwitch()}
+  <div class="rsec" ${rs('overview')}>${repOverview(pm,pt)}</div>
+  <div class="rsec" ${rs('loans')}>${repLoans()}</div>
+  <div class="rsec" ${rs('outlook')}>${repOutlook()}</div>
+  <div class="rsec" ${rs('money')}>${repMoneyCharts()}
   <!-- Financial Summary -->
   <div class="card"><div class="card-title">Financial Summary (All-Time)</div>
     <div class="stat-grid">
@@ -2109,12 +2214,16 @@ function renderMonthlyReport(){
     </div>
   </div>
 
+  </div>
+  <div class="rsec" ${rs('savings')}>${repSavingsCharts(pm)}
   <!-- Member Savings Preview -->
   <div class="card"><div class="card-title">Member Savings — ${pt}</div>
     <p style="font-size:11px;color:#aaa;margin-bottom:10px">Status &amp; shortfall reflect the SELECTED PERIOD only. A member is COMPLETE only if every month in the period was fully paid. Shortfall = period gap + period penalties.</p>
     ${pm.length?`<div class="table-wrap"><table><tr><th>Member</th><th>Paid</th><th>Expected</th><th>Total Shortfall (incl. penalties)</th><th>Status</th></tr>${rows}</table></div>`:'<p style="color:#aaa;font-size:13px">Select a valid period above.</p>'}
   </div>
 
+  </div>
+  <div class="rsec" ${rs('tools')}>
   <!-- Dividend Calculator -->
   <div class="card" style="border:2px solid #1B5E20"><div class="card-title">💰 Year-End Dividend Calculator</div>
     <p style="font-size:12px;color:#888;margin-bottom:12px">Calculates each member's share of interest collected in a given year, proportional to their savings that year. Interest collected = loan repayments received above the original principal.</p>
@@ -2165,6 +2274,7 @@ function renderMonthlyReport(){
       <button class="print-btn" onclick="triggerAllMembersPrint()">📥 Download All Members PDF</button>
     </div>
     <p style="font-size:10.5px;color:#aaa;margin-top:8px">ℹ️ Each member's page shows their savings for the selected period. Loan data shown is all-time (current position).</p>
+  </div>
   </div>`;
 }
 
