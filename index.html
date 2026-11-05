@@ -1920,32 +1920,19 @@ function svgDonut(slices,cx,cy,r,strokeW,title,subtitle){
   return`<svg width="${cx*2}" height="${cy*2}" xmlns="http://www.w3.org/2000/svg" style="overflow:visible">${paths}${hole}${cTitle}${cSub}</svg>`;
 }
 
+function fmtShort(v){const a=Math.abs(v);if(a>=1e6)return(v/1e6).toFixed(a>=1e7?1:2).replace(/\.?0+$/,'')+'M';if(a>=1e3)return Math.round(v/1e3)+'K';return String(Math.round(v));}
 function svgBar(items,w,h,title,barColor){
-  // items: [{label, value, color?, max?}]
   if(!items.length)return'';
   const maxVal=Math.max(...items.map(i=>i.value),1);
-  const padL=10,padR=10,padT=24,padB=8;
+  const padL=10,padR=84,padT=24,padB=8,labW=96;
   const barH=Math.max(14,Math.floor((h-padT-padB)/items.length)-4);
-  const totalH=padT+items.length*(barH+4)+padB;
+  const totalH=padT+items.length*(barH+4)+padB,trackW=w-padL-labW-padR,x0=padL+labW;
   const bars=items.map((item,idx)=>{
-    const y=padT+idx*(barH+4);
-    const barW=Math.round(((item.value||0)/maxVal)*(w-padL-padR-90));
-    const pct=Math.round((item.value||0)/maxVal*100);
-    const col=item.color||barColor||'#B08D57';
-    // background track
-    const track=`<rect x="${padL+90}" y="${y}" width="${w-padL-padR-90}" height="${barH}" rx="3" fill="#f0f0f0"/>`;
-    // bar
-    const bar=barW>0?`<rect x="${padL+90}" y="${y}" width="${barW}" height="${barH}" rx="3" fill="${col}"/>`:'';
-    // label
-    const lbl=`<text x="${padL+85}" y="${y+barH/2+4}" text-anchor="end" font-size="9.5" fill="#555">${(item.label||'').slice(0,14)}</text>`;
-    // value
-    const val=`<text x="${padL+90+barW+4}" y="${y+barH/2+4}" font-size="9" fill="#333">${(item.value||0).toLocaleString()}</text>`;
-    return track+bar+lbl+val;
+    const y=padT+idx*(barH+4),bw=Math.round(((item.value||0)/maxVal)*trackW),col=item.color||barColor||'#B08D57';
+    return`<rect x="${x0}" y="${y}" width="${trackW}" height="${barH}" rx="3" fill="#f0f0f0"/>${bw>0?`<rect x="${x0}" y="${y}" width="${bw}" height="${barH}" rx="3" fill="${col}"/>`:''}<text x="${x0-5}" y="${y+barH/2+4}" text-anchor="end" font-size="9.5" fill="#555">${(item.label||'').slice(0,16)}</text><text x="${x0+bw+4}" y="${y+barH/2+4}" font-size="9" fill="#333">${(item.value||0).toLocaleString()}</text>`;
   }).join('');
-  const titleEl=`<text x="${w/2}" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#111">${title}</text>`;
-  return`<svg width="${w}" height="${totalH}" xmlns="http://www.w3.org/2000/svg">${titleEl}${bars}</svg>`;
+  return`<svg viewBox="0 0 ${w} ${totalH}" width="100%" style="max-width:${w}px" xmlns="http://www.w3.org/2000/svg"><text x="${w/2}" y="14" text-anchor="middle" font-size="11" font-weight="700" fill="#111">${title}</text>${bars}</svg>`;
 }
-
 function svgLine(points,w,h,title,lineColor){
   // points: [{label, value}]  — label=month string
   if(!points||points.length<2)return'';
@@ -1961,7 +1948,7 @@ function svgLine(points,w,h,title,lineColor){
     const yg=padT+pct*(h-padT-padB);
     const vg=Math.round(maxV*(1-pct));
     return`<line x1="${padL}" y1="${yg}" x2="${w-padR}" y2="${yg}" stroke="#f0f0f0" stroke-width="1"/>
-    <text x="${padL-4}" y="${yg+4}" text-anchor="end" font-size="8" fill="#aaa">${vg>=1000?Math.round(vg/1000)+'K':vg}</text>`;
+    <text x="${padL-4}" y="${yg+4}" text-anchor="end" font-size="8" fill="#aaa">${fmtShort(vg)}</text>`;
   }).join('');
   // line path
   const pts=points.map((p,i)=>`${i===0?'M':'L'} ${toX(i).toFixed(1)} ${toY(p.value).toFixed(1)}`).join(' ');
@@ -2055,10 +2042,10 @@ function reportSwitch(){
 }
 function rs(k){return`style="display:${reportSection===k?'block':'none'}"`;}
 function svgMulti(series,labels,w,h){
-  const padL=58,padR=14,padT=14,padB=26,n=labels.length;
+  const padL=58,padR=28,padT=14,padB=26,n=labels.length;
   const all=series.flatMap(s=>s.values),mx=Math.max(...all,1),mn=Math.min(...all,0),rng=(mx-mn)||1;
   const X=i=>padL+(n>1?i/(n-1):0)*(w-padL-padR),Y=v=>padT+(1-(v-mn)/rng)*(h-padT-padB);
-  const fmt=v=>Math.abs(v)>=1e6?(v/1e6).toFixed(1)+'M':Math.round(v/1000)+'K';
+  const fmt=fmtShort;
   const grid=[0,.5,1].map(f=>{const y=padT+f*(h-padT-padB);return`<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="#eee"/><text x="${padL-5}" y="${y+3}" text-anchor="end" font-size="8" fill="#999">${fmt(mx-f*rng)}</text>`;}).join('');
   let band='';
   if(series.length>1){const a=series[0].values.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`),b=series[1].values.map((v,i)=>`${X(i).toFixed(1)},${Y(v).toFixed(1)}`).reverse();band=`<polygon points="${a.concat(b).join(' ')}" fill="${series[1].color}" opacity="0.13"/>`;}
@@ -2067,10 +2054,10 @@ function svgMulti(series,labels,w,h){
   return`<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px" xmlns="http://www.w3.org/2000/svg">${grid}${band}${lines}${xl}</svg>`;
 }
 function svgStack(items,w){
-  const rowH=24,padL=118,padR=64,max=Math.max(...items.map(i=>i.parts.reduce((a,p)=>a+p.v,0)),1),h=items.length*rowH+8;
+  const rowH=24,padL=118,padR=76,max=Math.max(...items.map(i=>i.parts.reduce((a,p)=>a+p.v,0)),1),h=items.length*rowH+8;
   const bars=items.map((it,i)=>{let x=padL;const y=i*rowH+4,tot=it.parts.reduce((a,p)=>a+p.v,0);
     const segs=it.parts.map(p=>{const bw=Math.max(0,p.v/max*(w-padL-padR));const r=`<rect x="${x.toFixed(1)}" y="${y}" width="${bw.toFixed(1)}" height="16" fill="${p.color}"/>`;x+=bw;return r;}).join('');
-    return`<text x="${padL-6}" y="${y+12}" text-anchor="end" font-size="9.5" fill="#444">${it.label}</text>${segs}<text x="${x+5}" y="${y+12}" font-size="9" fill="#333">${Math.round(tot/1000).toLocaleString()}K</text>`;}).join('');
+    return`<text x="${padL-6}" y="${y+12}" text-anchor="end" font-size="9.5" fill="#444">${it.label}</text>${segs}<text x="${x+5}" y="${y+12}" font-size="9" fill="#333">${fmtShort(tot)}</text>`;}).join('');
   return`<svg viewBox="0 0 ${w} ${h}" width="100%" style="max-width:${w}px" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`;
 }
 function loanSummary(){
