@@ -36,3 +36,13 @@
 - All 12 tables have RLS enabled; Supabase security advisor reported no findings.
 - No Auth users are linked to member records yet. The original PIN-based HTML remains deployed, continues using JSONBin, and is **not** suitable for production use with Supabase.
 - Do not merge until the new authenticated frontend, server-authorized write flows, and role-based acceptance tests are complete. Do not commit the private backup or any service-role credentials.
+
+## Staging dashboard and safe testing — 7 Nov 2026
+
+- New Vercel project `elites-sacco-auth-preview` serves the staging dashboard at <https://elites-sacco-auth-preview.vercel.app/>. This is separate from the existing GitHub Pages/JSONBin application.
+- The login page includes a sample-data **Explore demo without a password** option. The demo uses fictitious financial numbers and does not query Supabase.
+- For authenticated members, added real Supabase-backed savings and arrears, historical policy-based loan balances, loan exports, cashbook (admin), members, minutes and transaction **drafts** (admin only). These remain under testing and are not authoritative statements.
+- Added `supabase/migrations/0002_staging_drafts.sql`. Admins can write only to RLS-restricted test drafts. Drafts never post to the imported financial ledger; historical browser write/delete privileges were removed.
+- Browser scripts parsed without syntax errors. Supabase administrator role test allowed creating a test draft within a rolled-back transaction; unlinked user query returned zero visible drafts. No test transaction remained committed.
+- Remaining: validate exact loan math against all historic loans and edge cases, invite and link remaining verified members, verify all auth redirects and actual browser login, build audited production posting workflows, reconcile post-backup changes and rotate exposed JSONBin credentials.
+- Supabase security advisor currently warns that leaked-password protection is disabled; review Auth security settings before onboarding all members.
