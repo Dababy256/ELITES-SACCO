@@ -9,7 +9,18 @@
 <main class="wrap">
 <section id="auth" class="panel auth"><h2>Member sign in</h2><p class="muted">Use a Supabase Auth account. Historical four-digit PINs will not work here.</p>
 <form id="authForm"><label>Email</label><input id="email" type="email" required autocomplete="email"><label>Password</label><input id="password" type="password" required minlength="8" autocomplete="current-password"><p><button class="gold" id="submit" type="submit">Sign in</button></p></form>
-<button class="link" type="button" id="mode">Create account instead</button><p id="authMsg" role="status" class="muted"></p><p class="muted">New accounts cannot access records until an SACCO administrator verifies and links the registered identity.</p></section>
+<button class="link" type="button" id="mode">Create account instead</button> · <button class="link" type="button" id="forgot">No password yet? Set one</button><p id="authMsg" role="status" class="muted"></p><p class="muted">New accounts cannot access records until an SACCO administrator verifies and links the registered identity.</p></section>
+<section id="recovery" class="panel auth" hidden>
+<h2>Set or reset your password</h2>
+<p class="muted">Enter your verified email. We will send a private password-recovery link. Do not share that link or your password.</p>
+<form id="recoveryForm"><label for="recoveryEmail">Email address</label><input id="recoveryEmail" type="email" required autocomplete="email"><p><button class="gold" id="sendRecovery" type="submit">Email password link</button></p></form>
+<p id="recoveryMsg" class="muted" role="status"></p>
+<button class="link" id="backLogin" type="button">Back to sign in</button></section>
+<section id="newpassword" class="panel auth" hidden>
+<h2>Choose your new password</h2>
+<p class="muted">You are following a secure recovery link. Enter a unique password of at least 12 characters.</p>
+<form id="setPasswordForm"><label for="newPassword">New password</label><input id="newPassword" type="password" required minlength="12" autocomplete="new-password"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" type="password" minlength="12" required autocomplete="new-password"><p><button class="gold" id="savePassword" type="submit">Save password</button></p></form>
+<p id="setPasswordMsg" role="status" class="muted"></p></section>
 <section id="waiting" class="panel auth" hidden><h2>Account awaiting activation</h2><p>Your sign-in worked, but this account has not been linked to a SACCO member. No financial data was shared.</p><button id="waitingOut">Sign out</button></section>
 <section id="portal" hidden>
  <div class="row panel"><div><h2 id="welcome">Member portal</h2><div class="muted" id="identity"></div></div><button id="signOut">Sign out</button></div>
@@ -26,8 +37,46 @@
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.119.0?bundle';
 const sb=createClient('https://vcdswucekgrnonffvrva.supabase.co',"sb_publishable_uqkf_VrmW8J45zm-trWqLQ_Nnsf9S01");
 const $=q=>document.querySelector(q),fmt=n=>'UGX '+Number(n||0).toLocaleString('en-UG'),date=x=>x||'—';
-const show=id=>{for(const q of ['auth','waiting','portal'])$('#'+q).hidden=q!==id;};
+const show=id=>{for(const q of ['auth','recovery','newpassword','waiting','portal'])$('#'+q).hidden=q!==id;};
 let signUp=false;
+let isPasswordRecovery=false;
+const recoveryLink=/(?:^|[&?#])type=recovery(?:&|$)/.test(location.hash);
+const recoveryTarget='https://elites-sacco-auth-preview.vercel.app/';
+$('#forgot').onclick=()=>{$('#recoveryEmail').value=$('#email').value.trim();$('#recoveryMsg').textContent='';show('recovery');};
+$('#backLogin').onclick=()=>show('auth');
+$('#recoveryForm').onsubmit=async e=>{
+ e.preventDefault();
+ $('#sendRecovery').disabled=true;$('#recoveryMsg').textContent='Sending password link...';
+ try{
+  const {error}=await sb.auth.resetPasswordForEmail($('#recoveryEmail').value.trim(),{redirectTo:recoveryTarget});
+  if(error)throw error;
+  $('#recoveryMsg').className='muted';$('#recoveryMsg').textContent='If this account exists, a password link has been sent. Check your inbox and spam folder.';
+ }catch(err){$('#recoveryMsg').className='error';$('#recoveryMsg').textContent=err.message||'Could not send recovery email';}
+ finally{$('#sendRecovery').disabled=false;}
+};
+$('#setPasswordForm').onsubmit=async e=>{
+ e.preventDefault();
+ const p=$('#newPassword').value;
+ if(p!==$('#confirmPassword').value){$('#setPasswordMsg').className='error';$('#setPasswordMsg').textContent='Passwords do not match.';return;}
+ $('#savePassword').disabled=true;
+ try{
+  const {data:{session},error:sessionError}=await sb.auth.getSession();
+  if(sessionError||!session)throw new Error('The recovery link has expired. Request a new link.');
+  if(!isPasswordRecovery&&!recoveryLink)throw new Error('Start with the password recovery link sent to your email.');
+  const {error}=await sb.auth.updateUser({password:p});
+  if(error)throw error;
+  isPasswordRecovery=false;
+  $('#newPassword').value='';$('#confirmPassword').value='';
+  history.replaceState(null,'',location.pathname);
+  await sb.auth.signOut();
+  $('#authMsg').className='success';$('#authMsg').textContent='Password saved. Sign in with your new password.';
+  show('auth');
+ }catch(err){$('#setPasswordMsg').className='error';$('#setPasswordMsg').textContent=err.message||'Could not update password';}
+ finally{$('#savePassword').disabled=false;}
+};
+sb.auth.onAuthStateChange((event,session)=>{
+ if(event==='PASSWORD_RECOVERY'&&session){isPasswordRecovery=true;show('newpassword');}
+});
 $('#mode').onclick=()=>{signUp=!signUp;$('#submit').textContent=signUp?'Create account':'Sign in';$('#mode').textContent=signUp?'Already have an account? Sign in':'Create account instead';$('#authMsg').textContent='';};
 $('#authForm').onsubmit=async e=>{e.preventDefault();$('#submit').disabled=true;$('#authMsg').textContent='Connecting...';
  try{const email=$('#email').value.trim(),password=$('#password').value;
@@ -46,6 +95,7 @@ async function fetchTable(name,cols){const {data,error}=await sb.from(name).sele
 async function boot(){
  const sess=await sb.auth.getSession();
  if(!sess.data?.session){show('auth');return;}
+ if(isPasswordRecovery||recoveryLink){show('newpassword');return;}
  const id=sess.data.session.user.id;
  const {data:me,error}=await sb.from('sacco_members').select('id,display_name,legacy_name,member_role,auth_user_id').eq('auth_user_id',id).maybeSingle();
  if(error)throw error;
