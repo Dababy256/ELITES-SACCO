@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elites SACCO — Supabase Test Portal</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root{--gold:#b08d57;--cream:#f3e9d2;--black:#0d0d0d}*{box-sizing:border-box}body{background:#f0ebe0;color:#1d1d1d;margin:0;font-family:Arial,Helvetica,sans-serif}.mast{background:#111;color:var(--gold);padding:22px 5vw;border-bottom:3px solid var(--gold);display:flex;justify-content:space-between;align-items:center;gap:15px}.mast h1{font-size:23px;font-family:Georgia,serif;margin:0}.mast small{color:#999;display:block;margin-top:6px}.pill{color:var(--gold);border:1px solid #544328;border-radius:20px;padding:5px 11px;font-size:11px;font-weight:bold}.wrap{width:min(1100px,94vw);margin:25px auto}.panel{background:white;border-radius:14px;padding:22px;box-shadow:0 2px 12px #0001;margin-bottom:16px}.auth{max-width:480px;margin:9vh auto}.muted{color:#777;font-size:13px}h2{font-family:Georgia,serif;margin:4px 0 16px}h3{margin:8px 0 14px;font-size:15px}label{display:block;font-size:12px;font-weight:bold;color:#666;margin:14px 0 5px}input{font:inherit;padding:13px;width:100%;border:1px solid #ccc;border-radius:9px}button{border:0;background:#111;color:white;font-size:13px;font-weight:700;padding:12px 16px;border-radius:9px;cursor:pointer}button:hover{background:#333}button.gold{background:var(--gold);color:#111}button.link{background:transparent;color:#74552d;text-decoration:underline;padding:7px 0}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:12px}.stat{border:1px solid #eee;border-radius:11px;padding:16px;background:#faf9f5}.stat b{font-size:20px;display:block;margin-top:6px}.stat small{color:#666}.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th{background:#181818;color:var(--gold);text-align:left;padding:11px}td{border-bottom:1px solid #eee;padding:10px}td.num{text-align:right}.error{color:#aa2626}.success{color:#28713a}.columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:700px){.columns{grid-template-columns:1fr}.mast{align-items:flex-start}.mast h1{font-size:19px}}[hidden]{display:none!important}
+</style></head><body>
+<header class="mast"><div><h1>ELITES SACCO</h1><small>Let's Prosper · Secure database preview</small></div><span class="pill">READ-ONLY TEST</span></header>
+<main class="wrap">
+<section id="auth" class="panel auth"><h2>Member sign in</h2><p class="muted">Use a Supabase Auth account. Historical four-digit PINs will not work here.</p>
+<form id="authForm"><label>Email</label><input id="email" type="email" required autocomplete="email"><label>Password</label><input id="password" type="password" required minlength="8" autocomplete="current-password"><p><button class="gold" id="submit" type="submit">Sign in</button></p></form>
+<button class="link" type="button" id="mode">Create account instead</button><p id="authMsg" role="status" class="muted"></p><p class="muted">New accounts cannot access records until an SACCO administrator verifies and links the registered identity.</p></section>
+<section id="waiting" class="panel auth" hidden><h2>Account awaiting activation</h2><p>Your sign-in worked, but this account has not been linked to a SACCO member. No financial data was shared.</p><button id="waitingOut">Sign out</button></section>
+<section id="portal" hidden>
+ <div class="row panel"><div><h2 id="welcome">Member portal</h2><div class="muted" id="identity"></div></div><button id="signOut">Sign out</button></div>
+ <div class="cards" id="summary"></div>
+ <div class="columns">
+  <div class="panel"><h3>Recent contributions</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Month</th><th>Paid on</th><th>UGX</th></tr></thead><tbody id="contribRows"></tbody></table></div></div>
+  <div class="panel"><h3>Loans</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Issued</th><th>Type</th><th>Principal UGX</th></tr></thead><tbody id="loanRows"></tbody></table></div></div>
+ </div>
+ <div class="panel"><h3>Meeting minutes</h3><div id="minutes" class="muted"></div></div>
+ <p class="muted">This preview is intentionally read-only. Totals represent recorded transactions, not necessarily cash available or live loan balances with interest. The original website remains separate.</p>
+</section>
+</main>
+<script type="module">
+import{createClient}from'https://esm.sh/@supabase/supabase-js@2.119.0?bundle';
+const sb=createClient('https://vcdswucekgrnonffvrva.supabase.co',"sb_publishable_uqkf_VrmW8J45zm-trWqLQ_Nnsf9S01");
+const $=q=>document.querySelector(q),fmt=n=>'UGX '+Number(n||0).toLocaleString('en-UG'),date=x=>x||'—';
+const show=id=>{for(const q of ['auth','waiting','portal'])$('#'+q).hidden=q!==id;};
+let signUp=false;
+$('#mode').onclick=()=>{signUp=!signUp;$('#submit').textContent=signUp?'Create account':'Sign in';$('#mode').textContent=signUp?'Already have an account? Sign in':'Create account instead';$('#authMsg').textContent='';};
+$('#authForm').onsubmit=async e=>{e.preventDefault();$('#submit').disabled=true;$('#authMsg').textContent='Connecting...';
+ try{const email=$('#email').value.trim(),password=$('#password').value;
+ const r=signUp?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+ if(r.error)throw r.error;
+ $('#authMsg').textContent=signUp?'Account request received. Check your email for confirmation, then sign in.':'Sign-in successful.';
+ if(!signUp)await boot();
+ }catch(err){$('#authMsg').className='error';$('#authMsg').textContent=err.message||'Authentication failed';}
+ finally{$('#submit').disabled=false;}};
+async function logout(){await sb.auth.signOut();show('auth');$('#password').value='';}
+$('#waitingOut').onclick=logout;$('#signOut').onclick=logout;
+function td(text,cl){const e=document.createElement('td');e.textContent=String(text==null?'':text);if(cl)e.className=cl;return e;}
+function tableRows(id,rows,map){const t=$('#'+id);t.replaceChildren();for(const r of rows){const tr=document.createElement('tr');for(const item of map(r))tr.appendChild(td(item));t.appendChild(tr);}}
+function stat(title,value,sub){const d=document.createElement('div');d.className='stat';const c=document.createElement('small');c.textContent=title;const b=document.createElement('b');b.textContent=value;const s=document.createElement('small');s.textContent=sub||'';d.append(c,b,s);return d;}
+async function fetchTable(name,cols){const {data,error}=await sb.from(name).select(cols);if(error)throw error;return data||[];}
+async function boot(){
+ const sess=await sb.auth.getSession();
+ if(!sess.data?.session){show('auth');return;}
+ const id=sess.data.session.user.id;
+ const {data:me,error}=await sb.from('sacco_members').select('id,display_name,legacy_name,member_role,auth_user_id').eq('auth_user_id',id).maybeSingle();
+ if(error)throw error;
+ if(!me){show('waiting');return;}
+ const [members,contributions,loans,repayments,minutes]=await Promise.all([
+  fetchTable('sacco_members','id,display_name'),
+  fetchTable('sacco_contributions','member_id,amount,contribution_month,paid_on'),
+  fetchTable('sacco_loans','id,member_id,principal,issued_on,loan_type,loan_number'),
+  fetchTable('sacco_repayments','loan_id,member_id,amount,paid_on'),
+  fetchTable('sacco_minutes','title,meeting_on,body')
+ ]);
+ const mname=new Map(members.map(m=>[m.id,m.display_name]));
+ $('#welcome').textContent='Welcome, '+me.display_name;
+ $('#identity').textContent=me.member_role==='admin'?'Administrator · Verified membership':'Member · Verified membership';
+ const sum=arr=>arr.reduce((a,x)=>a+Number(x.amount||x.principal||0),0);
+ $('#summary').replaceChildren(stat('Recorded savings',fmt(sum(contributions)),contributions.length+' entries'),stat('Principal issued',fmt(loans.reduce((a,x)=>a+Number(x.principal),0)),loans.length+' loans'),stat('Repayments received',fmt(sum(repayments)),repayments.length+' repayments'),stat('Members visible',String(members.length),'Access limited by database policies'));
+ contributions.sort((a,b)=>(b.paid_on||'').localeCompare(a.paid_on||''));
+ loans.sort((a,b)=>(b.issued_on||'').localeCompare(a.issued_on||''));
+ tableRows('contribRows',contributions.slice(0,25),r=>[mname.get(r.member_id)||'Member',r.contribution_month?.slice(0,7)||'',date(r.paid_on),Number(r.amount).toLocaleString('en-UG')]);
+ tableRows('loanRows',loans.slice(0,25),r=>[mname.get(r.member_id)||'Member',date(r.issued_on),r.loan_type,Number(r.principal).toLocaleString('en-UG')]);
+ const list=$('#minutes');list.replaceChildren();
+ for(const m of minutes.sort((a,b)=>(b.meeting_on||'').localeCompare(a.meeting_on||''))){const d=document.createElement('details'),s=document.createElement('summary'),p=document.createElement('p');s.textContent=(m.meeting_on||'')+' — '+(m.title||'Meeting');p.textContent=m.body||'';p.style.whiteSpace='pre-wrap';d.append(s,p);list.append(d);}
+ show('portal');
+}
+boot().catch(e=>{$('#authMsg').textContent=e.message||'Could not load portal';show('auth');});
+</script></body></html>
