@@ -46,3 +46,7 @@
 - Browser scripts parsed without syntax errors. Supabase administrator role test allowed creating a test draft within a rolled-back transaction; unlinked user query returned zero visible drafts. No test transaction remained committed.
 - Remaining: validate exact loan math against all historic loans and edge cases, invite and link remaining verified members, verify all auth redirects and actual browser login, build audited production posting workflows, reconcile post-backup changes and rotate exposed JSONBin credentials.
 - Supabase security advisor currently warns that leaked-password protection is disabled; review Auth security settings before onboarding all members.
+
+## Auth email provider — pending user activation
+
+Prepared the [Brevo free-plan SMTP setup guide](docs/SMTP_SETUP_BREVO.md) for transactional password recovery and invitations. The settings have **not** been activated because a verified external sender and secret SMTP key must be generated in Brevo and entered by the authorized project administrator in Supabase Auth settings. The Supabase connector has no action for Auth SMTP configuration. Never commit any SMTP credentials.
