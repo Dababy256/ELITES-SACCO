@@ -29,4 +29,4 @@
 
 ## Status
 
-GitHub write access verified and migration branch opened. Supabase restoration was requested and accepted; database availability and a complete live-data import must be verified separately before claiming a migration.
+GitHub write access verified and migration branch opened. The existing Supabase project has been restored but contains unrelated hospital-management tables. The SACCO backup dry-run passed with five members, 133 contribution entries, 28 loans, 27 repayments, three meeting minutes and 13 legacy audit entries; no unmatched loan references. One empty legacy member alias was detected and explicitly skipped. The exported backup also has a logo and one member photo, both handled by the revised offline migration package. PINs are never imported. No financial data has been written to Supabase. A separate SACCO project and Auth-enabled frontend are still required.
