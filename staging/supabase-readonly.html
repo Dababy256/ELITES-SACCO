@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Elites SACCO — Supabase Test Portal</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root{--gold:#b08d57;--cream:#f3e9d2;--black:#0d0d0d}*{box-sizing:border-box}body{background:#f0ebe0;color:#1d1d1d;margin:0;font-family:Arial,Helvetica,sans-serif}.mast{background:#111;color:var(--gold);padding:22px 5vw;border-bottom:3px solid var(--gold);display:flex;justify-content:space-between;align-items:center;gap:15px}.mast h1{font-size:23px;font-family:Georgia,serif;margin:0}.mast small{color:#999;display:block;margin-top:6px}.pill{color:var(--gold);border:1px solid #544328;border-radius:20px;padding:5px 11px;font-size:11px;font-weight:bold}.wrap{width:min(1100px,94vw);margin:25px auto}.panel{background:white;border-radius:14px;padding:22px;box-shadow:0 2px 12px #0001;margin-bottom:16px}.auth{max-width:480px;margin:9vh auto}.muted{color:#777;font-size:13px}h2{font-family:Georgia,serif;margin:4px 0 16px}h3{margin:8px 0 14px;font-size:15px}label{display:block;font-size:12px;font-weight:bold;color:#666;margin:14px 0 5px}input{font:inherit;padding:13px;width:100%;border:1px solid #ccc;border-radius:9px}button{border:0;background:#111;color:white;font-size:13px;font-weight:700;padding:12px 16px;border-radius:9px;cursor:pointer}button:hover{background:#333}button.gold{background:var(--gold);color:#111}button.link{background:transparent;color:#74552d;text-decoration:underline;padding:7px 0}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:12px}.stat{border:1px solid #eee;border-radius:11px;padding:16px;background:#faf9f5}.stat b{font-size:20px;display:block;margin-top:6px}.stat small{color:#666}.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th{background:#181818;color:var(--gold);text-align:left;padding:11px}td{border-bottom:1px solid #eee;padding:10px}td.num{text-align:right}.error{color:#aa2626}.success{color:#28713a}.columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:700px){.columns{grid-template-columns:1fr}.mast{align-items:flex-start}.mast h1{font-size:19px}}[hidden]{display:none!important}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;border-bottom:1px solid #ddd;padding-bottom:14px}.tabs button{background:#eee9df;color:#1e1a16}.tabs button[aria-selected="true"]{background:#111;color:#e5bc77}.alert{background:#fff5dd;border-left:4px solid #b08d57;padding:12px 15px;font-size:13px;border-radius:6px;margin-bottom:15px}.controlrow{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:12px 0}.controlrow label{margin:0 0 6px}.controlrow .control{flex:1;min-width:180px}.controlrow select,.draft input,.draft select,.draft textarea{font:inherit;border:1px solid #c5bcaf;background:#fff;padding:10px;width:100%;border-radius:8px}.draft{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.draft textarea{resize:vertical;min-height:80px}.draft .wide{grid-column:1/-1}.tablewrap table{min-width:560px}.demo-hero{border-radius:12px;padding:17px;background:#151515;color:#e8d0aa}.demo-hero h2{color:#e8d0aa}.bars{height:110px;display:flex;align-items:end;gap:12px;margin-top:20px}.bars span{display:block;width:25px;background:#b08d57;border-radius:5px 5px 0 0}.demo-note{border:2px dashed #b08d57;padding:12px;font-weight:bold;font-size:12px;border-radius:8px}
+</style></head><body>
+<header class="mast"><div><h1>ELITES SACCO</h1><small>Let's Prosper · Secure database preview</small></div><span class="pill">STAGING · NO LIVE POSTING</span></header>
+<main class="wrap">
+<section id="auth" class="panel auth"><h2>Member sign in</h2><p class="muted">Use a Supabase Auth account. Historical four-digit PINs will not work here.</p>
+<form id="authForm"><label>Email</label><input id="email" type="email" required autocomplete="email"><label>Password</label><input id="password" type="password" required minlength="8" autocomplete="current-password"><p><button class="gold" id="submit" type="submit">Sign in</button></p></form>
+<button class="link" type="button" id="mode">Create account instead</button> · <button class="link" type="button" id="forgot">No password yet? Set one</button><p id="authMsg" role="status" class="muted"></p><p class="muted">New accounts cannot access records until an SACCO administrator verifies and links the registered identity.</p><p><button class="gold" type="button" id="demoOpen">Explore demo without a password</button></p></section>
+<section id="recovery" class="panel auth" hidden>
+<h2>Set or reset your password</h2>
+<p class="muted">Enter your verified email. We will send a private password-recovery link. Do not share that link or your password.</p>
+<form id="recoveryForm"><label for="recoveryEmail">Email address</label><input id="recoveryEmail" type="email" required autocomplete="email"><p><button class="gold" id="sendRecovery" type="submit">Email password link</button></p></form>
+<p id="recoveryMsg" class="muted" role="status"></p>
+<button class="link" id="backLogin" type="button">Back to sign in</button></section>
+<section id="newpassword" class="panel auth" hidden>
+<h2>Choose your new password</h2>
+<p class="muted">You are following a secure recovery link. Enter a unique password of at least 12 characters.</p>
+<form id="setPasswordForm"><label for="newPassword">New password</label><input id="newPassword" type="password" required minlength="12" autocomplete="new-password"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" type="password" minlength="12" required autocomplete="new-password"><p><button class="gold" id="savePassword" type="submit">Save password</button></p></form>
+<p id="setPasswordMsg" role="status" class="muted"></p></section>
+<section id="demo" hidden>
+<div class="demo-hero"><div class="row"><div><h2>Elites SACCO · Interactive design preview</h2><p style="color:#bbac96">This sample dashboard works without any account or recovery email.</p></div><button type="button" id="demoClose">Back to sign in</button></div></div>
+<div class="panel"><p class="demo-note">DEMO DATA ONLY — all names and amounts on this screen are fictitious. The five real members' records remain protected by Supabase login.</p>
+<div class="cards"><div class="stat"><small>Example savings</small><b>UGX 15,240,000</b><small>Sample total</small></div><div class="stat"><small>Example loan portfolio</small><b>UGX 4,760,000</b><small>Sample outstanding</small></div><div class="stat"><small>Example unit trust</small><b>UGX 7,500,000</b><small>Sample investment</small></div><div class="stat"><small>Sample members</small><b>5</b><small>Not actual member records</small></div></div></div>
+<div class="columns"><div class="panel"><h3>Sample monthly collections</h3><div class="bars"><span style="height:50%"></span><span style="height:64%"></span><span style="height:41%"></span><span style="height:88%"></span><span style="height:100%"></span><span style="height:75%"></span></div><p class="muted">Illustrative collection trend — not generated from the SACCO ledger</p></div><div class="panel"><h3>Example savings ledger</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Month</th><th>Contributed</th></tr></thead><tbody><tr><td>Member A</td><td>2026-11</td><td>UGX 150,000</td></tr><tr><td>Member B</td><td>2026-11</td><td>UGX 165,000</td></tr><tr><td>Member C</td><td>2026-10</td><td>UGX 150,000</td></tr></tbody></table></div></div></div>
+<div class="panel"><h3>What the authenticated dashboard contains</h3><p>Financial summary, member-by-member savings and arrears, compound/flat/frozen loan schedules, cashbook, CSV exports and safe transaction drafts. Demo mode does not send requests to the database.</p><button type="button" id="demoSignIn" class="gold">Return to secure login</button></div>
+</section>
+<section id="waiting" class="panel auth" hidden><h2>Account awaiting activation</h2><p>Your sign-in worked, but this account has not been linked to a SACCO member. No financial data was shared.</p><button id="waitingOut">Sign out</button></section>
+<section id="portal" hidden>
+ <div class="row panel"><div><h2 id="welcome">Member portal</h2><div class="muted" id="identity"></div></div><button id="signOut">Sign out</button></div>
+ <div class="alert"><b>TEST SITE / HISTORICAL SNAPSHOT.</b> The live SACCO website still uses JSONBin. Only verified members can view actual Supabase data. Draft approvals do not post to the ledger.</div>
+<div class="cards" id="summary"></div>
+<div class="panel"><h3>Detailed books of accounts</h3><div id="ledgerTabs" class="tabs" role="tablist"></div><div id="ledgerBody" role="tabpanel"></div></div>
+ <div class="columns">
+  <div class="panel"><h3>Recent contributions</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Month</th><th>Paid on</th><th>UGX</th></tr></thead><tbody id="contribRows"></tbody></table></div></div>
+  <div class="panel"><h3>Recent loans</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Issued</th><th>Interest</th><th>Status</th><th>Outstanding UGX</th></tr></thead><tbody id="loanRows"></tbody></table></div></div>
+ </div>
+ <div class="panel"><h3>Meeting minutes</h3><div id="minutes" class="muted"></div></div>
+ <p class="muted">Financial data is imported from the 6 November 2026 backup. Outstanding loans and monthly arrears are computed using the original SACCO rules as of today's date. Figures do not represent available cash. All financial entries are drafts only; the original live website remains separate.</p>
+</section>
+</main>
+<script>
+const demoShow=which=>{
+for(const id of ['auth','recovery','newpassword','waiting','portal','demo']){
+ const el=document.getElementById(id);if(el)el.hidden=id!==which;
+}
+};
+document.getElementById('demoOpen').addEventListener('click',()=>demoShow('demo'));
+document.getElementById('demoClose').addEventListener('click',()=>demoShow('auth'));
+document.getElementById('demoSignIn').addEventListener('click',()=>demoShow('auth'));
+</script>
+<script type="module">
+import{createClient}from'https://esm.sh/@supabase/supabase-js@2.119.0?bundle';
+const sb=createClient('https://vcdswucekgrnonffvrva.supabase.co',"sb_publishable_uqkf_VrmW8J45zm-trWqLQ_Nnsf9S01");
+const $=q=>document.querySelector(q),fmt=n=>'UGX '+Number(n||0).toLocaleString('en-UG'),date=x=>x||'—';
+const show=id=>{for(const q of ['auth','recovery','newpassword','waiting','portal','demo'])$('#'+q).hidden=q!==id;};
+let signUp=false;
+let isPasswordRecovery=false;
+const recoveryLink=/(?:^|[&?#])type=recovery(?:&|$)/.test(location.hash);
+const recoveryTarget='https://elites-sacco-auth-preview.vercel.app/';
+$('#forgot').onclick=()=>{$('#recoveryEmail').value=$('#email').value.trim();$('#recoveryMsg').textContent='';show('recovery');};
+$('#backLogin').onclick=()=>show('auth');
+$('#recoveryForm').onsubmit=async e=>{
+ e.preventDefault();
+ $('#sendRecovery').disabled=true;$('#recoveryMsg').textContent='Sending password link...';
+ try{
+  const {error}=await sb.auth.resetPasswordForEmail($('#recoveryEmail').value.trim(),{redirectTo:recoveryTarget});
+  if(error)throw error;
+  $('#recoveryMsg').className='muted';$('#recoveryMsg').textContent='If this account exists, a password link has been sent. Check your inbox and spam folder.';
+ }catch(err){$('#recoveryMsg').className='error';$('#recoveryMsg').textContent=err.message||'Could not send recovery email';}
+ finally{$('#sendRecovery').disabled=false;}
+};
+$('#setPasswordForm').onsubmit=async e=>{
+ e.preventDefault();
+ const p=$('#newPassword').value;
+ if(p!==$('#confirmPassword').value){$('#setPasswordMsg').className='error';$('#setPasswordMsg').textContent='Passwords do not match.';return;}
+ $('#savePassword').disabled=true;
+ try{
+  const {data:{session},error:sessionError}=await sb.auth.getSession();
+  if(sessionError||!session)throw new Error('The recovery link has expired. Request a new link.');
+  if(!isPasswordRecovery&&!recoveryLink)throw new Error('Start with the password recovery link sent to your email.');
+  const {error}=await sb.auth.updateUser({password:p});
+  if(error)throw error;
+  isPasswordRecovery=false;
+  $('#newPassword').value='';$('#confirmPassword').value='';
+  history.replaceState(null,'',location.pathname);
+  await sb.auth.signOut();
+  $('#authMsg').className='success';$('#authMsg').textContent='Password saved. Sign in with your new password.';
+  show('auth');
+ }catch(err){$('#setPasswordMsg').className='error';$('#setPasswordMsg').textContent=err.message||'Could not update password';}
+ finally{$('#savePassword').disabled=false;}
+};
+sb.auth.onAuthStateChange((event,session)=>{
+ if(event==='PASSWORD_RECOVERY'&&session){isPasswordRecovery=true;show('newpassword');}
+});
+$('#mode').onclick=()=>{signUp=!signUp;$('#submit').textContent=signUp?'Create account':'Sign in';$('#mode').textContent=signUp?'Already have an account? Sign in':'Create account instead';$('#authMsg').textContent='';};
+$('#authForm').onsubmit=async e=>{e.preventDefault();$('#submit').disabled=true;$('#authMsg').textContent='Connecting...';
+ try{const email=$('#email').value.trim(),password=$('#password').value;
+ const r=signUp?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+ if(r.error)throw r.error;
+ $('#authMsg').textContent=signUp?'Account request received. Check your email for confirmation, then sign in.':'Sign-in successful.';
+ if(!signUp)await boot();
+ }catch(err){$('#authMsg').className='error';$('#authMsg').textContent=err.message||'Authentication failed';}
+ finally{$('#submit').disabled=false;}};
+async function logout(){await sb.auth.signOut();book=null;$('#summary').replaceChildren();$('#ledgerBody').replaceChildren();show('auth');$('#password').value='';}
+$('#waitingOut').onclick=logout;$('#signOut').onclick=logout;
+function td(text,cl){const e=document.createElement('td');e.textContent=String(text==null?'':text);if(cl)e.className=cl;return e;}
+function tableRows(id,rows,map){const t=$('#'+id);t.replaceChildren();for(const r of rows){const tr=document.createElement('tr');for(const item of map(r))tr.appendChild(td(item));t.appendChild(tr);}}
+function stat(title,value,sub){const d=document.createElement('div');d.className='stat';const c=document.createElement('small');c.textContent=title;const b=document.createElement('b');b.textContent=value;const s=document.createElement('small');s.textContent=sub||'';d.append(c,b,s);return d;}
+async function fetchTable(name,cols){const {data,error}=await sb.from(name).select(cols);if(error)throw error;return data||[];}
+
+const pg=n=>Number(n||0);
+const ugx=n=>'UGX '+pg(n).toLocaleString('en-UG',{maximumFractionDigits:0});
+const formatMoney=n=>pg(n).toLocaleString('en-UG',{maximumFractionDigits:2});
+function jubaToday(){
+ const v=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Juba',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+ return v.year+'-'+v.month+'-'+v.day;
+}
+let book=null,view='savings';
+function targetFor(month,settings){
+ const override=settings?.targetOverrides?.[month];
+ if(override!=null&&pg(override)>0)return pg(override);
+ if(month>='2024-02'&&month<='2024-07')return 80000;
+ if(month>='2024-08'&&month<='2026-06')return 100000;
+ return pg(settings?.monthlyTarget)||150000;
+}
+function allMonths(end){
+ const result=[];for(let y=2024,m=2; y<Number(end.slice(0,4))||y===Number(end.slice(0,4))&&m<=Number(end.slice(5,7));){
+ result.push(y+'-'+String(m).padStart(2,'0'));m++;if(m>12){m=1;y++;}
+ if(result.length>100)break;
+ }return result;
+}
+function savingsSummary(){
+ const months=allMonths(jubaToday().slice(0,7));let output=[];
+ for(const m of book.members)for(const month of months){
+  const paid=book.contributions.filter(x=>x.member_id===m.id&&x.contribution_month?.slice(0,7)===month).reduce((s,x)=>s+pg(x.amount),0);
+  const due=targetFor(month,book.settings),waived=book.waivers.some(w=>w.member_id===m.id&&w.contribution_month?.slice(0,7)===month);
+  const day=Number(jubaToday().slice(8));
+  const fine=paid>=due||waived?0:(month!==jubaToday().slice(0,7)?15000:day>=10?Math.min(15000,5000*(Math.floor((day-10)/7)+1)):0);
+  output.push({id:m.id,name:m.display_name,month,paid,due,arrears:Math.max(0,due-paid),fine});
+ }return output;
+}
+function loanBalance(loan,repayments){
+ const principal=pg(loan.principal),start=new Date(loan.issued_on+'T00:00:00'),at=new Date(jubaToday()+'T23:59:59');
+ const rp=repayments.filter(x=>x.loan_id===loan.id).map(x=>({date:new Date(x.paid_on+'T00:00:00'),amount:pg(x.amount)})).sort((a,b)=>a.date-b.date);
+ const repaid=rp.reduce((s,r)=>s+r.amount,0);
+ const make=(owed,rule)=>({...loan,paid:repaid,balance:Math.max(0,Math.round(owed-repaid)),rule});
+ if(loan.manual_status==='COMPLETE')return make(repaid,'MANUAL');
+ if(pg(loan.frozen_total)>0)return make(pg(loan.frozen_total),'FROZEN');
+ const anniversary=n=>{const a=new Date(start);a.setMonth(a.getMonth()+n);if(a.getDate()!==start.getDate())a.setDate(0);return a;};
+ if(loan.issued_on>='2026-07-01'){
+  const monthAt=d=>{let count=1;for(let n=1;n<120;n++){const a=anniversary(n);a.setDate(a.getDate()+1);if(a>d)break;count++;}return count;};
+  let cumulative=0,cleared=null;
+  for(const r of rp){cumulative+=r.amount;const n=monthAt(r.date);if(cumulative>=principal*(1+.05*n)-.5){cleared=n;break;}}
+  const months=cleared??monthAt(at);
+  return make(principal*(1+.05*months),'FLAT');
+ }
+ let balance=principal*1.05;
+ for(const r of rp.filter(x=>x.date<=start))balance-=r.amount;
+ if(balance<=0)return make(repaid,'COMPOUND');
+ let n=1;
+ for(;n<120;n++){
+  const a=anniversary(n);if(a>at)break;
+  const prior=anniversary(n-1);
+  for(const r of rp.filter(x=>x.date>prior&&x.date<=a))balance-=r.amount;
+  if(balance<=0){balance=0;break;}
+  balance*=1.05;
+ }
+ if(balance>0){const prior=anniversary(n-1);for(const r of rp.filter(x=>x.date>prior&&x.date<=at))balance-=r.amount;}
+ return make(Math.max(0,balance)+repaid,'COMPOUND');
+}
+const mk=(t,str,klass)=>{const e=document.createElement(t);if(str!==undefined)e.textContent=String(str);if(klass)e.className=klass;return e;};
+function table(cols,records){
+ const wrap=mk('div',undefined,'tablewrap'),t=mk('table'),tr=mk('tr');
+ for(const h of cols)tr.append(mk('th',h));
+ const thead=mk('thead');thead.append(tr);t.append(thead);
+ const tbody=mk('tbody');
+ for(const rec of records){const row=mk('tr');for(const value of rec)row.append(mk('td',value));tbody.append(row);}
+ if(!records.length){const row=mk('tr'),cell=mk('td','No records');cell.colSpan=cols.length;row.append(cell);tbody.append(row);}
+ t.append(tbody);wrap.append(t);return wrap;
+}
+function csv(name,cols,records){
+ const cell=x=>{let t=String(x==null?'':x);if(/^[\s]*[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replaceAll('"','""')+'"';};
+ const content='\uFEFF'+[cols,...records].map(row=>row.map(cell).join(',')).join('\r\n');
+ const url=URL.createObjectURL(new Blob([content],{type:'text/csv;charset=utf-8;'})),a=mk('a');
+ a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),6000);
+}
+const displayMember=id=>book.members.find(m=>m.id===id)?.display_name||'Member';
+function memberFilter(){
+ const sel=mk('select');const choices=[['','All members'],...book.members.map(m=>[m.id,m.display_name])];
+ for(const [id,label] of choices){const o=mk('option',label);o.value=id;sel.append(o);}
+ sel.value=book.me.member_role==='admin'?'':book.me.id;sel.disabled=book.me.member_role!=='admin';return sel;
+}
+function wrapFilter(sel){
+ const row=mk('div',undefined,'controlrow'),div=mk('div',undefined,'control');div.append(mk('label','Member'),sel);row.append(div);return row;
+}
+function showTab(next){
+ view=next;
+ for(const b of document.querySelectorAll('#ledgerTabs button'))b.setAttribute('aria-selected',String(b.dataset.tab===next));
+ const p=$('#ledgerBody');p.replaceChildren();
+ const admin=book.me.member_role==='admin';
+ if(next==='savings'){
+  const chosen=memberFilter(),bar=wrapFilter(chosen),download=mk('button','Export CSV');bar.append(download);p.append(bar);
+  const render=()=>{
+   const relevant=savingsSummary().filter(x=>!chosen.value||x.id===chosen.value);
+   relevant.sort((a,b)=>b.month.localeCompare(a.month)||a.name.localeCompare(b.name));
+   const rows=relevant.map(x=>[x.name,x.month,formatMoney(x.paid),formatMoney(x.due),formatMoney(x.arrears),formatMoney(x.fine)]);
+   const amounts=relevant.reduce((s,x)=>({paid:s.paid+x.paid,arrears:s.arrears+x.arrears,fine:s.fine+x.fine}),{paid:0,arrears:0,fine:0});
+   let output=$('#ledgerContent');if(!output){output=mk('div');output.id='ledgerContent';p.append(output);}
+   output.replaceChildren(mk('p','Savings '+ugx(amounts.paid)+' · Contribution arrears '+ugx(amounts.arrears)+' · Estimated late fees '+ugx(amounts.fine),'alert'),table(['Member','Month','Paid UGX','Target UGX','Arrears UGX','Late fees UGX'],rows));
+   download.onclick=()=>csv('elites-sacco-savings.csv',['Member','Month','Paid UGX','Target UGX','Arrears UGX','Late fees UGX'],rows);
+  };chosen.onchange=render;render();
+ }else if(next==='loans'){
+  const chosen=memberFilter(),bar=wrapFilter(chosen),download=mk('button','Export CSV');bar.append(download);p.append(bar);
+  const render=()=>{
+   const loans=book.loans.filter(l=>!chosen.value||l.member_id===chosen.value).map(l=>loanBalance(l,book.repayments));
+   loans.sort((a,b)=>b.issued_on.localeCompare(a.issued_on));
+   const rows=loans.map(l=>[displayMember(l.member_id),'#'+l.loan_number,l.issued_on,l.loan_type,formatMoney(l.principal),formatMoney(l.paid),formatMoney(l.balance),l.rule]);
+   let output=$('#ledgerContent');if(!output){output=mk('div');output.id='ledgerContent';p.append(output);}
+   const totalIssued=loans.reduce((s,l)=>s+pg(l.principal),0),totalRepaid=loans.reduce((s,l)=>s+pg(l.paid),0);
+   const adminExtras=admin?' · Principal issued: '+ugx(totalIssued)+' · Repayments received: '+ugx(totalRepaid):'';
+   output.replaceChildren(mk('p','Outstanding loan balances (including interest): '+ugx(loans.reduce((s,l)=>s+l.balance,0))+' · Active loans: '+loans.filter(l=>l.balance>0).length+adminExtras,'alert'),table(['Member','Loan','Issued','Type','Principal UGX','Repaid UGX','Due UGX','Rule'],rows));
+   download.onclick=()=>csv('elites-sacco-loans.csv',['Member','Loan','Issued','Type','Principal UGX','Repaid UGX','Due UGX','Rule'],rows);
+  };chosen.onchange=render;render();
+ }else if(next==='cashbook'){
+  if(!admin){p.append(mk('p','Cashbook requires administrator permissions.'));return;}
+  const entries=book.financial.sort((a,b)=>(b.entry_on||'').localeCompare(a.entry_on||''));
+  const subtotals={};for(const x of entries)subtotals[x.entry_kind]=(subtotals[x.entry_kind]||0)+pg(x.amount);
+  p.append(mk('p','Investments: '+ugx(subtotals.investment)+' · Expenses: '+ugx(subtotals.expense)+' · Cash inflows: '+ugx(subtotals.cash_in)+' · Fees: '+ugx(book.fees.reduce((s,f)=>s+pg(f.amount),0)),'alert'));
+  const rows=entries.map(x=>[x.entry_on,x.entry_kind,x.narrative||'',formatMoney(x.amount)]);
+  p.append(table(['Date','Category','Reason','Amount UGX'],rows));const exportButton=mk('button','Export cashbook CSV');p.append(exportButton);exportButton.onclick=()=>csv('elites-sacco-cashbook.csv',['Date','Category','Reason','Amount UGX'],rows);
+ }else if(next==='drafts'){
+  if(!admin){p.append(mk('p','Only administrators can prepare test drafts.'));return;}
+  p.append(mk('p','SANDBOX REVIEW ONLY. Save a draft, preview its validation, then approve or reject it. Even an APPROVED draft is NOT posted to member savings, loans or the cashbook.','alert'));
+  const form=mk('form',undefined,'draft');
+  function select(choices){const e=mk('select');for(const [v,n] of choices){const o=mk('option',n);o.value=v;e.append(o);}return e;}
+  function field(label,input,full){const block=mk('div');if(full)block.style.gridColumn='1/-1';block.append(mk('label',label),input);form.append(block);return input;}
+  const kind=field('Transaction type',select([['CONTRIBUTION','Contribution'],['LOAN','Loan disbursement'],['REPAYMENT','Loan repayment'],['EXPENSE','Expense'],['INVESTMENT','Investment'],['CASH_IN','Cash received'],['MEMBERSHIP_FEE','Membership fee'],['WAIVER','Late-fee waiver']]));
+  const member=field('Member',select(book.members.map(m=>[m.id,m.display_name])));
+  const date=mk('input');date.type='date';date.value=jubaToday();field('Entry date',date);
+  const month=mk('input');month.type='month';month.value=jubaToday().slice(0,7);field('Contribution month',month);
+  const amount=mk('input');amount.type='number';amount.min='0';amount.step='0.01';amount.required=true;field('Amount (UGX)',amount);
+  const loan=field('Linked loan (repayments)',select([['','Select a loan']]));
+  const memo=mk('textarea');memo.maxLength=300;field('Description / purpose',memo,true);
+  const save=mk('button','Save test draft');save.type='submit';form.append(save);
+  const message=mk('p');message.setAttribute('role','status');form.append(message);
+  const update=()=>{
+   const isWaiver=kind.value==='WAIVER',isRepay=kind.value==='REPAYMENT',isContribution=kind.value==='CONTRIBUTION';
+   loan.parentElement.hidden=!isRepay;month.parentElement.hidden=!(isContribution||isWaiver);amount.parentElement.hidden=isWaiver;
+   amount.required=!isWaiver;loan.required=isRepay;
+   loan.replaceChildren();const o=mk('option','Choose loan');o.value='';loan.append(o);
+   for(const l of book.loans.filter(l=>l.member_id===member.value)){const op=mk('option','#'+l.loan_number+' — '+formatMoney(l.principal));op.value=l.id;loan.append(op);}
+  };kind.onchange=update;member.onchange=update;update();
+  form.onsubmit=async e=>{
+   e.preventDefault();save.disabled=true;message.textContent='Saving test draft...';
+   try{
+    const {data:{user},error:userError}=await sb.auth.getUser();
+    if(userError||!user||user.id!==book.me.auth_user_id)throw new Error('Session expired. Sign in again.');
+    const num=isFinite(Number(amount.value))?Number(amount.value):NaN;
+    if(kind.value!=='WAIVER'&&(!Number.isFinite(num)||num<=0))throw new Error('Enter a positive amount.');
+    if(kind.value==='REPAYMENT'&&!loan.value)throw new Error('Choose a loan for the repayment.');
+    if(['WAIVER','EXPENSE'].includes(kind.value)&&memo.value.trim().length<5)throw new Error('A reason of at least five characters is required.');
+    const payload={member_id:member.value,entry_on:date.value,amount:kind.value==='WAIVER'?0:num,
+      month:kind.value==='CONTRIBUTION'||kind.value==='WAIVER'?month.value:null,
+      loan_id:kind.value==='REPAYMENT'?loan.value:null,note:memo.value.trim()};
+    const {error}=await sb.from('sacco_staging_drafts').insert({action_kind:kind.value,created_by:user.id,payload});
+    if(error)throw error;message.className='success';message.textContent='Test draft saved. The financial ledger is unchanged.';memo.value='';
+    await loadDrafts(p);
+   }catch(err){message.className='error';message.textContent=err.message||'Draft failed';}finally{save.disabled=false;}
+  };
+  p.append(form);
+  loadDrafts(p).catch(e=>p.append(mk('p',e.message,'error')));
+ }else if(next==='meetings'){
+  const content=book.minutes.slice().sort((a,b)=>(b.meeting_on||'').localeCompare(a.meeting_on||''));
+  for(const v of content){const details=mk('details'),summary=mk('summary',(v.meeting_on||'')+' — '+(v.title||'Minutes'));const body=mk('p',v.body||'');body.style.whiteSpace='pre-wrap';details.append(summary,body);p.append(details);}
+ }else if(next==='members'){
+  p.append(table(['Member','Membership'],book.members.map(m=>[m.display_name,m.member_role])));
+ }
+}
+async function loadDrafts(p){
+ const [draftResp,reviewResp]=await Promise.all([
+  sb.from('sacco_staging_drafts').select('id,action_kind,payload,created_at,created_by').order('created_at',{ascending:false}).limit(40),
+  sb.from('sacco_staging_reviews').select('draft_id,decision,review_note,reviewed_at').order('reviewed_at',{ascending:false}).limit(150)
+ ]);
+ if(draftResp.error)throw draftResp.error;
+ if(reviewResp.error)throw reviewResp.error;
+ const reviews=new Map((reviewResp.data||[]).map(r=>[r.draft_id,r]));
+ let spot=$('#draftsHistory');if(!spot){spot=mk('div');spot.id='draftsHistory';p.append(spot);}
+ spot.replaceChildren();
+ const drafts=draftResp.data||[];
+ const pending=drafts.filter(d=>!reviews.has(d.id)).length;
+ spot.append(mk('h3','Draft approval queue ('+pending+' pending in the latest '+drafts.length+')'));
+ spot.append(mk('p','Approval records are immutable. Every decision is audited. A staging approval does not create, change or settle any real financial entry.','alert'));
+ if(!drafts.length){spot.append(mk('p','No test drafts have been submitted. Use the form above to prepare one.'));return;}
+ for(const d of drafts){
+  const record=mk('details');record.style.cssText='border:1px solid #e1dacd;border-radius:9px;padding:12px;margin:9px 0;background:#fcfaf6';
+  const existing=reviews.get(d.id);
+  const state=existing?.decision||'PENDING';
+  const summary=mk('summary',d.action_kind+' · '+displayMember(d.payload?.member_id)+' · '+ugx(d.payload?.amount)+' · '+state);
+  summary.style.cursor='pointer';record.append(summary);
+  const meta=mk('p','Created '+new Date(d.created_at).toLocaleString('en-UG')+' · '+(d.payload?.entry_on||'')+' · '+(d.payload?.note||'No description'),'muted');
+  record.append(meta);
+  if(existing){record.append(mk('p', 'Decision: '+existing.decision+' at '+new Date(existing.reviewed_at).toLocaleString('en-UG')+(existing.review_note?' · '+existing.review_note:''),'success'));spot.append(record);continue;}
+  const validate=mk('button','Preview validation');validate.type='button';validate.style.margin='8px 0';
+  const result=mk('p');result.setAttribute('role','status');
+  const controls=mk('div');controls.className='controlrow';
+  validate.onclick=async()=>{
+   validate.disabled=true;result.textContent='Validating against imported financial records...';controls.replaceChildren();
+   try{
+    const {data,error}=await sb.rpc('sacco_preview_draft',{p_draft_id:d.id});
+    if(error)throw error;
+    if(data.review_status!=='PENDING'){result.textContent='This draft has already been reviewed. Refresh the queue.';return;}
+    const v=data.validation;
+    if(!v?.valid){result.className='error';result.textContent='Cannot approve: '+(v?.error||'Validation failed');}
+    else {
+     const errors=Number(v.duplicate_count||0);
+     result.className=errors?'error':'muted';
+     result.textContent='Validation passed · '+v.action_kind+' · '+ugx(v.amount_ugx)+' · '+v.entry_on+
+      (errors?' · BLOCKED: '+errors+' matching historical entries':' · no matching historical entries')+
+      ' · Financial posting disabled.';
+     if(Array.isArray(v.warnings)&&v.warnings.length)result.textContent+=' Warnings: '+v.warnings.join('; ');
+    }
+    const note=mk('input');note.type='text';note.placeholder='Review note (required for rejection)';note.maxLength=500;note.style.minWidth='230px';
+    const accept=mk('button','Approve in sandbox');accept.type='button';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0);
+    const decline=mk('button','Reject draft');decline.type='button';
+    const perform=async decision=>{
+     const message=decision==='APPROVED'?'Approve this draft FOR TESTING ONLY? No real transaction will be posted.':'Reject this draft permanently in the staging queue?';
+     if(!window.confirm(message))return;
+     if(decision==='REJECTED'&&note.value.trim().length<5){result.className='error';result.textContent='Enter a rejection reason of at least 5 characters.';return;}
+     accept.disabled=true;decline.disabled=true;note.disabled=true;
+     try{
+      const {data:review,error:reviewError}=await sb.rpc('sacco_review_draft',{p_draft_id:d.id,p_decision:decision,p_note:note.value.trim()});
+      if(reviewError)throw reviewError;
+      result.className='success';result.textContent='Recorded '+review.decision+' (staging). Financial ledger unchanged.';
+      await loadDrafts(p);
+     }catch(ex){result.className='error';result.textContent=ex.message||'Review failed';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0);decline.disabled=false;note.disabled=false;}
+    };
+    accept.onclick=()=>perform('APPROVED');decline.onclick=()=>perform('REJECTED');
+    controls.append(note,accept,decline);
+   }catch(err){result.className='error';result.textContent='Could not validate: '+(err.message||'Unknown error');}
+   finally{validate.disabled=false;}
+  };
+  record.append(validate,result,controls);spot.append(record);
+ }
+}
+
+function initLedger(){
+ const nav=$('#ledgerTabs');nav.replaceChildren();
+ const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members']];
+ if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)']);
+ for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
+ showTab('savings');
+}
+
+async function boot(){
+ const sess=await sb.auth.getSession();
+ if(!sess.data?.session){show('auth');return;}
+ if(isPasswordRecovery||recoveryLink){show('newpassword');return;}
+ const id=sess.data.session.user.id;
+ const {data:me,error}=await sb.from('sacco_members').select('id,display_name,legacy_name,member_role,auth_user_id').eq('auth_user_id',id).maybeSingle();
+ if(error)throw error;
+ if(!me){show('waiting');return;}
+ const [members,contributions,loans,repayments,minutes,waivers,financial,fees,settingsRow]=await Promise.all([
+  fetchTable('sacco_members','id,display_name,member_role'),
+  fetchTable('sacco_contributions','member_id,amount,contribution_month,paid_on'),
+  fetchTable('sacco_loans','id,member_id,principal,issued_on,loan_type,loan_number,frozen_total,manual_status'),
+  fetchTable('sacco_repayments','loan_id,member_id,amount,paid_on'),
+  fetchTable('sacco_minutes','title,meeting_on,body'),
+  fetchTable('sacco_waivers','member_id,contribution_month'),
+  fetchTable('sacco_financial_entries','entry_kind,entry_on,amount,narrative'),
+  fetchTable('sacco_membership_fees','member_id,amount,paid_on'),
+  fetchTable('sacco_settings','value')
+ ]);
+ const mname=new Map(members.map(m=>[m.id,m.display_name]));
+ $('#welcome').textContent='Welcome, '+me.display_name;
+ $('#identity').textContent=me.member_role==='admin'?'Administrator · Verified membership':'Member · Verified membership';
+ book={me,members,contributions,loans,repayments,minutes,waivers,financial,fees,settings:settingsRow[0]?.value||{}};
+ const sum=arr=>arr.reduce((a,x)=>a+pg(x.amount),0);
+ const currentLoanBalances=loans.map(l=>loanBalance(l,repayments));
+ const unpaid=currentLoanBalances.reduce((a,l)=>a+l.balance,0);
+ const shortfalls=savingsSummary().reduce((a,x)=>a+x.arrears+x.fine,0);
+ $('#summary').replaceChildren(
+  stat('Recorded savings',fmt(sum(contributions)),contributions.length+' contributions'),
+  stat('Outstanding loans',fmt(unpaid),currentLoanBalances.filter(x=>x.balance>0).length+' loans with balances · interest included'),
+  stat('Savings arrears & fines',fmt(shortfalls),'Policy-calculated through '+jubaToday()),
+  stat('Members visible',String(members.length),'Access restricted by member role')
+ );
+ contributions.sort((a,b)=>(b.paid_on||'').localeCompare(a.paid_on||''));
+ loans.sort((a,b)=>(b.issued_on||'').localeCompare(a.issued_on||''));
+ tableRows('contribRows',contributions.slice(0,25),r=>[mname.get(r.member_id)||'Member',r.contribution_month?.slice(0,7)||'',date(r.paid_on),Number(r.amount).toLocaleString('en-UG')]);
+ tableRows('loanRows',loans.slice(0,25),r=>{const bal=loanBalance(r,repayments);const status=bal.balance===0?'PAID':bal.paid>0?'PARTIAL':'OUTSTANDING';return [mname.get(r.member_id)||'Member',date(r.issued_on),bal.rule,status,Number(bal.balance).toLocaleString('en-UG')];});
+ const list=$('#minutes');list.replaceChildren();
+ for(const m of minutes.sort((a,b)=>(b.meeting_on||'').localeCompare(a.meeting_on||''))){const d=document.createElement('details'),s=document.createElement('summary'),p=document.createElement('p');s.textContent=(m.meeting_on||'')+' — '+(m.title||'Meeting');p.textContent=m.body||'';p.style.whiteSpace='pre-wrap';d.append(s,p);list.append(d);}
+ initLedger();
+ show('portal');
+}
+boot().catch(e=>{$('#authMsg').textContent=e.message||'Could not load portal';show('auth');});
+</script></body></html>
