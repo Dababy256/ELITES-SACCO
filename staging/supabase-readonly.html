@@ -7,7 +7,7 @@
 
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;border-bottom:1px solid #ddd;padding-bottom:14px}.tabs button{background:#eee9df;color:#1e1a16}.tabs button[aria-selected="true"]{background:#111;color:#e5bc77}.alert{background:#fff5dd;border-left:4px solid #b08d57;padding:12px 15px;font-size:13px;border-radius:6px;margin-bottom:15px}.controlrow{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:12px 0}.controlrow label{margin:0 0 6px}.controlrow .control{flex:1;min-width:180px}.controlrow select,.draft input,.draft select,.draft textarea{font:inherit;border:1px solid #c5bcaf;background:#fff;padding:10px;width:100%;border-radius:8px}.draft{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.draft textarea{resize:vertical;min-height:80px}.draft .wide{grid-column:1/-1}.tablewrap table{min-width:560px}.demo-hero{border-radius:12px;padding:17px;background:#151515;color:#e8d0aa}.demo-hero h2{color:#e8d0aa}.bars{height:110px;display:flex;align-items:end;gap:12px;margin-top:20px}.bars span{display:block;width:25px;background:#b08d57;border-radius:5px 5px 0 0}.demo-note{border:2px dashed #b08d57;padding:12px;font-weight:bold;font-size:12px;border-radius:8px}
 </style></head><body>
-<header class="mast"><div><h1>ELITES SACCO</h1><small>Let's Prosper · Secure database preview</small></div><span class="pill">READ-ONLY TEST</span></header>
+<header class="mast"><div><h1>ELITES SACCO</h1><small>Let's Prosper · Secure database preview</small></div><span class="pill">SECURE STAGING</span></header>
 <main class="wrap">
 <section id="auth" class="panel auth"><h2>Member sign in</h2><p class="muted">Use a Supabase Auth account. Historical four-digit PINs will not work here.</p>
 <form id="authForm"><label>Email</label><input id="email" type="email" required autocomplete="email"><label>Password</label><input id="password" type="password" required minlength="8" autocomplete="current-password"><p><button class="gold" id="submit" type="submit">Sign in</button></p></form>
@@ -38,10 +38,10 @@
 <div class="panel"><h3>Detailed books of accounts</h3><div id="ledgerTabs" class="tabs" role="tablist"></div><div id="ledgerBody" role="tabpanel"></div></div>
  <div class="columns">
   <div class="panel"><h3>Recent contributions</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Month</th><th>Paid on</th><th>UGX</th></tr></thead><tbody id="contribRows"></tbody></table></div></div>
-  <div class="panel"><h3>Loans</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Issued</th><th>Type</th><th>Principal UGX</th></tr></thead><tbody id="loanRows"></tbody></table></div></div>
+  <div class="panel"><h3>Recent loans</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Issued</th><th>Interest</th><th>Status</th><th>Outstanding UGX</th></tr></thead><tbody id="loanRows"></tbody></table></div></div>
  </div>
  <div class="panel"><h3>Meeting minutes</h3><div id="minutes" class="muted"></div></div>
- <p class="muted">This preview is intentionally read-only. Totals represent recorded transactions, not necessarily cash available or live loan balances with interest. The original website remains separate.</p>
+ <p class="muted">Financial data is imported from the 6 November 2026 backup. Outstanding loans and monthly arrears are computed using the original SACCO rules as of today's date. Figures do not represent available cash. All financial entries are drafts only; the original live website remains separate.</p>
 </section>
 </main>
 <script>
@@ -107,7 +107,7 @@ $('#authForm').onsubmit=async e=>{e.preventDefault();$('#submit').disabled=true;
  if(!signUp)await boot();
  }catch(err){$('#authMsg').className='error';$('#authMsg').textContent=err.message||'Authentication failed';}
  finally{$('#submit').disabled=false;}};
-async function logout(){await sb.auth.signOut();show('auth');$('#password').value='';}
+async function logout(){await sb.auth.signOut();book=null;$('#summary').replaceChildren();$('#ledgerBody').replaceChildren();show('auth');$('#password').value='';}
 $('#waitingOut').onclick=logout;$('#signOut').onclick=logout;
 function td(text,cl){const e=document.createElement('td');e.textContent=String(text==null?'':text);if(cl)e.className=cl;return e;}
 function tableRows(id,rows,map){const t=$('#'+id);t.replaceChildren();for(const r of rows){const tr=document.createElement('tr');for(const item of map(r))tr.appendChild(td(item));t.appendChild(tr);}}
@@ -222,7 +222,9 @@ function showTab(next){
    loans.sort((a,b)=>b.issued_on.localeCompare(a.issued_on));
    const rows=loans.map(l=>[displayMember(l.member_id),'#'+l.loan_number,l.issued_on,l.loan_type,formatMoney(l.principal),formatMoney(l.paid),formatMoney(l.balance),l.rule]);
    let output=$('#ledgerContent');if(!output){output=mk('div');output.id='ledgerContent';p.append(output);}
-   output.replaceChildren(mk('p','Estimated outstanding (including policy interest): '+ugx(loans.reduce((s,l)=>s+l.balance,0))+' · Active loans: '+loans.filter(l=>l.balance>0).length,'alert'),table(['Member','Loan','Issued','Type','Principal UGX','Repaid UGX','Due UGX','Rule'],rows));
+   const totalIssued=loans.reduce((s,l)=>s+pg(l.principal),0),totalRepaid=loans.reduce((s,l)=>s+pg(l.paid),0);
+   const adminExtras=admin?' · Principal issued: '+ugx(totalIssued)+' · Repayments received: '+ugx(totalRepaid):'';
+   output.replaceChildren(mk('p','Outstanding loan balances (including interest): '+ugx(loans.reduce((s,l)=>s+l.balance,0))+' · Active loans: '+loans.filter(l=>l.balance>0).length+adminExtras,'alert'),table(['Member','Loan','Issued','Type','Principal UGX','Repaid UGX','Due UGX','Rule'],rows));
    download.onclick=()=>csv('elites-sacco-loans.csv',['Member','Loan','Issued','Type','Principal UGX','Repaid UGX','Due UGX','Rule'],rows);
   };chosen.onchange=render;render();
  }else if(next==='cashbook'){
@@ -315,15 +317,23 @@ async function boot(){
  const mname=new Map(members.map(m=>[m.id,m.display_name]));
  $('#welcome').textContent='Welcome, '+me.display_name;
  $('#identity').textContent=me.member_role==='admin'?'Administrator · Verified membership':'Member · Verified membership';
- const sum=arr=>arr.reduce((a,x)=>a+Number(x.amount||x.principal||0),0);
- $('#summary').replaceChildren(stat('Recorded savings',fmt(sum(contributions)),contributions.length+' entries'),stat('Principal issued',fmt(loans.reduce((a,x)=>a+Number(x.principal),0)),loans.length+' loans'),stat('Repayments received',fmt(sum(repayments)),repayments.length+' repayments'),stat('Members visible',String(members.length),'Access limited by database policies'));
+ book={me,members,contributions,loans,repayments,minutes,waivers,financial,fees,settings:settingsRow[0]?.value||{}};
+ const sum=arr=>arr.reduce((a,x)=>a+pg(x.amount),0);
+ const currentLoanBalances=loans.map(l=>loanBalance(l,repayments));
+ const unpaid=currentLoanBalances.reduce((a,l)=>a+l.balance,0);
+ const shortfalls=savingsSummary().reduce((a,x)=>a+x.arrears+x.fine,0);
+ $('#summary').replaceChildren(
+  stat('Recorded savings',fmt(sum(contributions)),contributions.length+' contributions'),
+  stat('Outstanding loans',fmt(unpaid),currentLoanBalances.filter(x=>x.balance>0).length+' loans with balances · interest included'),
+  stat('Savings arrears & fines',fmt(shortfalls),'Policy-calculated through '+jubaToday()),
+  stat('Members visible',String(members.length),'Access restricted by member role')
+ );
  contributions.sort((a,b)=>(b.paid_on||'').localeCompare(a.paid_on||''));
  loans.sort((a,b)=>(b.issued_on||'').localeCompare(a.issued_on||''));
  tableRows('contribRows',contributions.slice(0,25),r=>[mname.get(r.member_id)||'Member',r.contribution_month?.slice(0,7)||'',date(r.paid_on),Number(r.amount).toLocaleString('en-UG')]);
- tableRows('loanRows',loans.slice(0,25),r=>[mname.get(r.member_id)||'Member',date(r.issued_on),r.loan_type,Number(r.principal).toLocaleString('en-UG')]);
+ tableRows('loanRows',loans.slice(0,25),r=>{const bal=loanBalance(r,repayments);const status=bal.balance===0?'PAID':bal.paid>0?'PARTIAL':'OUTSTANDING';return [mname.get(r.member_id)||'Member',date(r.issued_on),bal.rule,status,Number(bal.balance).toLocaleString('en-UG')];});
  const list=$('#minutes');list.replaceChildren();
  for(const m of minutes.sort((a,b)=>(b.meeting_on||'').localeCompare(a.meeting_on||''))){const d=document.createElement('details'),s=document.createElement('summary'),p=document.createElement('p');s.textContent=(m.meeting_on||'')+' — '+(m.title||'Meeting');p.textContent=m.body||'';p.style.whiteSpace='pre-wrap';d.append(s,p);list.append(d);}
- book={me,members,contributions,loans,repayments,minutes,waivers,financial,fees,settings:settingsRow[0]?.value||{}};
  initLedger();
  show('portal');
 }
