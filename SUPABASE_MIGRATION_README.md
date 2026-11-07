@@ -50,3 +50,7 @@
 ## Auth email provider — pending user activation
 
 Prepared the [Brevo free-plan SMTP setup guide](docs/SMTP_SETUP_BREVO.md) for transactional password recovery and invitations. The settings have **not** been activated because a verified external sender and secret SMTP key must be generated in Brevo and entered by the authorized project administrator in Supabase Auth settings. The Supabase connector has no action for Auth SMTP configuration. Never commit any SMTP credentials.
+
+## Staging approval and dormant posting engine
+
+See [review / posting gate safety report](docs/STAGING_APPROVAL_AND_POSTING_GATES.md). The administrator-only draft approval queue has been deployed. Actual ledger posting remains disabled and browser-inaccessible; do not merge or enable before live source reconciliation and end-to-end posting tests.
