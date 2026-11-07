@@ -7,7 +7,7 @@
 
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;border-bottom:1px solid #ddd;padding-bottom:14px}.tabs button{background:#eee9df;color:#1e1a16}.tabs button[aria-selected="true"]{background:#111;color:#e5bc77}.alert{background:#fff5dd;border-left:4px solid #b08d57;padding:12px 15px;font-size:13px;border-radius:6px;margin-bottom:15px}.controlrow{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:12px 0}.controlrow label{margin:0 0 6px}.controlrow .control{flex:1;min-width:180px}.controlrow select,.draft input,.draft select,.draft textarea{font:inherit;border:1px solid #c5bcaf;background:#fff;padding:10px;width:100%;border-radius:8px}.draft{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.draft textarea{resize:vertical;min-height:80px}.draft .wide{grid-column:1/-1}.tablewrap table{min-width:560px}.demo-hero{border-radius:12px;padding:17px;background:#151515;color:#e8d0aa}.demo-hero h2{color:#e8d0aa}.bars{height:110px;display:flex;align-items:end;gap:12px;margin-top:20px}.bars span{display:block;width:25px;background:#b08d57;border-radius:5px 5px 0 0}.demo-note{border:2px dashed #b08d57;padding:12px;font-weight:bold;font-size:12px;border-radius:8px}
 </style></head><body>
-<header class="mast"><div><h1>ELITES SACCO</h1><small>Let's Prosper · Secure database preview</small></div><span class="pill">SECURE STAGING</span></header>
+<header class="mast"><div><h1>ELITES SACCO</h1><small>Let's Prosper · Secure database preview</small></div><span class="pill">STAGING · NO LIVE POSTING</span></header>
 <main class="wrap">
 <section id="auth" class="panel auth"><h2>Member sign in</h2><p class="muted">Use a Supabase Auth account. Historical four-digit PINs will not work here.</p>
 <form id="authForm"><label>Email</label><input id="email" type="email" required autocomplete="email"><label>Password</label><input id="password" type="password" required minlength="8" autocomplete="current-password"><p><button class="gold" id="submit" type="submit">Sign in</button></p></form>
@@ -33,7 +33,7 @@
 <section id="waiting" class="panel auth" hidden><h2>Account awaiting activation</h2><p>Your sign-in worked, but this account has not been linked to a SACCO member. No financial data was shared.</p><button id="waitingOut">Sign out</button></section>
 <section id="portal" hidden>
  <div class="row panel"><div><h2 id="welcome">Member portal</h2><div class="muted" id="identity"></div></div><button id="signOut">Sign out</button></div>
- <div class="alert"><b>TEST SITE / HISTORICAL SNAPSHOT.</b> The live SACCO website still uses JSONBin. Only verified members can view actual Supabase data. Financial drafts do not post to the ledger.</div>
+ <div class="alert"><b>TEST SITE / HISTORICAL SNAPSHOT.</b> The live SACCO website still uses JSONBin. Only verified members can view actual Supabase data. Draft approvals do not post to the ledger.</div>
 <div class="cards" id="summary"></div>
 <div class="panel"><h3>Detailed books of accounts</h3><div id="ledgerTabs" class="tabs" role="tablist"></div><div id="ledgerBody" role="tabpanel"></div></div>
  <div class="columns">
@@ -236,7 +236,7 @@ function showTab(next){
   p.append(table(['Date','Category','Reason','Amount UGX'],rows));const exportButton=mk('button','Export cashbook CSV');p.append(exportButton);exportButton.onclick=()=>csv('elites-sacco-cashbook.csv',['Date','Category','Reason','Amount UGX'],rows);
  }else if(next==='drafts'){
   if(!admin){p.append(mk('p','Only administrators can prepare test drafts.'));return;}
-  p.append(mk('p','TEST ONLY. Draft entries are stored separately and do not affect member savings, loan balances, cashbook totals or the live website.','alert'));
+  p.append(mk('p','SANDBOX REVIEW ONLY. Save a draft, preview its validation, then approve or reject it. Even an APPROVED draft is NOT posted to member savings, loans or the cashbook.','alert'));
   const form=mk('form',undefined,'draft');
   function select(choices){const e=mk('select');for(const [v,n] of choices){const o=mk('option',n);o.value=v;e.append(o);}return e;}
   function field(label,input,full){const block=mk('div');if(full)block.style.gridColumn='1/-1';block.append(mk('label',label),input);form.append(block);return input;}
@@ -264,6 +264,7 @@ function showTab(next){
     const num=isFinite(Number(amount.value))?Number(amount.value):NaN;
     if(kind.value!=='WAIVER'&&(!Number.isFinite(num)||num<=0))throw new Error('Enter a positive amount.');
     if(kind.value==='REPAYMENT'&&!loan.value)throw new Error('Choose a loan for the repayment.');
+    if(['WAIVER','EXPENSE'].includes(kind.value)&&memo.value.trim().length<5)throw new Error('A reason of at least five characters is required.');
     const payload={member_id:member.value,entry_on:date.value,amount:kind.value==='WAIVER'?0:num,
       month:kind.value==='CONTRIBUTION'||kind.value==='WAIVER'?month.value:null,
       loan_id:kind.value==='REPAYMENT'?loan.value:null,note:memo.value.trim()};
@@ -282,15 +283,76 @@ function showTab(next){
  }
 }
 async function loadDrafts(p){
- const {data,error}=await sb.from('sacco_staging_drafts').select('id,action_kind,payload,created_at').order('created_at',{ascending:false}).limit(15);
- if(error)throw error;
+ const [draftResp,reviewResp]=await Promise.all([
+  sb.from('sacco_staging_drafts').select('id,action_kind,payload,created_at,created_by').order('created_at',{ascending:false}).limit(40),
+  sb.from('sacco_staging_reviews').select('draft_id,decision,review_note,reviewed_at').order('reviewed_at',{ascending:false}).limit(150)
+ ]);
+ if(draftResp.error)throw draftResp.error;
+ if(reviewResp.error)throw reviewResp.error;
+ const reviews=new Map((reviewResp.data||[]).map(r=>[r.draft_id,r]));
  let spot=$('#draftsHistory');if(!spot){spot=mk('div');spot.id='draftsHistory';p.append(spot);}
- spot.replaceChildren(mk('h3','Recent test drafts'),table(['Time','Type','Member','Amount UGX'],(data||[]).map(v=>[new Date(v.created_at).toLocaleString('en-UG'),v.action_kind,displayMember(v.payload?.member_id),formatMoney(v.payload?.amount)])));
+ spot.replaceChildren();
+ const drafts=draftResp.data||[];
+ const pending=drafts.filter(d=>!reviews.has(d.id)).length;
+ spot.append(mk('h3','Draft approval queue ('+pending+' pending in the latest '+drafts.length+')'));
+ spot.append(mk('p','Approval records are immutable. Every decision is audited. A staging approval does not create, change or settle any real financial entry.','alert'));
+ if(!drafts.length){spot.append(mk('p','No test drafts have been submitted. Use the form above to prepare one.'));return;}
+ for(const d of drafts){
+  const record=mk('details');record.style.cssText='border:1px solid #e1dacd;border-radius:9px;padding:12px;margin:9px 0;background:#fcfaf6';
+  const existing=reviews.get(d.id);
+  const state=existing?.decision||'PENDING';
+  const summary=mk('summary',d.action_kind+' · '+displayMember(d.payload?.member_id)+' · '+ugx(d.payload?.amount)+' · '+state);
+  summary.style.cursor='pointer';record.append(summary);
+  const meta=mk('p','Created '+new Date(d.created_at).toLocaleString('en-UG')+' · '+(d.payload?.entry_on||'')+' · '+(d.payload?.note||'No description'),'muted');
+  record.append(meta);
+  if(existing){record.append(mk('p', 'Decision: '+existing.decision+' at '+new Date(existing.reviewed_at).toLocaleString('en-UG')+(existing.review_note?' · '+existing.review_note:''),'success'));spot.append(record);continue;}
+  const validate=mk('button','Preview validation');validate.type='button';validate.style.margin='8px 0';
+  const result=mk('p');result.setAttribute('role','status');
+  const controls=mk('div');controls.className='controlrow';
+  validate.onclick=async()=>{
+   validate.disabled=true;result.textContent='Validating against imported financial records...';controls.replaceChildren();
+   try{
+    const {data,error}=await sb.rpc('sacco_preview_draft',{p_draft_id:d.id});
+    if(error)throw error;
+    if(data.review_status!=='PENDING'){result.textContent='This draft has already been reviewed. Refresh the queue.';return;}
+    const v=data.validation;
+    if(!v?.valid){result.className='error';result.textContent='Cannot approve: '+(v?.error||'Validation failed');}
+    else {
+     const errors=Number(v.duplicate_count||0);
+     result.className=errors?'error':'muted';
+     result.textContent='Validation passed · '+v.action_kind+' · '+ugx(v.amount_ugx)+' · '+v.entry_on+
+      (errors?' · BLOCKED: '+errors+' matching historical entries':' · no matching historical entries')+
+      ' · Financial posting disabled.';
+     if(Array.isArray(v.warnings)&&v.warnings.length)result.textContent+=' Warnings: '+v.warnings.join('; ');
+    }
+    const note=mk('input');note.type='text';note.placeholder='Review note (required for rejection)';note.maxLength=500;note.style.minWidth='230px';
+    const accept=mk('button','Approve in sandbox');accept.type='button';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0);
+    const decline=mk('button','Reject draft');decline.type='button';
+    const perform=async decision=>{
+     const message=decision==='APPROVED'?'Approve this draft FOR TESTING ONLY? No real transaction will be posted.':'Reject this draft permanently in the staging queue?';
+     if(!window.confirm(message))return;
+     if(decision==='REJECTED'&&note.value.trim().length<5){result.className='error';result.textContent='Enter a rejection reason of at least 5 characters.';return;}
+     accept.disabled=true;decline.disabled=true;note.disabled=true;
+     try{
+      const {data:review,error:reviewError}=await sb.rpc('sacco_review_draft',{p_draft_id:d.id,p_decision:decision,p_note:note.value.trim()});
+      if(reviewError)throw reviewError;
+      result.className='success';result.textContent='Recorded '+review.decision+' (staging). Financial ledger unchanged.';
+      await loadDrafts(p);
+     }catch(ex){result.className='error';result.textContent=ex.message||'Review failed';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0);decline.disabled=false;note.disabled=false;}
+    };
+    accept.onclick=()=>perform('APPROVED');decline.onclick=()=>perform('REJECTED');
+    controls.append(note,accept,decline);
+   }catch(err){result.className='error';result.textContent='Could not validate: '+(err.message||'Unknown error');}
+   finally{validate.disabled=false;}
+  };
+  record.append(validate,result,controls);spot.append(record);
+ }
 }
+
 function initLedger(){
  const nav=$('#ledgerTabs');nav.replaceChildren();
  const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members']];
- if(book.me.member_role==='admin')tabs.push(['drafts','Test transaction drafts']);
+ if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)']);
  for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
  showTab('savings');
 }
