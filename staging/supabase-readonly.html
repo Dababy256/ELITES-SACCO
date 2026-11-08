@@ -318,6 +318,8 @@ function showTab(next){
   renderReconciliation(p);
  }else if(next==='access'){
   renderMemberAccess(p).catch(e=>p.append(mk('p',e.message||'Could not load access queue','error')));
+ }else if(next==='qa'){
+  renderFinancialPostingLab(p).catch(e=>p.append(mk('p',e.message||'Could not load posting lab','error')));
  }
 }
 async function loadDrafts(p){
@@ -390,7 +392,7 @@ async function loadDrafts(p){
 function initLedger(){
  const nav=$('#ledgerTabs');nav.replaceChildren();
  const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members']];
- if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup'],['access','Member access']);
+ if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup'],['access','Member access'],['qa','Financial posting lab']);
  for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
  showTab('savings');
 }
@@ -505,6 +507,103 @@ function reconcileCompare(snapshot){
  differences.sort((a,b)=>a.category.localeCompare(b.category)||a.member.localeCompare(b.member)||a.date.localeCompare(b.date));
  return {groups:[...groups.values()],differences,reportWarnings,
     exportCount:oldRows.length,dbCount:newRows.length,discrepancyCount:differences.reduce((s,x)=>s+x.quantity,0)};
+}
+
+
+let lastQaPosting=null;
+async function renderFinancialPostingLab(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access required.'));return;}
+ p.replaceChildren(mk('h3','Financial posting lab · separate fictional ledger'));
+ p.append(mk('p','QA ONLY. Real database writes to isolated test tables, NOT historical SACCO records. The old SACCO website and actual financial books are unaffected. Use TEST_A and TEST_B — never real member identities.','alert'));
+ const {data,error}=await sb.from('sacco_qa_entries')
+   .select('id,request_key,kind,member_code,entry_on,amount,loan_id,contribution_month,note,reverses_id,created_at')
+   .order('created_at',{ascending:false}).limit(200);
+ if(error)throw error;
+ const entries=data||[],rev=new Set(entries.filter(x=>x.kind==='REVERSAL').map(x=>x.reverses_id));
+ const active=entries.filter(x=>x.kind!=='REVERSAL'&&!rev.has(x.id));
+ const loans=active.filter(x=>x.kind==='LOAN'),repays=active.filter(x=>x.kind==='REPAYMENT').map(x=>({loan_id:x.loan_id,paid_on:x.entry_on,amount:Number(x.amount)}));
+ const balanceOf=x=>loanBalance({id:x.id,issued_on:x.entry_on,principal:x.amount,manual_status:null,frozen_total:null},repays);
+ const loanTotals=loans.map(l=>({l,b:balanceOf(l)}));
+ const sum=k=>active.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount),0);
+ const cards=mk('div',undefined,'cards');
+ cards.append(stat('Fictional savings',ugx(sum('CONTRIBUTION')),'Test transactions'),
+  stat('Fictional loan balance',ugx(loanTotals.reduce((a,x)=>a+x.b.balance,0)),'Original 5% interest rules'),
+  stat('Fictional cash flow',ugx(sum('CONTRIBUTION')+sum('REPAYMENT')+sum('CASH_IN')-sum('LOAN')-sum('EXPENSE')-sum('INVESTMENT')),'Not actual SACCO cash'),
+  stat('QA transaction events',String(entries.length),'Including reversals'));
+ p.append(cards);
+ const form=mk('form');form.className='draft';form.style.cssText='border:1px solid #ddd;border-radius:10px;padding:14px;margin:15px 0';
+ function field(label,control){const wrap=mk('div');wrap.append(mk('label',label),control);form.append(wrap);return wrap;}
+ const kind=mk('select');for(const [k,name] of [['LOAN','Issue test loan'],['REPAYMENT','Post test repayment'],['CONTRIBUTION','Post test saving'],['EXPENSE','Post test expense'],['CASH_IN','Post test cash received'],['INVESTMENT','Post test investment']]){const opt=mk('option',name);opt.value=k;kind.append(opt);}field('Transaction type',kind);
+ const member=mk('select');for(const k of ['TEST_A','TEST_B']){const opt=mk('option','Fictional '+k);opt.value=k;member.append(opt);}field('Test member',member);
+ const date=mk('input');date.type='date';date.value=jubaToday();date.required=true;field('Date paid / issued',date);
+ const amount=mk('input');amount.type='number';amount.min='1';amount.step='.01';amount.required=true;amount.placeholder='1000000';field('Amount (UGX)',amount);
+ const loan=mk('select');const loanWrap=field('Loan to repay',loan);
+ const month=mk('input');month.type='month';month.value=jubaToday().slice(0,7);const monthWrap=field('Savings month',month);
+ const note=mk('input');note.type='text';note.maxLength=300;note.placeholder='Test note / reason';field('Description',note);
+ const help=mk('p',undefined,'muted');help.style.gridColumn='1/-1';
+ const sync=()=>{
+  loanWrap.hidden=kind.value!=='REPAYMENT';monthWrap.hidden=kind.value!=='CONTRIBUTION';
+  loan.replaceChildren();for(const x of loans.filter(z=>z.member_code===member.value)){
+   const o=mk('option',x.entry_on+' · '+ugx(x.amount)+' · due '+ugx(balanceOf(x).balance));o.value=x.id;loan.append(o);
+  }
+  help.textContent=kind.value==='REPAYMENT'?'Repay at any time, including same day as loan issue. The original monthly interest model is preserved.':
+   '5% interest starts on loan issue date; new loans from July 2026 use flat interest, older loans compound.';
+ };kind.onchange=sync;member.onchange=sync;sync();
+ const footer=mk('div');footer.style.gridColumn='1/-1';
+ const submit=mk('button','POST TEST TRANSACTION');submit.type='submit';submit.className='gold';
+ const result=mk('p');result.setAttribute('role','status');
+ footer.append(help,submit,result);form.append(footer);p.append(form);
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  if(kind.value==='REPAYMENT'&&!loan.value){result.textContent='First issue a fictional test loan.';result.className='error';return;}
+  const args={p_request_key:crypto.randomUUID(),p_kind:kind.value,p_member_code:member.value,p_entry_on:date.value,
+   p_amount:Number(amount.value),p_loan_id:kind.value==='REPAYMENT'?loan.value:null,
+   p_contribution_month:kind.value==='CONTRIBUTION'?month.value:null,p_note:note.value.trim()};
+  if(!window.confirm('Post '+kind.value+' '+ugx(args.p_amount)+' to FICTIONAL '+member.value+'? No real SACCO record will change.'))return;
+  submit.disabled=true;
+  try{
+   const {data:receipt,error:e}=await sb.rpc('sacco_qa_post',args);if(e)throw e;
+   lastQaPosting=args;await renderFinancialPostingLab(p);
+   p.prepend(mk('p','Test posting saved. Receipt: '+receipt.receipt_id+'. Original SACCO financial records unchanged.','success'));
+  }catch(e){result.className='error';result.textContent=e.message||'Test posting failed';submit.disabled=false;}
+ };
+ if(lastQaPosting){
+  const retry=mk('button','Verify idempotent retry of last posting');retry.type='button';
+  const report=mk('p');report.setAttribute('role','status');
+  retry.onclick=async()=>{retry.disabled=true;try{
+   const {data:receipt,error:e}=await sb.rpc('sacco_qa_post',lastQaPosting);if(e)throw e;
+   report.className='success';report.textContent=receipt.already_posted?'Passed: no second posting created. Receipt '+receipt.receipt_id:'New posting: check history.';
+  }catch(e){report.className='error';report.textContent=e.message||'Retry failed';}finally{retry.disabled=false;}};
+  p.append(retry,report);
+ }
+ p.append(mk('h3','Fictional loan balances using original SACCO rules'));
+ p.append(table(['Test member','Issue date','Principal','Repaid','Due incl. interest','Interest rule'],
+  loanTotals.map(x=>[x.l.member_code,x.l.entry_on,ugx(x.l.amount),ugx(x.b.paid),ugx(x.b.balance),x.b.rule])));
+ p.append(mk('h3','Posted QA transactions and reversals'));
+ const history=mk('div');
+ for(const x of entries){
+  const row=mk('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #eee;padding:8px';
+  const label=x.kind+' · '+x.member_code+' · '+x.entry_on+' · '+ugx(x.amount)+(x.kind==='REVERSAL'?' (REVERSAL)':rev.has(x.id)?' (REVERSED)':'');
+  row.append(mk('span',label));
+  if(x.kind!=='REVERSAL'&&!rev.has(x.id)){
+   const undo=mk('button','Reverse test transaction');undo.type='button';
+   undo.onclick=async()=>{
+    const reason=window.prompt('Reason for TEST reversal (at least 5 characters):');
+    if(reason===null)return;
+    if(reason.trim().length<5){window.alert('Enter at least 5 characters.');return;}
+    if(!window.confirm('Reverse this fictional QA posting?'))return;
+    undo.disabled=true;
+    try{
+     const {data:receipt,error:e}=await sb.rpc('sacco_qa_reverse',{p_request_key:crypto.randomUUID(),p_entry_id:x.id,p_reason:reason.trim()});
+     if(e)throw e;await renderFinancialPostingLab(p);
+     p.prepend(mk('p','QA reversal recorded: '+receipt.receipt_id+'. Real books unchanged.','success'));
+    }catch(e){window.alert(e.message||'Reversal failed');undo.disabled=false;}
+   };row.append(undo);
+  }history.append(row);
+ }
+ if(!entries.length)history.append(mk('p','No test transactions yet.'));
+ p.append(history);
+ p.append(mk('p','You can post and reverse real test-database entries here. These test tables are not the real SACCO ledger, and testing them does not automatically certify the still-locked production posting engine.','muted'));
 }
 
 async function renderMemberAccess(p){
