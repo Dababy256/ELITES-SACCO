@@ -62,3 +62,7 @@ The secure staging portal now has a browser-local **Reconcile backup** tab for t
 ## Verified member access — 8 November 2026
 
 The test portal now has an email-confirmed **Request membership review** flow and an administrator-only **Member access** approval queue. Approval requires independent identity verification; any existing administrator role requires an additional explicit confirmation. See [member onboarding runbook](docs/MEMBER_ONBOARDING_2026-11-08.md). Only one of five member accounts is currently linked. Four others must enroll and be approved individually. Do not treat a confirmed email as verified SACCO membership; do not enable financial posting until backup reconciliation and release tests pass.
+
+## Release readiness checkpoint — 8 November 2026
+
+Administrator reported **0 unmatched records** from browser-local backup reconciliation. This is a user-reported result, not a verified source freeze or final reconciliation of every loan link/evidence field. Automated read-only integrity checks passed but four other members remain unlinked, real posting acceptance tests remain incomplete, and posting is still disabled. See [release readiness checkpoint](docs/RELEASE_READINESS_CHECKPOINT_2026-11-08.md) and [repeatable preflight SQL](supabase/tests/release_preflight_readonly.sql). Do not merge or cut over yet.
