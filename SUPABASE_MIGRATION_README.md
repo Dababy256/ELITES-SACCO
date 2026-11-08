@@ -54,3 +54,7 @@ Prepared the [Brevo free-plan SMTP setup guide](docs/SMTP_SETUP_BREVO.md) for tr
 ## Staging approval and dormant posting engine
 
 See [review / posting gate safety report](docs/STAGING_APPROVAL_AND_POSTING_GATES.md). The administrator-only draft approval queue has been deployed. Actual ledger posting remains disabled and browser-inaccessible; do not merge or enable before live source reconciliation and end-to-end posting tests.
+
+## Read-only source reconciliation — 8 November 2026
+
+The secure staging portal now has a browser-local **Reconcile backup** tab for the administrator. Instructions and limitations: [backup reconciliation guide](docs/BACKUP_RECONCILIATION_2026-11-08.md). **Awaiting a fresh original-site JSON export.** Current Supabase records are still the November 6 backup import and are not authoritative for later changes. Real posting remains disabled.
