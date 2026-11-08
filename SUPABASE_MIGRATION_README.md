@@ -78,3 +78,7 @@ Administrators can now test **real SQL writes and reversals in a separate fictio
 ## Source-policy loan alignment and cloned real posting tests — 8 Nov 2026
 
 Implemented server-side interest parity with the original code (84/84 checks), documented regular/developmental and unpaid-loan exceptions with mandatory audit reasons, and published the **Draft approvals (sandbox)** loan-policy controls. Exercised the actual *locked* posting routine copied into an ephemeral fictional schema with all data rolled back, including same-day repayment and documented exception cases. Financial posting on real SACCO tables is **still disabled**; real reversal design and full cutover acceptance are not yet complete. Details: [loan policy and cloned posting acceptance](docs/LOAN_POLICY_AND_CLONED_POSTING_ACCEPTANCE_2026-11-08.md).
+
+## Audited reversal workflow — 8 November 2026
+
+A locked native-transaction reversal engine is now in place. Originals remain stored; cancelled entries no longer affect member balances and are visible in an administrator-only, read-only audit journal. The actual posting and reversal functions passed a fictional, transaction-rolled-back integration regression including same-day repayment recovery, reversal dependency ordering, immutable history and duplicate-request safeguards. **Real financial posting and reversal remain disabled**; separate production browser and security acceptance tests still required. See [native reversal acceptance report](docs/NATIVE_REVERSAL_ACCEPTANCE_2026-11-08.md).
