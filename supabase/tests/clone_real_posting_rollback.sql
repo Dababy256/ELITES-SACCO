@@ -183,6 +183,13 @@ begin
  if (select count(*) from sacco_validation_clone.sacco_audit_entries where event_kind='NATIVE_POST')<>7 then
   raise exception 'Explicit posting audit trail incomplete';end if;
 
+ -- Native posting is immutable even before reversal.
+ begin
+  update sacco_validation_clone.sacco_loans set principal=77777 where id=loan_id;
+  raise exception 'FAILED: native posted principal was editable';
+ exception when others then
+  if sqlerrm not like '%A native posted entry cannot be edited%' then raise;end if;
+ end;
  -- Reversal must fail while a loan has an unvoided repayment.
  begin
   perform sacco_validation_clone.sacco_reverse_posted_entry(
@@ -204,6 +211,16 @@ begin
    or rev_a->>'reversal_id'<>rev_b->>'reversal_id' then
     raise exception 'FAILED: reversal retry was not idempotent';
  end if;
+ -- A same-key retry with a different reason is not an identical request.
+ begin
+  perform sacco_validation_clone.sacco_reverse_posted_entry(
+   native_repayment_receipt,'a0000000-0000-4000-8000-000000000002'::uuid,
+   'Different reason from the original reversal request',
+   'REVERSE POSTED TRANSACTION');
+  raise exception 'FAILED: altered reversal retry reason was accepted';
+ exception when others then
+  if sqlerrm not like '%different justification%' then raise;end if;
+ end;
  if (select count(*) from sacco_validation_clone.sacco_repayments where id=repayment_id)<>1
     or (select count(*) from sacco_validation_clone.sacco_repayments where id=repayment_id and voided_at is not null)<>1 then
   raise exception 'FAILED: reversal deleted a repayment or failed to mark it voided';
