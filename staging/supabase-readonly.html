@@ -280,16 +280,29 @@ function showTab(next){
   const month=mk('input');month.type='month';month.value=jubaToday().slice(0,7);field('Contribution month',month);
   const amount=mk('input');amount.type='number';amount.min='0';amount.step='0.01';amount.required=true;field('Amount (UGX)',amount);
   const loan=field('Linked loan (repayments)',select([['','Select a loan']]));
+  const loanType=field('Loan type (new loans)',select([['REGULAR','Regular loan'],['DEVELOPMENTAL','Developmental loan']]));
+  const capLabel=mk('label');capLabel.style.cssText='display:flex;gap:7px;align-items:center;font-size:12px;font-weight:normal';
+  const capOverride=mk('input');capOverride.type='checkbox';capOverride.style.width='auto';
+  capLabel.append(capOverride,mk('span','Request exception to the regular-loan UGX 1,000,000 limit'));
+  const capBox=mk('div');capBox.append(capLabel);form.append(capBox);
+  const unsettledLabel=mk('label');unsettledLabel.style.cssText='display:flex;gap:7px;align-items:center;font-size:12px;font-weight:normal';
+  const unsettledOverride=mk('input');unsettledOverride.type='checkbox';unsettledOverride.style.width='auto';
+  unsettledLabel.append(unsettledOverride,mk('span','Request exception if the member already has an unpaid loan'));
+  const unsettledBox=mk('div');unsettledBox.append(unsettledLabel);form.append(unsettledBox);
   const memo=mk('textarea');memo.maxLength=300;field('Description / purpose',memo,true);
   const save=mk('button','Save test draft');save.type='submit';form.append(save);
   const message=mk('p');message.setAttribute('role','status');form.append(message);
   const update=()=>{
-   const isWaiver=kind.value==='WAIVER',isRepay=kind.value==='REPAYMENT',isContribution=kind.value==='CONTRIBUTION';
+   const isWaiver=kind.value==='WAIVER',isRepay=kind.value==='REPAYMENT',isContribution=kind.value==='CONTRIBUTION',isLoan=kind.value==='LOAN';
    loan.parentElement.hidden=!isRepay;month.parentElement.hidden=!(isContribution||isWaiver);amount.parentElement.hidden=isWaiver;
+   loanType.parentElement.hidden=!isLoan;capBox.hidden=!isLoan||loanType.value!=='REGULAR'||Number(amount.value)<=1000000;
+   unsettledBox.hidden=!isLoan;
+   if(capBox.hidden)capOverride.checked=false;
+   if(!isLoan)unsettledOverride.checked=false;
    amount.required=!isWaiver;loan.required=isRepay;
    loan.replaceChildren();const o=mk('option','Choose loan');o.value='';loan.append(o);
    for(const l of book.loans.filter(l=>l.member_id===member.value)){const op=mk('option','#'+l.loan_number+' — '+formatMoney(l.principal));op.value=l.id;loan.append(op);}
-  };kind.onchange=update;member.onchange=update;update();
+  };kind.onchange=update;member.onchange=update;loanType.onchange=update;amount.oninput=update;update();
   form.onsubmit=async e=>{
    e.preventDefault();save.disabled=true;message.textContent='Saving test draft...';
    try{
@@ -301,7 +314,10 @@ function showTab(next){
     if(['WAIVER','EXPENSE'].includes(kind.value)&&memo.value.trim().length<5)throw new Error('A reason of at least five characters is required.');
     const payload={member_id:member.value,entry_on:date.value,amount:kind.value==='WAIVER'?0:num,
       month:kind.value==='CONTRIBUTION'||kind.value==='WAIVER'?month.value:null,
-      loan_id:kind.value==='REPAYMENT'?loan.value:null,note:memo.value.trim()};
+      loan_id:kind.value==='REPAYMENT'?loan.value:null,note:memo.value.trim(),
+      loan_type:kind.value==='LOAN'?loanType.value:null,
+      override_regular_cap:kind.value==='LOAN'&&capOverride.checked,
+      override_unsettled_loan:kind.value==='LOAN'&&unsettledOverride.checked};
     const {error}=await sb.from('sacco_staging_drafts').insert({action_kind:kind.value,created_by:user.id,payload});
     if(error)throw error;message.className='success';message.textContent='Test draft saved. The financial ledger is unchanged.';memo.value='';
     await loadDrafts(p);
@@ -345,6 +361,11 @@ async function loadDrafts(p){
   summary.style.cursor='pointer';record.append(summary);
   const meta=mk('p','Created '+new Date(d.created_at).toLocaleString('en-UG')+' · '+(d.payload?.entry_on||'')+' · '+(d.payload?.note||'No description'),'muted');
   record.append(meta);
+  if(d.action_kind==='LOAN'){
+   record.append(mk('p','Loan type: '+(d.payload?.loan_type||'REGULAR')+
+    ' · Regular cap override requested: '+(d.payload?.override_regular_cap?'YES':'NO')+
+    ' · Unpaid-loan override requested: '+(d.payload?.override_unsettled_loan?'YES':'NO'),'muted'));
+  }
   if(existing){record.append(mk('p', 'Decision: '+existing.decision+' at '+new Date(existing.reviewed_at).toLocaleString('en-UG')+(existing.review_note?' · '+existing.review_note:''),'success'));spot.append(record);continue;}
   const validate=mk('button','Preview validation');validate.type='button';validate.style.margin='8px 0';
   const result=mk('p');result.setAttribute('role','status');
@@ -365,20 +386,29 @@ async function loadDrafts(p){
       ' · Financial posting disabled.';
      if(Array.isArray(v.warnings)&&v.warnings.length)result.textContent+=' Warnings: '+v.warnings.join('; ');
     }
-    const note=mk('input');note.type='text';note.placeholder='Review note (required for rejection)';note.maxLength=500;note.style.minWidth='230px';
-    const accept=mk('button','Approve in sandbox');accept.type='button';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0);
+    const needsCap=v?.action_kind==='LOAN'&&v?.loan_type==='REGULAR'&&Number(v?.amount_ugx)>1000000;
+    const needsUnsettled=v?.action_kind==='LOAN'&&Number(v?.prior_unsettled_count)>0;
+    const lacksException=(needsCap&&!v?.cap_override_requested)||(needsUnsettled&&!v?.unsettled_override_requested);
+    const needsWrittenReason=needsCap||needsUnsettled;
+    if(lacksException)result.textContent+=' Approval blocked until a new draft explicitly requests all required policy overrides.';
+    const note=mk('input');note.type='text';note.placeholder=needsWrittenReason?'Required: documented loan exception justification (15+ characters)':'Review note (required for rejection)';
+    note.maxLength=500;note.style.minWidth='230px';
+    const accept=mk('button','Approve in sandbox');accept.type='button';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0||lacksException);
     const decline=mk('button','Reject draft');decline.type='button';
     const perform=async decision=>{
      const message=decision==='APPROVED'?'Approve this draft FOR TESTING ONLY? No real transaction will be posted.':'Reject this draft permanently in the staging queue?';
      if(!window.confirm(message))return;
      if(decision==='REJECTED'&&note.value.trim().length<5){result.className='error';result.textContent='Enter a rejection reason of at least 5 characters.';return;}
+     if(decision==='APPROVED'&&needsWrittenReason&&note.value.trim().length<15){
+      result.className='error';result.textContent='An exception approval requires a documented reason of at least 15 characters.';return;
+     }
      accept.disabled=true;decline.disabled=true;note.disabled=true;
      try{
       const {data:review,error:reviewError}=await sb.rpc('sacco_review_draft',{p_draft_id:d.id,p_decision:decision,p_note:note.value.trim()});
       if(reviewError)throw reviewError;
       result.className='success';result.textContent='Recorded '+review.decision+' (staging). Financial ledger unchanged.';
       await loadDrafts(p);
-     }catch(ex){result.className='error';result.textContent=ex.message||'Review failed';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0);decline.disabled=false;note.disabled=false;}
+     }catch(ex){result.className='error';result.textContent=ex.message||'Review failed';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0||lacksException);decline.disabled=false;note.disabled=false;}
     };
     accept.onclick=()=>perform('APPROVED');decline.onclick=()=>perform('REJECTED');
     controls.append(note,accept,decline);
