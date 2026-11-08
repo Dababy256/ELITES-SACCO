@@ -559,6 +559,11 @@ async function renderFinancialPostingLab(p){
   const args={p_request_key:crypto.randomUUID(),p_kind:kind.value,p_member_code:member.value,p_entry_on:date.value,
    p_amount:Number(amount.value),p_loan_id:kind.value==='REPAYMENT'?loan.value:null,
    p_contribution_month:kind.value==='CONTRIBUTION'?month.value:null,p_note:note.value.trim()};
+  if(kind.value==='LOAN'){
+   if(args.p_amount>1000000&&!window.confirm('Original SACCO guideline: a regular loan above UGX 1,000,000 requires an explicit override. Continue in the fictional test lab?'))return;
+   const outstanding=loans.filter(x=>x.member_code===member.value&&balanceOf(x).balance>0);
+   if(outstanding.length&&!window.confirm('Original SACCO guideline: clear existing loans before taking a new loan. This fictional member has '+outstanding.length+' unpaid loan(s). Override for this QA test?'))return;
+  }
   if(!window.confirm('Post '+kind.value+' '+ugx(args.p_amount)+' to FICTIONAL '+member.value+'? No real SACCO record will change.'))return;
   submit.disabled=true;
   try{
@@ -576,6 +581,7 @@ async function renderFinancialPostingLab(p){
   }catch(e){report.className='error';report.textContent=e.message||'Retry failed';}finally{retry.disabled=false;}};
   p.append(retry,report);
  }
+ p.append(mk('p','Loan testing: issue UGX 1,000,000 to TEST_A today, then repay UGX 200,000 on that same date. The original 5% first-month interest applies immediately, so the displayed outstanding balance should be UGX 850,000. Try another payment after a monthly anniversary to see the original flat-rate interest increase.','muted'));
  p.append(mk('h3','Fictional loan balances using original SACCO rules'));
  p.append(table(['Test member','Issue date','Principal','Repaid','Due incl. interest','Interest rule'],
   loanTotals.map(x=>[x.l.member_code,x.l.entry_on,ugx(x.l.amount),ugx(x.b.paid),ugx(x.b.balance),x.b.rule])));
