@@ -70,3 +70,7 @@ Administrator reported **0 unmatched records** from browser-local backup reconci
 ## Linked member and repayment QA — 8 November 2026
 
 Two of five members now have linked, email-confirmed logins. Verified the newly approved ordinary member's data isolation with repeatable RLS tests, strengthened repayment validation to reject pre-issuance dates, and reran the financial preflight successfully. Three members can enroll later while testing proceeds. **Real transaction posting and reversals remain untested and locked.** See [member privacy and repayment validation checkpoint](docs/APPROVED_MEMBER_AND_REPAYMENT_GUARDS_2026-11-08.md).
+
+## Isolated transaction posting lab — 8 November 2026
+
+Administrators can now test **real SQL writes and reversals in a separate fictional QA ledger** through the staging portal's **Financial posting lab** tab. This does not mutate the original website, any imported real SACCO financial tables, or the still-locked live posting switch. Same-day and partial loan repayments follow the source-code interest rules. Details and step-by-step tests: [isolated posting lab runbook](docs/ISOLATED_FINANCIAL_POSTING_LAB_2026-11-08.md).
