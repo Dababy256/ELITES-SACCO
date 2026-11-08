@@ -47,9 +47,9 @@
 - Remaining: validate exact loan math against all historic loans and edge cases, invite and link remaining verified members, verify all auth redirects and actual browser login, build audited production posting workflows, reconcile post-backup changes and rotate exposed JSONBin credentials.
 - Supabase security advisor currently warns that leaked-password protection is disabled; review Auth security settings before onboarding all members.
 
-## Auth email provider — pending user activation
+## Auth email provider — activated for administrator (7 Nov 2026)
 
-Prepared the [Brevo free-plan SMTP setup guide](docs/SMTP_SETUP_BREVO.md) for transactional password recovery and invitations. The settings have **not** been activated because a verified external sender and secret SMTP key must be generated in Brevo and entered by the authorized project administrator in Supabase Auth settings. The Supabase connector has no action for Auth SMTP configuration. Never commit any SMTP credentials.
+The user configured Brevo SMTP directly in the provider dashboard, corrected the sending-IP restrictions, received a Supabase password recovery email and set a password successfully. Supabase logs subsequently confirmed a successful password sign-in. Keep SMTP credentials private. New-member confirmation delivery remains to be tested. See [Brevo SMTP guide](docs/SMTP_SETUP_BREVO.md).
 
 ## Staging approval and dormant posting engine
 
@@ -58,3 +58,7 @@ See [review / posting gate safety report](docs/STAGING_APPROVAL_AND_POSTING_GATE
 ## Read-only source reconciliation — 8 November 2026
 
 The secure staging portal now has a browser-local **Reconcile backup** tab for the administrator. Instructions and limitations: [backup reconciliation guide](docs/BACKUP_RECONCILIATION_2026-11-08.md). **Awaiting a fresh original-site JSON export.** Current Supabase records are still the November 6 backup import and are not authoritative for later changes. Real posting remains disabled.
+
+## Verified member access — 8 November 2026
+
+The test portal now has an email-confirmed **Request membership review** flow and an administrator-only **Member access** approval queue. Approval requires independent identity verification; any existing administrator role requires an additional explicit confirmation. See [member onboarding runbook](docs/MEMBER_ONBOARDING_2026-11-08.md). Only one of five member accounts is currently linked. Four others must enroll and be approved individually. Do not treat a confirmed email as verified SACCO membership; do not enable financial posting until backup reconciliation and release tests pass.
