@@ -9,6 +9,7 @@ create table sacco_validation_clone.sacco_members (like public.sacco_members inc
 create table sacco_validation_clone.sacco_staging_drafts (like public.sacco_staging_drafts including all);
 create table sacco_validation_clone.sacco_staging_reviews (like public.sacco_staging_reviews including all);
 create table sacco_validation_clone.sacco_posting_receipts (like public.sacco_posting_receipts including all);
+create table sacco_validation_clone.sacco_posting_reversals (like public.sacco_posting_reversals including all);
 create table sacco_validation_clone.sacco_loans (like public.sacco_loans including all);
 create table sacco_validation_clone.sacco_repayments (like public.sacco_repayments including all);
 create table sacco_validation_clone.sacco_contributions (like public.sacco_contributions including all);
@@ -27,7 +28,8 @@ begin
    'sacco_private.is_sacco_admin()'::regprocedure,
    'sacco_private.validate_staging_draft(text,jsonb)'::regprocedure,
    'sacco_private.loan_due_as_of(uuid,date)'::regprocedure,
-   'public.sacco_post_approved_draft(uuid)'::regprocedure
+   'public.sacco_post_approved_draft(uuid)'::regprocedure,
+   'public.sacco_reverse_posted_entry(uuid,uuid,text,text)'::regprocedure
  ] loop
   s:=pg_catalog.pg_get_functiondef(fn);
   s:=replace(s,'public.sacco_','sacco_validation_clone.sacco_');
@@ -47,7 +49,8 @@ declare
  loan_draft uuid; loan_id uuid; repayment_draft uuid; repayment_id uuid;
  saving_draft uuid; expense_draft uuid; fee_draft uuid; cash_draft uuid;
  extra_draft uuid; denied_draft uuid; cap_draft uuid; cap_denied_draft uuid;
- a jsonb; b jsonb; v_count integer; v_errors integer:=0;
+ a jsonb; b jsonb; rev_a jsonb; rev_b jsonb; native_loan_receipt uuid; native_repayment_receipt uuid;
+ v_count integer; v_errors integer:=0;
 begin
  select auth_user_id into actor from public.sacco_members
  where member_role='admin' and auth_user_id is not null order by created_at limit 1;
@@ -72,6 +75,7 @@ begin
     or a->>'receipt_id' <> b->>'receipt_id' then
   raise exception 'Loan replay was not idempotent';
  end if;
+ select id into native_loan_receipt from sacco_validation_clone.sacco_posting_receipts where draft_id=loan_draft;
  select id into loan_id from sacco_validation_clone.sacco_loans where legacy_key='native:'||loan_draft::text;
  if loan_id is null then raise exception 'Fictional loan row not created'; end if;
  -- Same-day partial payment (no one-month waiting requirement).
@@ -82,6 +86,7 @@ begin
  insert into sacco_validation_clone.sacco_staging_reviews(draft_id,decision,reviewed_by,validation_snapshot)
  values(repayment_draft,'APPROVED',actor,'{}'::jsonb);
  a:=sacco_validation_clone.post_approved_draft(repayment_draft);
+ select id into native_repayment_receipt from sacco_validation_clone.sacco_posting_receipts where draft_id=repayment_draft;
  select id into repayment_id from sacco_validation_clone.sacco_repayments where legacy_key='native:'||repayment_draft::text;
  if repayment_id is null then raise exception 'Same-day repayment not written'; end if;
  -- 5% flat interest immediately => 1,000,000 + 50,000 - 200,000 = 850,000 due.
@@ -161,7 +166,59 @@ begin
   raise exception 'Incorrect receipt count after seven distinct synthetic postings';end if;
  if (select count(*) from sacco_validation_clone.sacco_audit_entries where event_kind='NATIVE_POST')<>7 then
   raise exception 'Explicit posting audit trail incomplete';end if;
- raise notice 'PASS: cloned real posting flow, same-day partial payment, safe replay, expenses, savings, fees, unmet-loan override, cap override, seven audited receipts';
+
+ -- Reversal must fail while a loan has an unvoided repayment.
+ begin
+  perform sacco_validation_clone.sacco_reverse_posted_entry(
+   native_loan_receipt,'a0000000-0000-4000-8000-000000000001'::uuid,
+   'Correcting original test loan after reconciliation','REVERSE POSTED TRANSACTION');
+  raise exception 'FAILED: loan reversal was allowed with an active repayment';
+ exception when others then
+  if sqlerrm not like '%Reverse all active repayments%' then raise;end if;
+ end;
+ -- A repayment reversal restores the full loan balance; original records remain.
+ rev_a:=sacco_validation_clone.sacco_reverse_posted_entry(
+  native_repayment_receipt,'a0000000-0000-4000-8000-000000000002'::uuid,
+  'Wrong repayment amount was received on the test receipt','REVERSE POSTED TRANSACTION');
+ rev_b:=sacco_validation_clone.sacco_reverse_posted_entry(
+  native_repayment_receipt,'a0000000-0000-4000-8000-000000000002'::uuid,
+  'Wrong repayment amount was received on the test receipt','REVERSE POSTED TRANSACTION');
+ if (rev_a->>'already_reversed')::boolean is distinct from false
+   or (rev_b->>'already_reversed')::boolean is distinct from true
+   or rev_a->>'reversal_id'<>rev_b->>'reversal_id' then
+    raise exception 'FAILED: reversal retry was not idempotent';
+ end if;
+ if (select count(*) from sacco_validation_clone.sacco_repayments where id=repayment_id)<>1
+    or (select count(*) from sacco_validation_clone.sacco_repayments where id=repayment_id and voided_at is not null)<>1 then
+  raise exception 'FAILED: reversal deleted a repayment or failed to mark it voided';
+ end if;
+ if sacco_validation_clone.loan_due_as_of(loan_id,'2026-11-08')<>1050000 then
+  raise exception 'FAILED: reversing repayment did not restore original principal plus interest';
+ end if;
+ begin
+  perform sacco_validation_clone.sacco_reverse_posted_entry(
+   native_repayment_receipt,'a0000000-0000-4000-8000-000000000003'::uuid,
+   'Attempt a different reversal key for the same receipt','REVERSE POSTED TRANSACTION');
+  raise exception 'FAILED: second reversal accepted';
+ exception when others then
+  if sqlerrm not like '%already reversed%' then raise;end if;
+ end;
+ -- Once active repayments are reversed, a native loan can also be reversed.
+ rev_a:=sacco_validation_clone.sacco_reverse_posted_entry(
+  native_loan_receipt,'a0000000-0000-4000-8000-000000000004'::uuid,
+  'Void mistaken disbursement after all linked repayments reversed','REVERSE POSTED TRANSACTION');
+ if (select count(*) from sacco_validation_clone.sacco_loans where id=loan_id)<>1
+    or (select count(*) from sacco_validation_clone.sacco_loans where id=loan_id and voided_at is not null)<>1
+    or sacco_validation_clone.loan_due_as_of(loan_id,'2026-11-08')<>0 then
+  raise exception 'FAILED: reversed loan not preserved or still affects balance';
+ end if;
+ if (select count(*) from sacco_validation_clone.sacco_posting_reversals)<>2
+    or (select count(*) from sacco_validation_clone.sacco_audit_entries where event_kind='NATIVE_REVERSAL')<>2
+    or (select count(*) from sacco_validation_clone.sacco_posting_receipts)<>7 then
+  raise exception 'FAILED: reversal audit or original posting receipt history incomplete';
+ end if;
+ raise notice 'PASS: 7 original postings, 2 audited reversals, same-day repayment effect removed, loan reversal dependency enforced, retry idempotent, records preserved';
+
  -- All synthetic entries plus cloned schema are discarded below.
 end$test$;
 rollback;
