@@ -82,8 +82,8 @@ begin
  select id into repayment_id from sacco_validation_clone.sacco_repayments where legacy_key='native:'||repayment_draft::text;
  if repayment_id is null then raise exception 'Same-day repayment not written'; end if;
  -- 5% flat interest immediately => 1,000,000 + 50,000 - 200,000 = 850,000 due.
- if (select principal from sacco_validation_clone.sacco_loans where id=loan_id)*1.05 -
-    (select sum(amount) from sacco_validation_clone.sacco_repayments where loan_id=loan_id)<>850000 then
+ if (select l.principal from sacco_validation_clone.sacco_loans l where l.id=loan_id)*1.05 -
+    (select sum(r.amount) from sacco_validation_clone.sacco_repayments r where r.loan_id=(select l.id from sacco_validation_clone.sacco_loans l where l.legacy_key='native:'||loan_draft::text))<>850000 then
   raise exception 'Same-day flat interest regression failed'; end if;
  -- Contribution, cashbook expense and membership fee using same production code.
  insert into sacco_validation_clone.sacco_staging_drafts(created_by,action_kind,payload)
