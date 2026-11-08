@@ -146,7 +146,16 @@ async function showWaiting(){
 function td(text,cl){const e=document.createElement('td');e.textContent=String(text==null?'':text);if(cl)e.className=cl;return e;}
 function tableRows(id,rows,map){const t=$('#'+id);t.replaceChildren();for(const r of rows){const tr=document.createElement('tr');for(const item of map(r))tr.appendChild(td(item));t.appendChild(tr);}}
 function stat(title,value,sub){const d=document.createElement('div');d.className='stat';const c=document.createElement('small');c.textContent=title;const b=document.createElement('b');b.textContent=value;const s=document.createElement('small');s.textContent=sub||'';d.append(c,b,s);return d;}
-async function fetchTable(name,cols){const {data,error}=await sb.from(name).select(cols);if(error)throw error;return data||[];}
+async function fetchTable(name,cols){
+ const activeFinancialTables=new Set([
+ 'sacco_contributions','sacco_loans','sacco_repayments','sacco_financial_entries',
+ 'sacco_membership_fees','sacco_waivers'
+ ]);
+ const query=sb.from(name).select(cols);
+ const {data,error}=await (activeFinancialTables.has(name)?query.is('voided_at',null):query);
+ if(error)throw error;
+ return data||[];
+}
 
 const pg=n=>Number(n||0);
 const ugx=n=>'UGX '+pg(n).toLocaleString('en-UG',{maximumFractionDigits:0});
@@ -336,6 +345,8 @@ function showTab(next){
   renderMemberAccess(p).catch(e=>p.append(mk('p',e.message||'Could not load access queue','error')));
  }else if(next==='qa'){
   renderFinancialPostingLab(p).catch(e=>p.append(mk('p',e.message||'Could not load posting lab','error')));
+ }else if(next==='journal'){
+  renderPostingJournal(p).catch(e=>p.append(mk('p',e.message||'Could not load posting journal','error')));
  }
 }
 async function loadDrafts(p){
@@ -422,7 +433,7 @@ async function loadDrafts(p){
 function initLedger(){
  const nav=$('#ledgerTabs');nav.replaceChildren();
  const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members']];
- if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup'],['access','Member access'],['qa','Financial posting lab']);
+ if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup'],['access','Member access'],['qa','Financial posting lab'],['journal','Posting & reversal journal']);
  for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
  showTab('savings');
 }
@@ -640,6 +651,36 @@ async function renderFinancialPostingLab(p){
  if(!entries.length)history.append(mk('p','No test transactions yet.'));
  p.append(history);
  p.append(mk('p','You can post and reverse real test-database entries here. These test tables are not the real SACCO ledger, and testing them does not automatically certify the still-locked production posting engine.','muted'));
+}
+
+
+async function renderPostingJournal(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access required.'));return;}
+ p.append(mk('h3','Native posting and reversal audit journal'));
+ p.append(mk('p','REAL POSTING AND REVERSALS ARE DISABLED. This is a read-only audit screen for the future controlled cutover. No records are posted or reversed from this screen. Fictional tests belong in Financial posting lab.','alert'));
+ const [posts,undo]=await Promise.all([
+  sb.from('sacco_posting_receipts').select('id,ledger_table,posted_record_id,posted_at').order('posted_at',{ascending:false}).limit(100),
+  sb.from('sacco_posting_reversals').select('id,posting_receipt_id,reversed_at,reason').order('reversed_at',{ascending:false}).limit(100)
+ ]);
+ if(posts.error)throw posts.error;
+ if(undo.error)throw undo.error;
+ const receipts=posts.data||[],reversals=undo.data||[];
+ const reversed=new Map(reversals.map(x=>[x.posting_receipt_id,x]));
+ const box=mk('div',undefined,'cards');
+ box.append(
+  stat('Native posting receipts',String(receipts.length),'Read-only, up to 100 most recent'),
+  stat('Native reversals',String(reversals.length),'Original transactions preserved')
+ );
+ p.append(box);
+ if(!receipts.length){p.append(mk('p','No real posting receipts or reversals exist yet. The original SACCO website remains the operating system.'));return;}
+ p.append(table(['Transaction type','Posted','Status','Reversed on','Reversal reason'],
+  receipts.map(r=>{
+   const v=reversed.get(r.id);
+   return [r.ledger_table.replace(/^sacco_/,''),new Date(r.posted_at).toLocaleString('en-UG'),
+    v?'REVERSED':'POSTED',v?new Date(v.reversed_at).toLocaleString('en-UG'):'—',v?.reason||'—'];
+  })
+ ));
+ p.append(mk('p','Reversed native transactions remain stored for audit, but do not contribute to savings, loans, arrears, repayment totals or cashflow.','muted'));
 }
 
 async function renderMemberAccess(p){
