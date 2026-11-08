@@ -280,6 +280,8 @@ function showTab(next){
   for(const v of content){const details=mk('details'),summary=mk('summary',(v.meeting_on||'')+' — '+(v.title||'Minutes'));const body=mk('p',v.body||'');body.style.whiteSpace='pre-wrap';details.append(summary,body);p.append(details);}
  }else if(next==='members'){
   p.append(table(['Member','Membership'],book.members.map(m=>[m.display_name,m.member_role])));
+ }else if(next==='reconcile'){
+  renderReconciliation(p);
  }
 }
 async function loadDrafts(p){
@@ -352,9 +354,166 @@ async function loadDrafts(p){
 function initLedger(){
  const nav=$('#ledgerTabs');nav.replaceChildren();
  const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members']];
- if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)']);
+ if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup']);
  for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
  showTab('savings');
+}
+
+
+// Admin-only local comparison: no legacy backup, PINs, or images are ever uploaded.
+function reconcileNormName(v){
+ return String(v??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+}
+function reconcileMoney(v){
+ const n=Number(v);
+ return Number.isFinite(n)?n.toFixed(2):'INVALID';
+}
+function reconcileDate(v){return String(v??'').slice(0,10);}
+function reconcileCompare(snapshot){
+ if(!snapshot||typeof snapshot!=='object'||Array.isArray(snapshot)||!Array.isArray(snapshot.members)||
+    !Array.isArray(snapshot.expenses)||!Array.isArray(snapshot.investments)||
+    !Array.isArray(snapshot.cashIn)||!Array.isArray(snapshot.minutes)||
+    !Array.isArray(snapshot.membershipFees))
+  throw new Error('This is not a complete Elites SACCO JSON backup. Download Backup from the original website.');
+ const reportWarnings=[],oldRows=[],newRows=[];
+ const canonical=new Map(book.members.map(m=>[reconcileNormName(m.legacy_name||m.display_name),m.display_name]));
+ const seenNames=new Set();
+ const useName=n=>{
+  const key=reconcileNormName(n);
+  if(!key)return '(member missing)';
+  if(!canonical.has(key)&&!seenNames.has(key)){reportWarnings.push('Member name not found in Supabase: '+String(n).slice(0,80));seenNames.add(key);}
+  return key;
+ };
+ const build=(arr,category,member,on,amount,detail,display)=>{
+  const memberKey=useName(member);
+  const amountKey=reconcileMoney(amount);
+  const key=JSON.stringify([category,memberKey,reconcileDate(on),amountKey,String(detail??'').trim()]);
+  arr.push({category,key,member:canonical.get(memberKey)||String(member||'—').slice(0,80),
+   date:reconcileDate(on),amount:amountKey,detail:String(display??'').slice(0,130)});
+ };
+ const add=(arr,category,member,on,amount,detail,display)=>build(arr,category,member,on,amount,detail,display);
+ for(const n of snapshot.members) add(oldRows,'Members',n,'',0,'roster','Member roster');
+ for(const n of book.members) add(newRows,'Members',n.legacy_name||n.display_name,'',0,'roster','Member roster');
+ let rawGroups=0;
+ for(const [name,v] of Object.entries(snapshot)){
+  if(v===null||typeof v!=='object'||Array.isArray(v)||!Array.isArray(v.contributions)||!Array.isArray(v.loans))continue;
+  rawGroups++;
+  for(const x of v.contributions){
+   add(oldRows,'Contributions',name,x.date,x.amt,String(x.month||''),'Month: '+String(x.month||''));
+  }
+  for(const x of v.loans){
+   if(x.type==='LOAN') add(oldRows,'Loans',name,x.date,x.amt,reconcileMoney(x.frozenTotal||0),
+    'Frozen total: '+reconcileMoney(x.frozenTotal||0));
+   else if(x.type==='REPAYMENT') add(oldRows,'Repayments',name,x.date,x.amt,'','Loan link: manual verification');
+   else reportWarnings.push('Unrecognized legacy loan event type; compare manually.');
+  }
+ }
+ if(rawGroups<book.members.length)reportWarnings.push('Some member records are absent from this backup.');
+ for(const x of book.contributions){
+  add(newRows,'Contributions',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.paid_on,x.amount,
+   String(x.contribution_month||'').slice(0,7),'Month: '+String(x.contribution_month||'').slice(0,7));
+ }
+ for(const x of book.loans){
+  add(newRows,'Loans',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.issued_on,x.principal,
+   reconcileMoney(x.frozen_total||0),'Frozen total: '+reconcileMoney(x.frozen_total||0));
+ }
+ for(const x of book.repayments){
+  add(newRows,'Repayments',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.paid_on,x.amount,'',
+   'Loan link: manual verification');
+ }
+ for(const x of snapshot.expenses)add(oldRows,'Expenses','',x.date,x.amt,String(x.reason||'').trim().toLowerCase(),'Expense');
+ for(const x of snapshot.investments)add(oldRows,'Investments','',x.date,x.amt,String(x.reason||'').trim().toLowerCase(),'Investment');
+ for(const x of snapshot.cashIn)add(oldRows,'Cash received','',x.date,x.amt,String(x.source||'').trim().toLowerCase(),'Cash received');
+ for(const x of book.financial){
+  const category={'expense':'Expenses','investment':'Investments','cash_in':'Cash received'}[x.entry_kind];
+  if(category)add(newRows,category,'',x.entry_on,x.amount,String(x.narrative||'').trim().toLowerCase(),category);
+ }
+ for(const x of snapshot.membershipFees)add(oldRows,'Membership fees',x.member,x.date,x.amt,'','Membership fee');
+ for(const x of book.fees)add(newRows,'Membership fees',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.paid_on,x.amount,'','Membership fee');
+ for(const x of snapshot.minutes){
+  add(oldRows,'Minutes','',x.date,0,JSON.stringify([String(x.title||'').trim(),String(x.body||'').trim()]),String(x.title||'Meeting'));
+ }
+ for(const x of book.minutes){
+  add(newRows,'Minutes','',x.meeting_on,0,JSON.stringify([String(x.title||'').trim(),String(x.body||'').trim()]),String(x.title||'Meeting'));
+ }
+ const importedWaiverRows=book.waivers||[];
+ if(snapshot.waivers?.length||importedWaiverRows.length){
+  const compatible=Array.isArray(snapshot.waivers)&&snapshot.waivers.every(x=>x&&typeof x==='object'&&x.member!=null&&x.month!=null);
+  if(!compatible)reportWarnings.push('Waiver format is not recognized: waiver records must be checked manually.');
+  else for(const x of snapshot.waivers)add(oldRows,'Waivers',x.member,x.month,0,'','Waiver');
+  for(const x of importedWaiverRows)add(newRows,'Waivers',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.contribution_month,0,'','Waiver');
+ }
+ if(Array.isArray(snapshot.requests)&&snapshot.requests.length)reportWarnings.push('Member requests are present in the export and need manual review before cutover.');
+ reportWarnings.push('Repayment-to-loan links, attachments, member PINs, and changes to unstructured notes are NOT compared.');
+ reportWarnings.push('This report cannot prove a backup is current or that transactions are ready to post.');
+ const counts=new Map(),first=new Map(),groups=new Map();
+ const allCats=['Members','Contributions','Loans','Repayments','Expenses','Investments','Cash received','Membership fees','Minutes','Waivers'];
+ for(const cat of allCats)groups.set(cat,{category:cat,exported:0,supabase:0,onlyExport:0,onlySupabase:0});
+ for(const [which,rows] of [['exported',oldRows],['supabase',newRows]]){
+  for(const x of rows){
+   const tag=which+'|'+x.key;counts.set(tag,(counts.get(tag)||0)+1);
+   if(!first.has(x.key))first.set(x.key,x);
+   groups.get(x.category)[which]++;
+  }
+ }
+ const differences=[];
+ for(const [key,item] of first){
+  const a=counts.get('exported|'+key)||0,b=counts.get('supabase|'+key)||0;
+  if(a===b)continue;
+  const direction=a>b?'Only in uploaded backup':'Only in Supabase';
+  const quantity=Math.abs(a-b);
+  const group=groups.get(item.category);
+  if(a>b)group.onlyExport+=quantity;else group.onlySupabase+=quantity;
+  differences.push({...item,direction,quantity});
+ }
+ differences.sort((a,b)=>a.category.localeCompare(b.category)||a.member.localeCompare(b.member)||a.date.localeCompare(b.date));
+ return {groups:[...groups.values()],differences,reportWarnings,
+    exportCount:oldRows.length,dbCount:newRows.length,discrepancyCount:differences.reduce((s,x)=>s+x.quantity,0)};
+}
+function renderReconciliation(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access is required.'));return;}
+ p.append(mk('p','Reconciliation is READ-ONLY. Upload a fresh JSON backup downloaded from the original SACCO website. The file stays in your browser: no file contents, PINs, photos or secrets are sent to Supabase, Vercel or GitHub.','alert'));
+ const step=mk('div');step.style.cssText='padding:12px 0;max-width:660px';
+ step.append(mk('p','Original SACCO website → Admin → Settings → Download Backup (JSON). Select that newly downloaded file below.'));
+ const upload=mk('input');upload.type='file';upload.accept='.json,application/json';upload.setAttribute('aria-label','Choose a local SACCO JSON backup');
+ const status=mk('p');status.setAttribute('role','status');
+ step.append(upload,status);p.append(step);
+ const results=mk('div');p.append(results);
+ upload.onchange=async()=>{
+  results.replaceChildren();status.textContent='';const file=upload.files?.[0];if(!file)return;
+  if(file.size>10*1024*1024){status.className='error';status.textContent='File exceeds 10 MB. Select a normal SACCO JSON backup.';return;}
+  try{
+   const raw=JSON.parse(await file.text());
+   const check=reconcileCompare(raw);
+   const difference=check.discrepancyCount;
+   status.className=difference?'error':'success';
+   const checkedAt=new Date(file.lastModified).toLocaleString('en-UG');
+   status.textContent='Compared '+file.name+' (file last modified '+checkedAt+'). '+difference+' unmatched record(s). A zero count does not verify that this is the latest backup.';
+   const total=mk('div',undefined,'cards');
+   total.append(stat('Records in selected export',String(check.exportCount),'Local browser comparison'));
+   total.append(stat('Records in Supabase',String(check.dbCount),'Read-only import snapshot'));
+   total.append(stat('Unmatched records',String(difference),difference?'Investigate before migration':'No tuple differences identified'));
+   results.append(total);
+   const rows=check.groups.map(x=>[x.category,String(x.exported),String(x.supabase),String(x.onlyExport),String(x.onlySupabase)]);
+   results.append(mk('h3','Record-by-record reconciliation'));
+   results.append(table(['Category','Export','Supabase','Only in export','Only in Supabase'],rows));
+   if(check.differences.length){
+    results.append(mk('h3','Discrepancies ('+check.differences.length+' groups)'));
+    const diffRows=check.differences.map(x=>[x.category,x.direction,String(x.quantity),x.member,x.date,x.amount,x.detail]);
+    results.append(table(['Category','Difference','Count','Member','Date','UGX','Details'],diffRows.slice(0,100)));
+    if(diffRows.length>100)results.append(mk('p','First 100 discrepancies displayed. Export the full CSV report.'));
+    const btn=mk('button','Download sanitized reconciliation CSV');btn.type='button';
+    btn.onclick=()=>csv('elites-sacco-reconciliation.csv',['Category','Difference','Count','Member','Date','UGX','Details'],diffRows);
+    results.append(btn);
+   }
+   const warning=mk('div',undefined,'alert');
+   warning.append(mk('strong','Important limitations'));
+   for(const item of check.reportWarnings)warning.append(mk('p',item));
+   warning.append(mk('p','This screen never posts transactions or enables the disabled production posting engine.'));
+   results.append(warning);
+  }catch(err){status.className='error';status.textContent=err.message||'Could not read the JSON backup. No changes were made.';}
+  finally{upload.value='';}
+ };
 }
 
 async function boot(){
@@ -366,7 +525,7 @@ async function boot(){
  if(error)throw error;
  if(!me){show('waiting');return;}
  const [members,contributions,loans,repayments,minutes,waivers,financial,fees,settingsRow]=await Promise.all([
-  fetchTable('sacco_members','id,display_name,member_role'),
+  fetchTable('sacco_members','id,display_name,legacy_name,member_role'),
   fetchTable('sacco_contributions','member_id,amount,contribution_month,paid_on'),
   fetchTable('sacco_loans','id,member_id,principal,issued_on,loan_type,loan_number,frozen_total,manual_status'),
   fetchTable('sacco_repayments','loan_id,member_id,amount,paid_on'),
