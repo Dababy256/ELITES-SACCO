@@ -65,7 +65,7 @@ begin
   if v_existing.kind<>p_kind or v_existing.member_code<>p_member_code or
      v_existing.entry_on is distinct from p_entry_on or v_existing.amount is distinct from p_amount or
      v_existing.loan_id is distinct from p_loan_id or
-     pg_catalog.coalesce(pg_catalog.to_char(v_existing.contribution_month,'YYYY-MM'),'')
+     coalesce(pg_catalog.to_char(v_existing.contribution_month,'YYYY-MM'),'')
        <>coalesce(p_contribution_month,'') then
     raise exception 'Idempotency key already used for another transaction' using errcode='23505';
   end if;
