@@ -66,3 +66,7 @@ The test portal now has an email-confirmed **Request membership review** flow an
 ## Release readiness checkpoint — 8 November 2026
 
 Administrator reported **0 unmatched records** from browser-local backup reconciliation. This is a user-reported result, not a verified source freeze or final reconciliation of every loan link/evidence field. Automated read-only integrity checks passed but four other members remain unlinked, real posting acceptance tests remain incomplete, and posting is still disabled. See [release readiness checkpoint](docs/RELEASE_READINESS_CHECKPOINT_2026-11-08.md) and [repeatable preflight SQL](supabase/tests/release_preflight_readonly.sql). Do not merge or cut over yet.
+
+## Linked member and repayment QA — 8 November 2026
+
+Two of five members now have linked, email-confirmed logins. Verified the newly approved ordinary member's data isolation with repeatable RLS tests, strengthened repayment validation to reject pre-issuance dates, and reran the financial preflight successfully. Three members can enroll later while testing proceeds. **Real transaction posting and reversals remain untested and locked.** See [member privacy and repayment validation checkpoint](docs/APPROVED_MEMBER_AND_REPAYMENT_GUARDS_2026-11-08.md).
