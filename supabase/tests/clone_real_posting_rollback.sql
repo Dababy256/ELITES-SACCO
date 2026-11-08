@@ -19,6 +19,22 @@ create table sacco_validation_clone.sacco_membership_fees (like public.sacco_mem
 create table sacco_validation_clone.sacco_audit_entries (like public.sacco_audit_entries including all);
 create table sacco_validation_clone.posting_control (like sacco_private.posting_control including all);
 
+-- Mirror live immutable-history triggers on fictional tables.
+do $clone_guard$
+declare t text;
+begin
+ foreach t in array array[
+ 'sacco_contributions','sacco_loans','sacco_repayments',
+ 'sacco_financial_entries','sacco_membership_fees','sacco_waivers'
+ ] loop
+  execute pg_catalog.format(
+   'create trigger sacco_guard_native_history before update or delete
+    on sacco_validation_clone.%I
+    for each row execute function sacco_private.guard_native_financial_history()',t
+  );
+ end loop;
+end$clone_guard$;
+
 -- Clone function DEFINITIONS from Postgres, modifying only schema-qualified references.
 -- This tests the exact current procedural logic, not the unrelated QA posting lab code.
 do $clone$
@@ -217,7 +233,20 @@ begin
     or (select count(*) from sacco_validation_clone.sacco_posting_receipts)<>7 then
   raise exception 'FAILED: reversal audit or original posting receipt history incomplete';
  end if;
- raise notice 'PASS: 7 original postings, 2 audited reversals, same-day repayment effect removed, loan reversal dependency enforced, retry idempotent, records preserved';
+ -- Once voided, the original transaction may not be silently edited or deleted.
+ begin
+  update sacco_validation_clone.sacco_repayments set amount=1 where id=repayment_id;
+  raise exception 'FAILED: editing a reversed repayment was permitted';
+ exception when others then
+  if sqlerrm not like '%reversed financial entry is immutable%' then raise;end if;
+ end;
+ begin
+  delete from sacco_validation_clone.sacco_loans where id=loan_id;
+  raise exception 'FAILED: deleting a native loan was permitted';
+ exception when others then
+  if sqlerrm not like '%Native or reversed SACCO transactions are immutable%' then raise;end if;
+ end;
+ raise notice 'PASS: 7 original postings, 2 audited reversals, correct balance, duplicate prevention, source history immutable';
 
  -- All synthetic entries plus cloned schema are discarded below.
 end$test$;
