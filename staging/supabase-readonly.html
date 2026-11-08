@@ -10,7 +10,7 @@
 <header class="mast"><div><h1>ELITES SACCO</h1><small>Let's Prosper · Secure database preview</small></div><span class="pill">STAGING · NO LIVE POSTING</span></header>
 <main class="wrap">
 <section id="auth" class="panel auth"><h2>Member sign in</h2><p class="muted">Use a Supabase Auth account. Historical four-digit PINs will not work here.</p>
-<form id="authForm"><label>Email</label><input id="email" type="email" required autocomplete="email"><label>Password</label><input id="password" type="password" required minlength="8" autocomplete="current-password"><p><button class="gold" id="submit" type="submit">Sign in</button></p></form>
+<form id="authForm"><label>Email</label><input id="email" type="email" required autocomplete="email"><label>Password</label><input id="password" type="password" required minlength="8" autocomplete="current-password"><p id="passwordAdvice" class="muted" hidden>For a new account, choose a unique password of at least 12 characters. Do not share it with any SACCO official.</p><p><button class="gold" id="submit" type="submit">Sign in</button></p></form>
 <button class="link" type="button" id="mode">Create account instead</button> · <button class="link" type="button" id="forgot">No password yet? Set one</button><p id="authMsg" role="status" class="muted"></p><p class="muted">New accounts cannot access records until an SACCO administrator verifies and links the registered identity.</p><p><button class="gold" type="button" id="demoOpen">Explore demo without a password</button></p></section>
 <section id="recovery" class="panel auth" hidden>
 <h2>Set or reset your password</h2>
@@ -103,9 +103,15 @@ $('#setPasswordForm').onsubmit=async e=>{
 sb.auth.onAuthStateChange((event,session)=>{
  if(event==='PASSWORD_RECOVERY'&&session){isPasswordRecovery=true;show('newpassword');}
 });
-$('#mode').onclick=()=>{signUp=!signUp;$('#submit').textContent=signUp?'Create account':'Sign in';$('#mode').textContent=signUp?'Already have an account? Sign in':'Create account instead';$('#authMsg').textContent='';};
+$('#mode').onclick=()=>{signUp=!signUp;$('#submit').textContent=signUp?'Create account':'Sign in';
+ $('#mode').textContent=signUp?'Already have an account? Sign in':'Create account instead';
+ $('#password').minLength=signUp?12:8;
+ $('#password').setAttribute('autocomplete',signUp?'new-password':'current-password');
+ $('#passwordAdvice').hidden=!signUp;
+ $('#authMsg').textContent='';};
 $('#authForm').onsubmit=async e=>{e.preventDefault();$('#submit').disabled=true;$('#authMsg').textContent='Connecting...';
  try{const email=$('#email').value.trim(),password=$('#password').value;
+ if(signUp&&password.length<12)throw new Error('New accounts need a unique password of at least 12 characters.');
  const r=signUp?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
  if(r.error)throw r.error;
  $('#authMsg').textContent=signUp?'Account request received. Check your email for confirmation, then sign in.':'Sign-in successful.';
