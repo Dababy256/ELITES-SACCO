@@ -26,12 +26,14 @@ begin
  foreach fn in array array[
    'sacco_private.is_sacco_admin()'::regprocedure,
    'sacco_private.validate_staging_draft(text,jsonb)'::regprocedure,
+   'sacco_private.loan_due_as_of(uuid,date)'::regprocedure,
    'public.sacco_post_approved_draft(uuid)'::regprocedure
  ] loop
   s:=pg_catalog.pg_get_functiondef(fn);
   s:=replace(s,'public.sacco_','sacco_validation_clone.sacco_');
   s:=replace(s,'sacco_private.is_sacco_admin','sacco_validation_clone.is_sacco_admin');
   s:=replace(s,'sacco_private.validate_staging_draft','sacco_validation_clone.validate_staging_draft');
+  s:=replace(s,'sacco_private.loan_due_as_of','sacco_validation_clone.loan_due_as_of');
   s:=replace(s,'sacco_private.posting_control','sacco_validation_clone.posting_control');
   s:=replace(s,'sacco_validation_clone.sacco_post_approved_draft','sacco_validation_clone.post_approved_draft');
   execute s;
@@ -44,6 +46,7 @@ declare
  actor uuid; member_a uuid; member_b uuid;
  loan_draft uuid; loan_id uuid; repayment_draft uuid; repayment_id uuid;
  saving_draft uuid; expense_draft uuid; fee_draft uuid; cash_draft uuid;
+ extra_draft uuid; denied_draft uuid; cap_draft uuid; cap_denied_draft uuid;
  a jsonb; b jsonb; v_count integer; v_errors integer:=0;
 begin
  select auth_user_id into actor from public.sacco_members
@@ -110,11 +113,55 @@ begin
  a:=sacco_validation_clone.post_approved_draft(fee_draft);
  if (select count(*) from sacco_validation_clone.sacco_membership_fees)<>1 then
   raise exception 'Membership fee posting failed';end if;
- if (select count(*) from sacco_validation_clone.sacco_posting_receipts)<>5 then
-  raise exception 'Incorrect number of receipts after five unique drafts';end if;
- if (select count(*) from sacco_validation_clone.sacco_audit_entries where event_kind='NATIVE_POST')<>5 then
+ -- Original source allows exceptions to unpaid-loan policy, but ONLY with explicit approval.
+ insert into sacco_validation_clone.sacco_staging_drafts(created_by,action_kind,payload)
+ values(actor,'LOAN',jsonb_build_object('member_id',member_a,'amount',400000,'entry_on','2026-11-08','note','Unapproved second loan'))
+ returning id into denied_draft;
+ insert into sacco_validation_clone.sacco_staging_reviews(draft_id,decision,reviewed_by,validation_snapshot)
+ values(denied_draft,'APPROVED',actor,'{}'::jsonb);
+ begin
+  perform sacco_validation_clone.post_approved_draft(denied_draft);
+  raise exception 'FAILED: unsettled loan exception was not blocked';
+ exception when others then
+  if sqlerrm not like '%unsettled loan%' then raise; end if;
+ end;
+ insert into sacco_validation_clone.sacco_staging_drafts(created_by,action_kind,payload)
+ values(actor,'LOAN',jsonb_build_object('member_id',member_a,'amount',400000,'entry_on','2026-11-08',
+  'override_unsettled_loan',true,'note','Approved second loan exception'))
+ returning id into extra_draft;
+ insert into sacco_validation_clone.sacco_staging_reviews(draft_id,decision,reviewed_by,review_note,validation_snapshot)
+ values(extra_draft,'APPROVED',actor,'Approved exception after checking unpaid loan and documenting rationale','{}'::jsonb);
+ a:=sacco_validation_clone.post_approved_draft(extra_draft);
+ if (select loan_number from sacco_validation_clone.sacco_loans where legacy_key='native:'||extra_draft::text)<>2 then
+  raise exception 'Sequential numbering for explicitly overridden second loan failed';
+ end if;
+ -- Regular-loan cap: unapproved >1m is blocked; approved exception is recorded.
+ insert into sacco_validation_clone.sacco_staging_drafts(created_by,action_kind,payload)
+ values(actor,'LOAN',jsonb_build_object('member_id',member_b,'amount',1200000,'entry_on','2026-11-08','note','Unapproved cap override'))
+ returning id into cap_denied_draft;
+ insert into sacco_validation_clone.sacco_staging_reviews(draft_id,decision,reviewed_by,validation_snapshot)
+ values(cap_denied_draft,'APPROVED',actor,'{}'::jsonb);
+ begin
+  perform sacco_validation_clone.post_approved_draft(cap_denied_draft);
+  raise exception 'FAILED: regular loan cap exception was not blocked';
+ exception when others then
+  if sqlerrm not like '%Regular loan exceeds%' then raise; end if;
+ end;
+ insert into sacco_validation_clone.sacco_staging_drafts(created_by,action_kind,payload)
+ values(actor,'LOAN',jsonb_build_object('member_id',member_b,'amount',1200000,'entry_on','2026-11-08',
+  'loan_type','REGULAR','override_regular_cap',true,'note','Approved regular loan cap exception'))
+ returning id into cap_draft;
+ insert into sacco_validation_clone.sacco_staging_reviews(draft_id,decision,reviewed_by,review_note,validation_snapshot)
+ values(cap_draft,'APPROVED',actor,'Approved exceptional regular loan above policy cap at committee review','{}'::jsonb);
+ a:=sacco_validation_clone.post_approved_draft(cap_draft);
+ if (select source_record->'policy_override'->>'regular_cap'
+  from sacco_validation_clone.sacco_loans where legacy_key='native:'||cap_draft::text)<>'true' then
+  raise exception 'Approved cap override was not audited in source record';end if;
+ if (select count(*) from sacco_validation_clone.sacco_posting_receipts)<>7 then
+  raise exception 'Incorrect receipt count after seven distinct synthetic postings';end if;
+ if (select count(*) from sacco_validation_clone.sacco_audit_entries where event_kind='NATIVE_POST')<>7 then
   raise exception 'Explicit posting audit trail incomplete';end if;
- raise notice 'PASS: loan issue, same-day repayment, savings, expense, membership fee, 5 unique receipts, replay idempotence, 5 explicit audit rows';
+ raise notice 'PASS: cloned real posting flow, same-day partial payment, safe replay, expenses, savings, fees, unmet-loan override, cap override, seven audited receipts';
  -- All synthetic entries plus cloned schema are discarded below.
 end$test$;
 rollback;
