@@ -82,3 +82,7 @@ Implemented server-side interest parity with the original code (84/84 checks), d
 ## Audited reversal workflow — 8 November 2026
 
 A locked native-transaction reversal engine is now in place. Originals remain stored; cancelled entries no longer affect member balances and are visible in an administrator-only, read-only audit journal. The actual posting and reversal functions passed a fictional, transaction-rolled-back integration regression including same-day repayment recovery, reversal dependency ordering, immutable history and duplicate-request safeguards. **Real financial posting and reversal remain disabled**; separate production browser and security acceptance tests still required. See [native reversal acceptance report](docs/NATIVE_REVERSAL_ACCEPTANCE_2026-11-08.md).
+
+## Security hardening and simultaneous duplicate checks — 8 November 2026
+
+Four previously exposed public SECURITY DEFINER RPCs are now private implementations behind SECURITY INVOKER wrappers. Ordinary-member authorization regression passed. Simultaneous duplicate-submission QA confirmed one posting when references match and one success/one duplicate rejection when references differ but payment details match; both fictional test postings were reversed. Staging signup UI prompts for 12-character passwords. One Auth advisor warning remains: leaked-password protection disabled (requires dashboard change, available on Pro+). No real posting or production changes. See [security and concurrency report](docs/SECURITY_HARDENING_AND_CONCURRENCY_2026-11-08.md).
