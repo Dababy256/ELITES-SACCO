@@ -30,7 +30,12 @@
 <div class="columns"><div class="panel"><h3>Sample monthly collections</h3><div class="bars"><span style="height:50%"></span><span style="height:64%"></span><span style="height:41%"></span><span style="height:88%"></span><span style="height:100%"></span><span style="height:75%"></span></div><p class="muted">Illustrative collection trend — not generated from the SACCO ledger</p></div><div class="panel"><h3>Example savings ledger</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Month</th><th>Contributed</th></tr></thead><tbody><tr><td>Member A</td><td>2026-11</td><td>UGX 150,000</td></tr><tr><td>Member B</td><td>2026-11</td><td>UGX 165,000</td></tr><tr><td>Member C</td><td>2026-10</td><td>UGX 150,000</td></tr></tbody></table></div></div></div>
 <div class="panel"><h3>What the authenticated dashboard contains</h3><p>Financial summary, member-by-member savings and arrears, compound/flat/frozen loan schedules, cashbook, CSV exports and safe transaction drafts. Demo mode does not send requests to the database.</p><button type="button" id="demoSignIn" class="gold">Return to secure login</button></div>
 </section>
-<section id="waiting" class="panel auth" hidden><h2>Account awaiting activation</h2><p>Your sign-in worked, but this account has not been linked to a SACCO member. No financial data was shared.</p><button id="waitingOut">Sign out</button></section>
+<section id="waiting" class="panel auth" hidden><h2>Account awaiting activation</h2>
+<p>Your sign-in worked, but your account has not been linked to a verified SACCO member. No financial data was shared.</p>
+<p class="muted">Please confirm your email and request a membership review. A SACCO administrator must verify your identity independently before access is granted.</p>
+<p id="waitingMsg" role="status" class="muted">Checking your membership status...</p>
+<div class="row"><button class="gold" type="button" id="requestAccess">Request membership review</button><button type="button" id="checkAccess">Check status again</button><button type="button" id="waitingOut">Sign out</button></div>
+</section>
 <section id="portal" hidden>
  <div class="row panel"><div><h2 id="welcome">Member portal</h2><div class="muted" id="identity"></div></div><button id="signOut">Sign out</button></div>
  <div class="alert"><b>TEST SITE / HISTORICAL SNAPSHOT.</b> The live SACCO website still uses JSONBin. Only verified members can view actual Supabase data. Draft approvals do not post to the ledger.</div>
@@ -109,6 +114,35 @@ $('#authForm').onsubmit=async e=>{e.preventDefault();$('#submit').disabled=true;
  finally{$('#submit').disabled=false;}};
 async function logout(){await sb.auth.signOut();book=null;$('#summary').replaceChildren();$('#ledgerBody').replaceChildren();show('auth');$('#password').value='';}
 $('#waitingOut').onclick=logout;$('#signOut').onclick=logout;
+$('#requestAccess').onclick=async()=>{
+ const button=$('#requestAccess');button.disabled=true;$('#waitingMsg').textContent='Submitting review request...';
+ try{
+  const {data,error}=await sb.rpc('sacco_request_access');
+  if(error)throw error;
+  await showWaiting();
+  if(data?.created)$('#waitingMsg').textContent='Membership request submitted. An existing administrator must verify your identity before linking your account.';
+ }catch(e){$('#waitingMsg').className='error';$('#waitingMsg').textContent=e.message||'Could not submit membership request.';}
+ finally{button.disabled=false;}
+};
+$('#checkAccess').onclick=()=>boot().catch(e=>{$('#waitingMsg').className='error';$('#waitingMsg').textContent=e.message||'Could not check membership.';});
+async function showWaiting(){
+ const userResp=await sb.auth.getUser();
+ if(userResp.error||!userResp.data?.user)throw userResp.error||new Error('Please sign in again.');
+ const userId=userResp.data.user.id;
+ const {data,error}=await sb.from('sacco_access_requests').select('status,requested_at,reviewed_at').eq('auth_user_id',userId).maybeSingle();
+ if(error)throw error;
+ show('waiting');
+ $('#waitingMsg').className='muted';
+ const status=data?.status||'NOT_SUBMITTED';
+ const messages={
+  NOT_SUBMITTED:'No membership request submitted yet. Verify your email, then request a review.',
+  PENDING:'Membership request pending. The administrator will verify your identity before approval.',
+  APPROVED:'Your membership request is approved. Select Check status again to load your member records.',
+  REJECTED:'This membership request was rejected. Contact the SACCO administrator using your usual verified channel.'
+ };
+ $('#waitingMsg').textContent=messages[status]||'Status: '+status;
+ $('#requestAccess').hidden=status!=='NOT_SUBMITTED';
+}
 function td(text,cl){const e=document.createElement('td');e.textContent=String(text==null?'':text);if(cl)e.className=cl;return e;}
 function tableRows(id,rows,map){const t=$('#'+id);t.replaceChildren();for(const r of rows){const tr=document.createElement('tr');for(const item of map(r))tr.appendChild(td(item));t.appendChild(tr);}}
 function stat(title,value,sub){const d=document.createElement('div');d.className='stat';const c=document.createElement('small');c.textContent=title;const b=document.createElement('b');b.textContent=value;const s=document.createElement('small');s.textContent=sub||'';d.append(c,b,s);return d;}
@@ -282,6 +316,8 @@ function showTab(next){
   p.append(table(['Member','Membership'],book.members.map(m=>[m.display_name,m.member_role])));
  }else if(next==='reconcile'){
   renderReconciliation(p);
+ }else if(next==='access'){
+  renderMemberAccess(p).catch(e=>p.append(mk('p',e.message||'Could not load access queue','error')));
  }
 }
 async function loadDrafts(p){
@@ -354,7 +390,7 @@ async function loadDrafts(p){
 function initLedger(){
  const nav=$('#ledgerTabs');nav.replaceChildren();
  const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members']];
- if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup']);
+ if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup'],['access','Member access']);
  for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
  showTab('savings');
 }
@@ -470,6 +506,84 @@ function reconcileCompare(snapshot){
  return {groups:[...groups.values()],differences,reportWarnings,
     exportCount:oldRows.length,dbCount:newRows.length,discrepancyCount:differences.reduce((s,x)=>s+x.quantity,0)};
 }
+
+async function renderMemberAccess(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access required.'));return;}
+ p.append(mk('p','Member access is separate from financial postings. Approve only after independently confirming the applicant controls the verified email and is the named SACCO member.','alert'));
+ p.append(mk('p','An account with an administrator role can access more SACCO records. The existing finance-secretary administrator role is preserved, but requires an extra confirmation before linking.','muted'));
+ const {data,error}=await sb.from('sacco_access_requests')
+  .select('id,verified_email,status,requested_at,reviewed_at,target_member_id,verification_note')
+  .order('requested_at',{ascending:false}).limit(100);
+ if(error)throw error;
+ const pending=(data||[]).filter(r=>r.status==='PENDING');
+ p.append(mk('h3','Membership requests · '+pending.length+' pending'));
+ if(!data?.length){p.append(mk('p','No access requests yet. Each member must register with their own email, confirm it, sign in, then select Request membership review.'));return;}
+ const available=book.members.filter(x=>!x.auth_user_id);
+ for(const r of data){
+  const panel=mk('div');panel.style.cssText='border:1px solid #dfd6c6;border-radius:10px;padding:14px;margin:10px 0;background:#fcfaf7';
+  const head=mk('h3',r.verified_email+' · '+r.status);panel.append(head);
+  panel.append(mk('p','Requested '+new Date(r.requested_at).toLocaleString('en-UG'),'muted'));
+  if(r.status!=='PENDING'){
+   const matched=book.members.find(m=>m.id===r.target_member_id);
+   panel.append(mk('p','Decision: '+r.status+(matched?' · '+matched.display_name:'')+(r.reviewed_at?' · '+new Date(r.reviewed_at).toLocaleString('en-UG'):'') ));
+   p.append(panel);continue;
+  }
+  const chooseLabel=mk('label','Match to a verified existing member');
+  const select=mk('select');select.style.cssText='width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;max-width:500px';
+  const blank=mk('option','Select verified SACCO member');blank.value='';select.append(blank);
+  for(const m of available){const opt=mk('option',m.display_name+' · '+(m.member_role==='admin'?'ADMIN':'Member'));opt.value=m.id;select.append(opt);}
+  const noteLabel=mk('label','How did you independently verify this person? (minimum 15 characters)');
+  const note=mk('textarea');note.rows=2;note.maxLength=500;
+  note.placeholder='Example: Confirmed identity by calling the member using our existing SACCO contact records';
+  note.style.cssText='display:block;width:100%;max-width:670px;border:1px solid #ccc;border-radius:8px;padding:9px;margin-bottom:8px';
+  const verifyLine=mk('label');
+  verifyLine.style.cssText='display:flex;align-items:center;gap:8px;max-width:620px;font-size:13px;font-weight:normal';
+  const verified=mk('input');verified.type='checkbox';verified.style.width='auto';
+  verifyLine.append(verified,mk('span','I verified this person independently; the email alone is not proof of membership.'));
+  const adminLine=mk('label');
+  adminLine.style.cssText='display:none;align-items:center;gap:8px;max-width:620px;font-size:13px;font-weight:bold;color:#92400e';
+  const adminCheck=mk('input');adminCheck.type='checkbox';adminCheck.style.width='auto';
+  adminLine.append(adminCheck,mk('span','I explicitly authorize administrator-level access for this account.'));
+  select.onchange=()=>{
+   adminLine.style.display=available.find(m=>m.id===select.value)?.member_role==='admin'?'flex':'none';
+   adminCheck.checked=false;
+  };
+  const actions=mk('div');actions.className='controlrow';
+  const approve=mk('button','Approve verified member');approve.type='button';
+  const reject=mk('button','Reject request');reject.type='button';
+  const result=mk('p');result.setAttribute('role','status');
+  const decide=async decision=>{
+   const target=available.find(m=>m.id===select.value);
+   if(decision==='APPROVED'&&!target){result.className='error';result.textContent='Select the exact member whose identity you verified.';return;}
+   if(note.value.trim().length<15){result.className='error';result.textContent='A verification or rejection note of at least 15 characters is required.';return;}
+   if(decision==='APPROVED'&&!verified.checked){result.className='error';result.textContent='You must confirm independent identity verification.';return;}
+   if(decision==='APPROVED'&&target.member_role==='admin'&&!adminCheck.checked){
+    result.className='error';result.textContent='Administrator access requires a separate explicit confirmation.';return;
+   }
+   const msg=decision==='APPROVED'?
+    'Link '+r.verified_email+' to '+target.display_name+' with '+target.member_role.toUpperCase()+' privileges? This grants access to their existing SACCO records.':
+    'Reject membership request from '+r.verified_email+'?';
+   if(!window.confirm(msg))return;
+   approve.disabled=true;reject.disabled=true;
+   try{
+    const confirmation=decision==='APPROVED'?(target.member_role==='admin'?'AUTHORIZE ADMIN ACCESS':'I VERIFIED THIS PERSON'):'';
+    const {data:response,error:rpcError}=await sb.rpc('sacco_review_access_request',{
+     p_request_id:r.id,p_decision:decision,p_member_id:decision==='APPROVED'?target.id:null,
+     p_verification_note:note.value.trim(),p_confirmation:confirmation
+    });
+    if(rpcError)throw rpcError;
+    result.className='success';result.textContent='Recorded '+response.status+'. The member can refresh the portal and sign in.';
+    p.replaceChildren();await renderMemberAccess(p);
+   }catch(e){result.className='error';result.textContent=e.message||'Could not review member access';approve.disabled=false;reject.disabled=false;}
+  };
+  approve.onclick=()=>decide('APPROVED');
+  reject.onclick=()=>decide('REJECTED');
+  actions.append(approve,reject);
+  panel.append(chooseLabel,select,noteLabel,note,verifyLine,adminLine,actions,result);
+  p.append(panel);
+ }
+}
+
 function renderReconciliation(p){
  if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access is required.'));return;}
  p.append(mk('p','Reconciliation is READ-ONLY. Upload a fresh JSON backup downloaded from the original SACCO website. The file stays in your browser: no file contents, PINs, photos or secrets are sent to Supabase, Vercel or GitHub.','alert'));
@@ -523,9 +637,9 @@ async function boot(){
  const id=sess.data.session.user.id;
  const {data:me,error}=await sb.from('sacco_members').select('id,display_name,legacy_name,member_role,auth_user_id').eq('auth_user_id',id).maybeSingle();
  if(error)throw error;
- if(!me){show('waiting');return;}
+ if(!me){await showWaiting();return;}
  const [members,contributions,loans,repayments,minutes,waivers,financial,fees,settingsRow]=await Promise.all([
-  fetchTable('sacco_members','id,display_name,legacy_name,member_role'),
+  fetchTable('sacco_members','id,display_name,legacy_name,member_role,auth_user_id'),
   fetchTable('sacco_contributions','member_id,amount,contribution_month,paid_on'),
   fetchTable('sacco_loans','id,member_id,principal,issued_on,loan_type,loan_number,frozen_total,manual_status'),
   fetchTable('sacco_repayments','loan_id,member_id,amount,paid_on'),
