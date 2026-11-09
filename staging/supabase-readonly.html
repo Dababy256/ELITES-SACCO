@@ -756,10 +756,41 @@ async function renderFinancialPostingLab(p){
 function renderReadinessChecks(p){
  const admin=book.me.member_role==='admin';
  p.append(mk('h3','Account and release acceptance checks'));
- p.append(mk('p','READ-ONLY. This tests your own authenticated session. The original SACCO website remains authoritative and real posting/reversals remain locked.','alert'));
+ p.append(mk('p','The eight account checks are READ-ONLY. After a complete pass, you may record a member-owned acceptance receipt (non-financial). This is NOT approval to enable real posting or stop the original website.','alert'));
  const run=mk('button','Run read-only checks now');run.className='gold';run.type='button';
  const status=mk('p');status.setAttribute('role','status');status.className='muted';
  const output=mk('div');p.append(run,status,output);
+ const acceptancePanel=mk('div');acceptancePanel.style.cssText='margin:17px 0;padding:12px;border:1px solid #e1dacd;border-radius:9px';
+ p.append(acceptancePanel);
+ const renderAcceptance=async()=>{
+  acceptancePanel.replaceChildren(mk('h3','Recorded member acceptance · 8/8'));
+  const {data,error}=await sb.from('sacco_member_readiness_signoffs')
+   .select('member_id,auth_user_id,checks_passed,checks_total,accepted_at')
+   .eq('checks_version','member-browser-v1')
+   .order('accepted_at',{ascending:false});
+  if(error){acceptancePanel.append(mk('p','Acceptance register unavailable: '+(error.message||'permission error'),'error'));return false;}
+  const records=data||[];
+  const recorded=new Map(records.map(x=>[x.member_id,x]));
+  if(admin){
+   const linked=book.members.filter(m=>!!m.auth_user_id);
+   acceptancePanel.append(mk('p','Signed-off accounts: '+linked.filter(m=>recorded.has(m.id)).length+' of '+linked.length+
+    ' linked. This register records member self-attestations, not independent browser automation.','muted'));
+   acceptancePanel.append(table(['Member','Account','8/8 acceptance'],
+    book.members.map(m=>[
+     m.display_name,
+     m.auth_user_id?'Linked':'Not yet linked',
+     recorded.has(m.id)?'RECORDED · '+new Date(recorded.get(m.id).accepted_at).toLocaleDateString('en-UG'):'Not recorded'
+    ])));
+  }else{
+   const receipt=recorded.get(book.me.id);
+   acceptancePanel.append(mk('p',receipt?
+    'Your 8/8 acceptance is recorded on '+new Date(receipt.accepted_at).toLocaleString('en-UG')+'.':
+    'You have not yet recorded your 8/8 acceptance. Run the checks below and record your result after a full pass.',
+    receipt?'success':'muted'));
+  }
+  return recorded.has(book.me.id);
+ };
+ renderAcceptance().catch(e=>acceptancePanel.append(mk('p',e.message||'Could not display acceptance register','error')));
  const manual=mk('div');manual.style.marginTop='20px';
  manual.append(mk('h3','Still required before any final cutover'));
  for(const task of [
@@ -827,6 +858,25 @@ function renderReadinessChecks(p){
    status.textContent=passing+' of '+checks.length+' account checks passed. Manual cutover work remains outstanding.';
    output.append(table(['Read-only check','Result','Details'],checks.map(x=>[x.name,x.ok?'PASS':'FAIL',x.note])));
    output.append(mk('p','These checks do not confirm that the original website has stopped receiving financial transactions.','muted'));
+   if(passing===8&&checks.length===8){
+    const record=mk('button','Record my successful 8/8 check');record.type='button';record.className='gold';
+    const saveMsg=mk('p');saveMsg.setAttribute('role','status');saveMsg.className='muted';
+    output.append(mk('p','By recording, you attest that YOU personally completed all eight checks in this signed-in browser. This is not a production posting authorization.','muted'),record,saveMsg);
+    record.onclick=async()=>{
+     if(!window.confirm('Confirm you personally ran and passed all 8 checks. This creates a non-financial, member-owned acceptance record.'))return;
+     record.disabled=true;saveMsg.textContent='Recording member acceptance...';
+     const {error}=await sb.from('sacco_member_readiness_signoffs').insert({
+      member_id:book.me.id,auth_user_id:user.id,checks_passed:8,checks_total:8,
+      checks_version:'member-browser-v1',
+      attestation:'I personally ran and passed all eight checks in my signed-in browser.'
+     });
+     if(error && error.code!=='23505'){
+      saveMsg.className='error';saveMsg.textContent=error.message||'Acceptance receipt failed';record.disabled=false;return;
+     }
+     saveMsg.className='success';saveMsg.textContent=error?'Your 8/8 acceptance was already recorded.':'Your 8/8 acceptance receipt has been saved.';
+     await renderAcceptance();
+    };
+   }
   }catch(err){status.className='error';status.textContent='Unable to complete checks: '+(err.message||'Database read failed');}
   finally{run.disabled=false;}
  };
