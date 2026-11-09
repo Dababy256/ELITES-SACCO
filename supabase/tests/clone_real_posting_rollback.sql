@@ -44,10 +44,12 @@ begin
    'sacco_private.is_sacco_admin()'::regprocedure,
    'sacco_private.validate_staging_draft(text,jsonb)'::regprocedure,
    'sacco_private.loan_due_as_of(uuid,date)'::regprocedure,
-   'public.sacco_post_approved_draft(uuid)'::regprocedure,
-   'public.sacco_reverse_posted_entry(uuid,uuid,text,text)'::regprocedure
+   'sacco_private.sacco_post_approved_draft(uuid)'::regprocedure,
+   'sacco_private.sacco_reverse_posted_entry(uuid,uuid,text,text)'::regprocedure
  ] loop
   s:=pg_catalog.pg_get_functiondef(fn);
+  s:=replace(s,'FUNCTION sacco_private.sacco_post_approved_draft','FUNCTION sacco_validation_clone.post_approved_draft');
+  s:=replace(s,'FUNCTION sacco_private.sacco_reverse_posted_entry','FUNCTION sacco_validation_clone.sacco_reverse_posted_entry');
   s:=replace(s,'public.sacco_','sacco_validation_clone.sacco_');
   s:=replace(s,'sacco_private.is_sacco_admin','sacco_validation_clone.is_sacco_admin');
   s:=replace(s,'sacco_private.validate_staging_draft','sacco_validation_clone.validate_staging_draft');
