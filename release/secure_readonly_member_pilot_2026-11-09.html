@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Elites SACCO — Read-Only Member Pilot</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root{--gold:#b08d57;--cream:#f3e9d2;--black:#0d0d0d}*{box-sizing:border-box}body{background:#f0ebe0;color:#1d1d1d;margin:0;font-family:Arial,Helvetica,sans-serif}.mast{background:#111;color:var(--gold);padding:22px 5vw;border-bottom:3px solid var(--gold);display:flex;justify-content:space-between;align-items:center;gap:15px}.mast h1{font-size:23px;font-family:Georgia,serif;margin:0}.mast small{color:#999;display:block;margin-top:6px}.pill{color:var(--gold);border:1px solid #544328;border-radius:20px;padding:5px 11px;font-size:11px;font-weight:bold}.wrap{width:min(1100px,94vw);margin:25px auto}.panel{background:white;border-radius:14px;padding:22px;box-shadow:0 2px 12px #0001;margin-bottom:16px}.auth{max-width:480px;margin:9vh auto}.muted{color:#777;font-size:13px}h2{font-family:Georgia,serif;margin:4px 0 16px}h3{margin:8px 0 14px;font-size:15px}label{display:block;font-size:12px;font-weight:bold;color:#666;margin:14px 0 5px}input{font:inherit;padding:13px;width:100%;border:1px solid #ccc;border-radius:9px}button{border:0;background:#111;color:white;font-size:13px;font-weight:700;padding:12px 16px;border-radius:9px;cursor:pointer}button:hover{background:#333}button.gold{background:var(--gold);color:#111}button.link{background:transparent;color:#74552d;text-decoration:underline;padding:7px 0}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:12px}.stat{border:1px solid #eee;border-radius:11px;padding:16px;background:#faf9f5}.stat b{font-size:20px;display:block;margin-top:6px}.stat small{color:#666}.tablewrap{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:13px}th{background:#181818;color:var(--gold);text-align:left;padding:11px}td{border-bottom:1px solid #eee;padding:10px}td.num{text-align:right}.error{color:#aa2626}.success{color:#28713a}.columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:700px){.columns{grid-template-columns:1fr}.mast{align-items:flex-start}.mast h1{font-size:19px}}[hidden]{display:none!important}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;border-bottom:1px solid #ddd;padding-bottom:14px}.tabs button{background:#eee9df;color:#1e1a16}.tabs button[aria-selected="true"]{background:#111;color:#e5bc77}.alert{background:#fff5dd;border-left:4px solid #b08d57;padding:12px 15px;font-size:13px;border-radius:6px;margin-bottom:15px}.controlrow{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:12px 0}.controlrow label{margin:0 0 6px}.controlrow .control{flex:1;min-width:180px}.controlrow select,.draft input,.draft select,.draft textarea{font:inherit;border:1px solid #c5bcaf;background:#fff;padding:10px;width:100%;border-radius:8px}.draft{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.draft textarea{resize:vertical;min-height:80px}.draft .wide{grid-column:1/-1}.tablewrap table{min-width:560px}.demo-hero{border-radius:12px;padding:17px;background:#151515;color:#e8d0aa}.demo-hero h2{color:#e8d0aa}.bars{height:110px;display:flex;align-items:end;gap:12px;margin-top:20px}.bars span{display:block;width:25px;background:#b08d57;border-radius:5px 5px 0 0}.demo-note{border:2px dashed #b08d57;padding:12px;font-weight:bold;font-size:12px;border-radius:8px}
+</style></head><body>
+<header class="mast"><div><h1>ELITES SACCO</h1><small>Let's Prosper · Verified membership and secure ledger</small></div><span class="pill">READ-ONLY MEMBER PILOT · REAL POSTING LOCKED</span></header>
+<main class="wrap">
+<section id="auth" class="panel auth"><h2>Member sign in</h2><p class="muted">Use a Supabase Auth account. Historical four-digit PINs will not work here.</p>
+<form id="authForm"><label>Email</label><input id="email" type="email" required autocomplete="email"><label>Password</label><input id="password" type="password" required minlength="8" autocomplete="current-password"><p id="passwordAdvice" class="muted" hidden>For a new account, choose a unique password of at least 12 characters. Do not share it with any SACCO official.</p><p><button class="gold" id="submit" type="submit">Sign in</button></p></form>
+<button class="link" type="button" id="mode">Create account instead</button> · <button class="link" type="button" id="forgot">No password yet? Set one</button><p id="authMsg" role="status" class="muted"></p><p class="muted">New accounts cannot access records until an SACCO administrator verifies and links the registered identity.</p><p><button class="gold" type="button" id="demoOpen">Explore demo without a password</button></p></section>
+<section id="recovery" class="panel auth" hidden>
+<h2>Set or reset your password</h2>
+<p class="muted">Enter your verified email. We will send a private password-recovery link. Do not share that link or your password.</p>
+<form id="recoveryForm"><label for="recoveryEmail">Email address</label><input id="recoveryEmail" type="email" required autocomplete="email"><p><button class="gold" id="sendRecovery" type="submit">Email password link</button></p></form>
+<p id="recoveryMsg" class="muted" role="status"></p>
+<button class="link" id="backLogin" type="button">Back to sign in</button></section>
+<section id="newpassword" class="panel auth" hidden>
+<h2>Choose your new password</h2>
+<p class="muted">You are following a secure recovery link. Enter a unique password of at least 12 characters.</p>
+<form id="setPasswordForm"><label for="newPassword">New password</label><input id="newPassword" type="password" required minlength="12" autocomplete="new-password"><label for="confirmPassword">Confirm password</label><input id="confirmPassword" type="password" minlength="12" required autocomplete="new-password"><p><button class="gold" id="savePassword" type="submit">Save password</button></p></form>
+<p id="setPasswordMsg" role="status" class="muted"></p></section>
+<section id="demo" hidden>
+<div class="demo-hero"><div class="row"><div><h2>Elites SACCO · Interactive design preview</h2><p style="color:#bbac96">This sample dashboard works without any account or recovery email.</p></div><button type="button" id="demoClose">Back to sign in</button></div></div>
+<div class="panel"><p class="demo-note">DEMO DATA ONLY — all names and amounts on this screen are fictitious. The five real members' records remain protected by Supabase login.</p>
+<div class="cards"><div class="stat"><small>Example savings</small><b>UGX 15,240,000</b><small>Sample total</small></div><div class="stat"><small>Example loan portfolio</small><b>UGX 4,760,000</b><small>Sample outstanding</small></div><div class="stat"><small>Example unit trust</small><b>UGX 7,500,000</b><small>Sample investment</small></div><div class="stat"><small>Sample members</small><b>5</b><small>Not actual member records</small></div></div></div>
+<div class="columns"><div class="panel"><h3>Sample monthly collections</h3><div class="bars"><span style="height:50%"></span><span style="height:64%"></span><span style="height:41%"></span><span style="height:88%"></span><span style="height:100%"></span><span style="height:75%"></span></div><p class="muted">Illustrative collection trend — not generated from the SACCO ledger</p></div><div class="panel"><h3>Example savings ledger</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Month</th><th>Contributed</th></tr></thead><tbody><tr><td>Member A</td><td>2026-11</td><td>UGX 150,000</td></tr><tr><td>Member B</td><td>2026-11</td><td>UGX 165,000</td></tr><tr><td>Member C</td><td>2026-10</td><td>UGX 150,000</td></tr></tbody></table></div></div></div>
+<div class="panel"><h3>What the authenticated dashboard contains</h3><p>Financial summary, member-by-member savings and arrears, compound/flat/frozen loan schedules, cashbook, CSV exports and safe transaction drafts. Demo mode does not send requests to the database.</p><button type="button" id="demoSignIn" class="gold">Return to secure login</button></div>
+</section>
+<section id="waiting" class="panel auth" hidden><h2>Account awaiting activation</h2>
+<p>Your sign-in worked, but your account has not been linked to a verified SACCO member. No financial data was shared.</p>
+<p class="muted">Please confirm your email and request a membership review. A SACCO administrator must verify your identity independently before access is granted.</p>
+<p id="waitingMsg" role="status" class="muted">Checking your membership status...</p>
+<div class="row"><button class="gold" type="button" id="requestAccess">Request membership review</button><button type="button" id="checkAccess">Check status again</button><button type="button" id="waitingOut">Sign out</button></div>
+</section>
+<section id="portal" hidden>
+ <div class="row panel"><img id="saccoLogo" alt="The Elites SACCO original logo" hidden style="max-width:72px;max-height:72px;object-fit:contain;border-radius:8px"><div style="flex:1"><h2 id="welcome">Member portal</h2><div class="muted" id="identity"></div></div><img id="memberPhoto" alt="Your profile photograph" hidden style="width:55px;height:55px;object-fit:cover;border-radius:50%"><button id="signOut">Sign out</button></div>
+ <div class="alert"><b>READ-ONLY MEMBER PILOT.</b> Historical savings, loans and cashbook records are available for verification by approved members. <b>Do not treat this as the live payment system.</b> Financial posting and reversal remain blocked at the database. The original website has not been retired. Administrator draft review does not move money.</div>
+<div class="cards" id="summary"></div>
+<div class="panel"><h3>Detailed books of accounts</h3><div id="ledgerTabs" class="tabs" role="tablist"></div><div id="ledgerBody" role="tabpanel"></div></div>
+ <div class="columns">
+  <div class="panel"><h3>Recent contributions</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Month</th><th>Paid on</th><th>UGX</th></tr></thead><tbody id="contribRows"></tbody></table></div></div>
+  <div class="panel"><h3>Recent loans</h3><div class="tablewrap"><table><thead><tr><th>Member</th><th>Issued</th><th>Interest</th><th>Status</th><th>Outstanding UGX</th></tr></thead><tbody id="loanRows"></tbody></table></div></div>
+ </div>
+ <div class="panel"><h3>Meeting minutes</h3><div id="minutes" class="muted"></div></div>
+ <p class="muted">Financial data is imported from the 6 November 2026 backup. Outstanding loans and monthly arrears are computed using the original SACCO rules as of today's date. Figures do not represent available cash. All financial entries are drafts only; the original live website remains separate.</p>
+</section>
+</main>
+<script>
+const demoShow=which=>{
+for(const id of ['auth','recovery','newpassword','waiting','portal','demo']){
+ const el=document.getElementById(id);if(el)el.hidden=id!==which;
+}
+};
+document.getElementById('demoOpen').addEventListener('click',()=>demoShow('demo'));
+document.getElementById('demoClose').addEventListener('click',()=>demoShow('auth'));
+document.getElementById('demoSignIn').addEventListener('click',()=>demoShow('auth'));
+</script>
+<script type="module">
+import{createClient}from'https://esm.sh/@supabase/supabase-js@2.119.0?bundle';
+const sb=createClient('https://vcdswucekgrnonffvrva.supabase.co',"sb_publishable_uqkf_VrmW8J45zm-trWqLQ_Nnsf9S01");
+const $=q=>document.querySelector(q),fmt=n=>'UGX '+Number(n||0).toLocaleString('en-UG'),date=x=>x||'—';
+const show=id=>{for(const q of ['auth','recovery','newpassword','waiting','portal','demo'])$('#'+q).hidden=q!==id;};
+let signUp=false;
+let isPasswordRecovery=false;
+const recoveryLink=/(?:^|[&?#])type=recovery(?:&|$)/.test(location.hash);
+const recoveryTarget='https://elites-sacco-auth-preview.vercel.app/';
+$('#forgot').onclick=()=>{$('#recoveryEmail').value=$('#email').value.trim();$('#recoveryMsg').textContent='';show('recovery');};
+$('#backLogin').onclick=()=>show('auth');
+$('#recoveryForm').onsubmit=async e=>{
+ e.preventDefault();
+ $('#sendRecovery').disabled=true;$('#recoveryMsg').textContent='Sending password link...';
+ try{
+  const {error}=await sb.auth.resetPasswordForEmail($('#recoveryEmail').value.trim(),{redirectTo:recoveryTarget});
+  if(error)throw error;
+  $('#recoveryMsg').className='muted';$('#recoveryMsg').textContent='If this account exists, a password link has been sent. Check your inbox and spam folder.';
+ }catch(err){$('#recoveryMsg').className='error';$('#recoveryMsg').textContent=err.message||'Could not send recovery email';}
+ finally{$('#sendRecovery').disabled=false;}
+};
+$('#setPasswordForm').onsubmit=async e=>{
+ e.preventDefault();
+ const p=$('#newPassword').value;
+ if(p!==$('#confirmPassword').value){$('#setPasswordMsg').className='error';$('#setPasswordMsg').textContent='Passwords do not match.';return;}
+ $('#savePassword').disabled=true;
+ try{
+  const {data:{session},error:sessionError}=await sb.auth.getSession();
+  if(sessionError||!session)throw new Error('The recovery link has expired. Request a new link.');
+  if(!isPasswordRecovery&&!recoveryLink)throw new Error('Start with the password recovery link sent to your email.');
+  const {error}=await sb.auth.updateUser({password:p});
+  if(error)throw error;
+  isPasswordRecovery=false;
+  $('#newPassword').value='';$('#confirmPassword').value='';
+  history.replaceState(null,'',location.pathname);
+  await sb.auth.signOut();
+  $('#authMsg').className='success';$('#authMsg').textContent='Password saved. Sign in with your new password.';
+  show('auth');
+ }catch(err){$('#setPasswordMsg').className='error';$('#setPasswordMsg').textContent=err.message||'Could not update password';}
+ finally{$('#savePassword').disabled=false;}
+};
+sb.auth.onAuthStateChange((event,session)=>{
+ if(event==='PASSWORD_RECOVERY'&&session){isPasswordRecovery=true;show('newpassword');}
+});
+$('#mode').onclick=()=>{signUp=!signUp;$('#submit').textContent=signUp?'Create account':'Sign in';
+ $('#mode').textContent=signUp?'Already have an account? Sign in':'Create account instead';
+ $('#password').minLength=signUp?12:8;
+ $('#password').setAttribute('autocomplete',signUp?'new-password':'current-password');
+ $('#passwordAdvice').hidden=!signUp;
+ $('#authMsg').textContent='';};
+$('#authForm').onsubmit=async e=>{e.preventDefault();$('#submit').disabled=true;$('#authMsg').textContent='Connecting...';
+ try{const email=$('#email').value.trim(),password=$('#password').value;
+ if(signUp&&password.length<12)throw new Error('New accounts need a unique password of at least 12 characters.');
+ const r=signUp?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
+ if(r.error)throw r.error;
+ $('#authMsg').textContent=signUp?'Account request received. Check your email for confirmation, then sign in.':'Sign-in successful.';
+ if(!signUp)await boot();
+ }catch(err){$('#authMsg').className='error';$('#authMsg').textContent=err.message||'Authentication failed';}
+ finally{$('#submit').disabled=false;}};
+async function logout(){await sb.auth.signOut();book=null;
+ for(const id of ['saccoLogo','memberPhoto']){const img=$('#'+id);img.hidden=true;img.removeAttribute('src');}
+ $('#summary').replaceChildren();$('#ledgerBody').replaceChildren();show('auth');$('#password').value='';}
+$('#waitingOut').onclick=logout;$('#signOut').onclick=logout;
+$('#requestAccess').onclick=async()=>{
+ const button=$('#requestAccess');button.disabled=true;$('#waitingMsg').textContent='Submitting review request...';
+ try{
+  const {data,error}=await sb.rpc('sacco_request_access');
+  if(error)throw error;
+  await showWaiting();
+  if(data?.created)$('#waitingMsg').textContent='Membership request submitted. An existing administrator must verify your identity before linking your account.';
+ }catch(e){$('#waitingMsg').className='error';$('#waitingMsg').textContent=e.message||'Could not submit membership request.';}
+ finally{button.disabled=false;}
+};
+$('#checkAccess').onclick=()=>boot().catch(e=>{$('#waitingMsg').className='error';$('#waitingMsg').textContent=e.message||'Could not check membership.';});
+async function showWaiting(){
+ const userResp=await sb.auth.getUser();
+ if(userResp.error||!userResp.data?.user)throw userResp.error||new Error('Please sign in again.');
+ const userId=userResp.data.user.id;
+ const {data,error}=await sb.from('sacco_access_requests').select('status,requested_at,reviewed_at').eq('auth_user_id',userId).maybeSingle();
+ if(error)throw error;
+ show('waiting');
+ $('#waitingMsg').className='muted';
+ const status=data?.status||'NOT_SUBMITTED';
+ const messages={
+  NOT_SUBMITTED:'No membership request submitted yet. Verify your email, then request a review.',
+  PENDING:'Membership request pending. The administrator will verify your identity before approval.',
+  APPROVED:'Your membership request is approved. Select Check status again to load your member records.',
+  REJECTED:'This membership request was rejected. Contact the SACCO administrator using your usual verified channel.'
+ };
+ $('#waitingMsg').textContent=messages[status]||'Status: '+status;
+ $('#requestAccess').hidden=status!=='NOT_SUBMITTED';
+}
+function td(text,cl){const e=document.createElement('td');e.textContent=String(text==null?'':text);if(cl)e.className=cl;return e;}
+function tableRows(id,rows,map){const t=$('#'+id);t.replaceChildren();for(const r of rows){const tr=document.createElement('tr');for(const item of map(r))tr.appendChild(td(item));t.appendChild(tr);}}
+function stat(title,value,sub){const d=document.createElement('div');d.className='stat';const c=document.createElement('small');c.textContent=title;const b=document.createElement('b');b.textContent=value;const s=document.createElement('small');s.textContent=sub||'';d.append(c,b,s);return d;}
+async function fetchTable(name,cols){
+ const activeFinancialTables=new Set([
+ 'sacco_contributions','sacco_loans','sacco_repayments','sacco_financial_entries',
+ 'sacco_membership_fees','sacco_waivers'
+ ]);
+ const query=sb.from(name).select(cols);
+ const {data,error}=await (activeFinancialTables.has(name)?query.is('voided_at',null):query);
+ if(error)throw error;
+ return data||[];
+}
+
+const pg=n=>Number(n||0);
+const ugx=n=>'UGX '+pg(n).toLocaleString('en-UG',{maximumFractionDigits:0});
+const formatMoney=n=>pg(n).toLocaleString('en-UG',{maximumFractionDigits:2});
+function jubaToday(){
+ const v=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:'Africa/Juba',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));
+ return v.year+'-'+v.month+'-'+v.day;
+}
+let book=null,view='savings';
+function targetFor(month,settings){
+ const override=settings?.targetOverrides?.[month];
+ if(override!=null&&pg(override)>0)return pg(override);
+ if(month>='2024-02'&&month<='2024-07')return 80000;
+ if(month>='2024-08'&&month<='2026-06')return 100000;
+ return pg(settings?.monthlyTarget)||150000;
+}
+function allMonths(end){
+ const result=[];for(let y=2024,m=2; y<Number(end.slice(0,4))||y===Number(end.slice(0,4))&&m<=Number(end.slice(5,7));){
+ result.push(y+'-'+String(m).padStart(2,'0'));m++;if(m>12){m=1;y++;}
+ if(result.length>100)break;
+ }return result;
+}
+function savingsSummary(){
+ const months=allMonths(jubaToday().slice(0,7));let output=[];
+ for(const m of book.members)for(const month of months){
+  const paid=book.contributions.filter(x=>x.member_id===m.id&&x.contribution_month?.slice(0,7)===month).reduce((s,x)=>s+pg(x.amount),0);
+  const due=targetFor(month,book.settings),waived=book.waivers.some(w=>w.member_id===m.id&&w.contribution_month?.slice(0,7)===month);
+  const day=Number(jubaToday().slice(8));
+  const fine=paid>=due||waived?0:(month!==jubaToday().slice(0,7)?15000:day>=10?Math.min(15000,5000*(Math.floor((day-10)/7)+1)):0);
+  output.push({id:m.id,name:m.display_name,month,paid,due,arrears:Math.max(0,due-paid),fine});
+ }return output;
+}
+function originalSourceFinancialPosition(b){
+ // Algebraic equivalent of original getGlobalStats() using only active ledger rows.
+ const total=arr=>(arr||[]).reduce((sum,row)=>sum+pg(row.amount),0);
+ const savings=total(b.contributions),fees=total(b.fees);
+ const cashIn=(b.financial||[]).filter(x=>x.entry_kind==='cash_in').reduce((sum,x)=>sum+pg(x.amount),0);
+ const expenses=(b.financial||[]).filter(x=>x.entry_kind==='expense').reduce((sum,x)=>sum+pg(x.amount),0);
+ const investments=(b.financial||[]).filter(x=>x.entry_kind==='investment').reduce((sum,x)=>sum+pg(x.amount),0);
+ const paidByLoan=new Map();
+ for(const r of b.repayments||[])paidByLoan.set(r.loan_id,(paidByLoan.get(r.loan_id)||0)+pg(r.amount));
+ let issued=0,interestCollected=0,activeLoanPrincipal=0;
+ for(const l of b.loans||[]){
+  const principal=pg(l.principal),repaid=paidByLoan.get(l.id)||0;
+  const principalPaid=Math.min(repaid,principal);
+  issued+=principal;
+  interestCollected+=Math.max(0,repaid-principalPaid);
+  activeLoanPrincipal+=Math.max(0,principal-principalPaid);
+ }
+ const repayments=total(b.repayments);
+ const netCash=savings+fees+cashIn+interestCollected-expenses-investments-activeLoanPrincipal;
+ const directCash=savings+fees+cashIn+repayments-issued-expenses-investments;
+ return {savings,fees,cashIn,expenses,investments,issued,repayments,
+  interestCollected,activeLoanPrincipal,netCash,directCash,
+  consistent:Math.abs(netCash-directCash)<0.01};
+}
+
+function loanBalance(loan,repayments){
+ const principal=pg(loan.principal),start=new Date(loan.issued_on+'T00:00:00'),at=new Date(jubaToday()+'T23:59:59');
+ const rp=repayments.filter(x=>x.loan_id===loan.id).map(x=>({date:new Date(x.paid_on+'T00:00:00'),amount:pg(x.amount)})).sort((a,b)=>a.date-b.date);
+ const repaid=rp.reduce((s,r)=>s+r.amount,0);
+ const make=(owed,rule)=>({...loan,paid:repaid,balance:Math.max(0,Math.round(owed-repaid)),rule});
+ if(loan.manual_status==='COMPLETE')return make(repaid,'MANUAL');
+ if(pg(loan.frozen_total)>0)return make(pg(loan.frozen_total),'FROZEN');
+ const anniversary=n=>{const a=new Date(start);a.setMonth(a.getMonth()+n);if(a.getDate()!==start.getDate())a.setDate(0);return a;};
+ if(loan.issued_on>='2026-07-01'){
+  const monthAt=d=>{let count=1;for(let n=1;n<120;n++){const a=anniversary(n);a.setDate(a.getDate()+1);if(a>d)break;count++;}return count;};
+  let cumulative=0,cleared=null;
+  for(const r of rp){cumulative+=r.amount;const n=monthAt(r.date);if(cumulative>=principal*(1+.05*n)-.5){cleared=n;break;}}
+  const months=cleared??monthAt(at);
+  return make(principal*(1+.05*months),'FLAT');
+ }
+ let balance=principal*1.05;
+ for(const r of rp.filter(x=>x.date<=start))balance-=r.amount;
+ if(balance<=0)return make(repaid,'COMPOUND');
+ let n=1;
+ for(;n<120;n++){
+  const a=anniversary(n);if(a>at)break;
+  const prior=anniversary(n-1);
+  for(const r of rp.filter(x=>x.date>prior&&x.date<=a))balance-=r.amount;
+  if(balance<=0){balance=0;break;}
+  balance*=1.05;
+ }
+ if(balance>0){const prior=anniversary(n-1);for(const r of rp.filter(x=>x.date>prior&&x.date<=at))balance-=r.amount;}
+ return make(Math.max(0,balance)+repaid,'COMPOUND');
+}
+const mk=(t,str,klass)=>{const e=document.createElement(t);if(str!==undefined)e.textContent=String(str);if(klass)e.className=klass;return e;};
+function table(cols,records){
+ const wrap=mk('div',undefined,'tablewrap'),t=mk('table'),tr=mk('tr');
+ for(const h of cols)tr.append(mk('th',h));
+ const thead=mk('thead');thead.append(tr);t.append(thead);
+ const tbody=mk('tbody');
+ for(const rec of records){const row=mk('tr');for(const value of rec)row.append(mk('td',value));tbody.append(row);}
+ if(!records.length){const row=mk('tr'),cell=mk('td','No records');cell.colSpan=cols.length;row.append(cell);tbody.append(row);}
+ t.append(tbody);wrap.append(t);return wrap;
+}
+function csv(name,cols,records){
+ const cell=x=>{let t=String(x==null?'':x);if(/^[\s]*[=+\-@\t\r]/.test(t))t="'"+t;return '"'+t.replaceAll('"','""')+'"';};
+ const content='\uFEFF'+[cols,...records].map(row=>row.map(cell).join(',')).join('\r\n');
+ const url=URL.createObjectURL(new Blob([content],{type:'text/csv;charset=utf-8;'})),a=mk('a');
+ a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),6000);
+}
+const displayMember=id=>book.members.find(m=>m.id===id)?.display_name||'Member';
+function memberFilter(){
+ const sel=mk('select');const choices=[['','All members'],...book.members.map(m=>[m.id,m.display_name])];
+ for(const [id,label] of choices){const o=mk('option',label);o.value=id;sel.append(o);}
+ sel.value=book.me.member_role==='admin'?'':book.me.id;sel.disabled=book.me.member_role!=='admin';return sel;
+}
+function wrapFilter(sel){
+ const row=mk('div',undefined,'controlrow'),div=mk('div',undefined,'control');div.append(mk('label','Member'),sel);row.append(div);return row;
+}
+function showTab(next){
+ view=next;
+ for(const b of document.querySelectorAll('#ledgerTabs button'))b.setAttribute('aria-selected',String(b.dataset.tab===next));
+ const p=$('#ledgerBody');p.replaceChildren();
+ const admin=book.me.member_role==='admin';
+ if(next==='savings'){
+  const chosen=memberFilter(),bar=wrapFilter(chosen),download=mk('button','Export CSV');bar.append(download);p.append(bar);
+  const render=()=>{
+   const relevant=savingsSummary().filter(x=>!chosen.value||x.id===chosen.value);
+   relevant.sort((a,b)=>b.month.localeCompare(a.month)||a.name.localeCompare(b.name));
+   const rows=relevant.map(x=>[x.name,x.month,formatMoney(x.paid),formatMoney(x.due),formatMoney(x.arrears),formatMoney(x.fine)]);
+   const amounts=relevant.reduce((s,x)=>({paid:s.paid+x.paid,arrears:s.arrears+x.arrears,fine:s.fine+x.fine}),{paid:0,arrears:0,fine:0});
+   let output=$('#ledgerContent');if(!output){output=mk('div');output.id='ledgerContent';p.append(output);}
+   output.replaceChildren(mk('p','Savings '+ugx(amounts.paid)+' · Contribution arrears '+ugx(amounts.arrears)+' · Estimated late fees '+ugx(amounts.fine),'alert'),table(['Member','Month','Paid UGX','Target UGX','Arrears UGX','Late fees UGX'],rows));
+   download.onclick=()=>csv('elites-sacco-savings.csv',['Member','Month','Paid UGX','Target UGX','Arrears UGX','Late fees UGX'],rows);
+  };chosen.onchange=render;render();
+ }else if(next==='loans'){
+  const chosen=memberFilter(),bar=wrapFilter(chosen),download=mk('button','Export CSV');bar.append(download);p.append(bar);
+  const render=()=>{
+   const loans=book.loans.filter(l=>!chosen.value||l.member_id===chosen.value).map(l=>loanBalance(l,book.repayments));
+   loans.sort((a,b)=>b.issued_on.localeCompare(a.issued_on));
+   const rows=loans.map(l=>[displayMember(l.member_id),'#'+l.loan_number,l.issued_on,l.loan_type,formatMoney(l.principal),formatMoney(l.paid),formatMoney(l.balance),l.rule]);
+   let output=$('#ledgerContent');if(!output){output=mk('div');output.id='ledgerContent';p.append(output);}
+   const totalIssued=loans.reduce((s,l)=>s+pg(l.principal),0),totalRepaid=loans.reduce((s,l)=>s+pg(l.paid),0);
+   const adminExtras=admin?' · Principal issued: '+ugx(totalIssued)+' · Repayments received: '+ugx(totalRepaid):'';
+   output.replaceChildren(mk('p','Outstanding loan balances (including interest): '+ugx(loans.reduce((s,l)=>s+l.balance,0))+' · Active loans: '+loans.filter(l=>l.balance>0).length+adminExtras,'alert'),table(['Member','Loan','Issued','Type','Principal UGX','Repaid UGX','Due UGX','Rule'],rows));
+   download.onclick=()=>csv('elites-sacco-loans.csv',['Member','Loan','Issued','Type','Principal UGX','Repaid UGX','Due UGX','Rule'],rows);
+  };chosen.onchange=render;render();
+ }else if(next==='cashbook'){
+  if(!admin){p.append(mk('p','Cashbook requires administrator permissions.'));return;}
+  const f=originalSourceFinancialPosition(book);
+  p.append(mk('h3','All-time SACCO financial position'));
+  const reportCards=mk('div',undefined,'cards');
+  reportCards.append(
+   stat('Ledger net cash position',ugx(f.netCash),'Original SACCO formula; not bank-confirmed'),
+   stat('Interest actually collected',ugx(f.interestCollected),'Total repayments above principal recovered'),
+   stat('Loan principal circulating',ugx(f.activeLoanPrincipal),'Principal issued less principal recovered'),
+   stat('Recorded membership fees',ugx(f.fees),'Savings and interest tracked separately')
+  );
+  p.append(reportCards);
+  p.append(mk('p','Original source formula: (Gross Savings + Membership Fees + Interest Collected + Cash In) − (Expenses + Active Loan Principal + Investments). This is the imported ledger position, NOT a confirmation of current cash held or bank balance.','muted'));
+  if(!f.consistent)p.append(mk('p','RECONCILIATION WARNING: source formula and direct cashflow do not agree. Check orphaned repayments before cutover.','error'));
+  const breakdown=[
+   ['Member contributions',f.savings,'Inflow'],
+   ['Loan repayments',f.repayments,'Inflow'],
+   ['Other cash received',f.cashIn,'Inflow'],
+   ['Membership fees',f.fees,'Inflow'],
+   ['Loan disbursements',f.issued,'Outflow'],
+   ['Expenses',f.expenses,'Outflow'],
+   ['Investments',f.investments,'Outflow']
+  ];
+  p.append(table(['Cashflow category','Amount UGX','Direction'],
+   breakdown.map(x=>[x[0],formatMoney(x[1]),x[2]])));
+  const summary=mk('p','Historical net cash: '+ugx(f.netCash)+' · Source-formula cross-check: '+(f.consistent?'PASS':'FAIL'),'alert');p.append(summary);
+  const csvSummary=mk('button','Export financial position CSV');csvSummary.type='button';
+  csvSummary.onclick=()=>csv('elites-sacco-financial-position.csv',
+    ['Cashflow category','Amount UGX','Direction'],
+    [...breakdown.map(x=>[x[0],String(x[1]),x[2]]),['NET CASH',String(f.netCash),'Ledger estimate']]);
+  p.append(csvSummary,mk('h3','Other cashbook transactions'));
+  const entries=book.financial.slice().sort((a,b)=>(b.entry_on||'').localeCompare(a.entry_on||''));
+  const rows=entries.map(x=>[x.entry_on,x.entry_kind,x.narrative||'',formatMoney(x.amount)]);
+  p.append(table(['Date','Category','Reason','Amount UGX'],rows));
+  const exportButton=mk('button','Export other cashbook entries CSV');exportButton.type='button';p.append(exportButton);
+  exportButton.onclick=()=>csv('elites-sacco-cashbook.csv',['Date','Category','Reason','Amount UGX'],rows);
+ }else if(next==='drafts'){
+  if(!admin){p.append(mk('p','Only administrators can prepare test drafts.'));return;}
+  p.append(mk('p','REVIEW ONLY. Saving or approving a draft does not post any financial entry. After a separately authorized cutover, approved NEW drafts can be posted one at a time through Launch controls.','alert'));
+  const form=mk('form',undefined,'draft');
+  function select(choices){const e=mk('select');for(const [v,n] of choices){const o=mk('option',n);o.value=v;e.append(o);}return e;}
+  function field(label,input,full){const block=mk('div');if(full)block.style.gridColumn='1/-1';block.append(mk('label',label),input);form.append(block);return input;}
+  const kind=field('Transaction type',select([['CONTRIBUTION','Contribution'],['LOAN','Loan disbursement'],['REPAYMENT','Loan repayment'],['EXPENSE','Expense'],['INVESTMENT','Investment'],['CASH_IN','Cash received'],['MEMBERSHIP_FEE','Membership fee'],['WAIVER','Late-fee waiver']]));
+  const member=field('Member',select(book.members.map(m=>[m.id,m.display_name])));
+  const date=mk('input');date.type='date';date.value=jubaToday();field('Entry date',date);
+  const month=mk('input');month.type='month';month.value=jubaToday().slice(0,7);field('Contribution month',month);
+  const amount=mk('input');amount.type='number';amount.min='0';amount.step='0.01';amount.required=true;field('Amount (UGX)',amount);
+  const loan=field('Linked loan (repayments)',select([['','Select a loan']]));
+  const loanType=field('Loan type (new loans)',select([['REGULAR','Regular loan'],['DEVELOPMENTAL','Developmental loan']]));
+  const capLabel=mk('label');capLabel.style.cssText='display:flex;gap:7px;align-items:center;font-size:12px;font-weight:normal';
+  const capOverride=mk('input');capOverride.type='checkbox';capOverride.style.width='auto';
+  capLabel.append(capOverride,mk('span','Request exception to the regular-loan UGX 1,000,000 limit'));
+  const capBox=mk('div');capBox.append(capLabel);form.append(capBox);
+  const unsettledLabel=mk('label');unsettledLabel.style.cssText='display:flex;gap:7px;align-items:center;font-size:12px;font-weight:normal';
+  const unsettledOverride=mk('input');unsettledOverride.type='checkbox';unsettledOverride.style.width='auto';
+  unsettledLabel.append(unsettledOverride,mk('span','Request exception if the member already has an unpaid loan'));
+  const unsettledBox=mk('div');unsettledBox.append(unsettledLabel);form.append(unsettledBox);
+  const memo=mk('textarea');memo.maxLength=300;field('Description / purpose',memo,true);
+  const save=mk('button','Save test draft');save.type='submit';form.append(save);
+  const message=mk('p');message.setAttribute('role','status');form.append(message);
+  const update=()=>{
+   const isWaiver=kind.value==='WAIVER',isRepay=kind.value==='REPAYMENT',isContribution=kind.value==='CONTRIBUTION',isLoan=kind.value==='LOAN';
+   loan.parentElement.hidden=!isRepay;month.parentElement.hidden=!(isContribution||isWaiver);amount.parentElement.hidden=isWaiver;
+   loanType.parentElement.hidden=!isLoan;capBox.hidden=!isLoan||loanType.value!=='REGULAR'||Number(amount.value)<=1000000;
+   unsettledBox.hidden=!isLoan;
+   if(capBox.hidden)capOverride.checked=false;
+   if(!isLoan)unsettledOverride.checked=false;
+   amount.required=!isWaiver;loan.required=isRepay;
+   loan.replaceChildren();const o=mk('option','Choose loan');o.value='';loan.append(o);
+   for(const l of book.loans.filter(l=>l.member_id===member.value)){const op=mk('option','#'+l.loan_number+' — '+formatMoney(l.principal));op.value=l.id;loan.append(op);}
+  };kind.onchange=update;member.onchange=update;loanType.onchange=update;amount.oninput=update;update();
+  form.onsubmit=async e=>{
+   e.preventDefault();save.disabled=true;message.textContent='Saving test draft...';
+   try{
+    const {data:{user},error:userError}=await sb.auth.getUser();
+    if(userError||!user||user.id!==book.me.auth_user_id)throw new Error('Session expired. Sign in again.');
+    const num=isFinite(Number(amount.value))?Number(amount.value):NaN;
+    if(kind.value!=='WAIVER'&&(!Number.isFinite(num)||num<=0))throw new Error('Enter a positive amount.');
+    if(kind.value==='REPAYMENT'&&!loan.value)throw new Error('Choose a loan for the repayment.');
+    if(['WAIVER','EXPENSE'].includes(kind.value)&&memo.value.trim().length<5)throw new Error('A reason of at least five characters is required.');
+    const payload={member_id:member.value,entry_on:date.value,amount:kind.value==='WAIVER'?0:num,
+      month:kind.value==='CONTRIBUTION'||kind.value==='WAIVER'?month.value:null,
+      loan_id:kind.value==='REPAYMENT'?loan.value:null,note:memo.value.trim(),
+      loan_type:kind.value==='LOAN'?loanType.value:null,
+      override_regular_cap:kind.value==='LOAN'&&capOverride.checked,
+      override_unsettled_loan:kind.value==='LOAN'&&unsettledOverride.checked};
+    const {error}=await sb.from('sacco_staging_drafts').insert({action_kind:kind.value,created_by:user.id,payload});
+    if(error)throw error;message.className='success';message.textContent='Test draft saved. The financial ledger is unchanged.';memo.value='';
+    await loadDrafts(p);
+   }catch(err){message.className='error';message.textContent=err.message||'Draft failed';}finally{save.disabled=false;}
+  };
+  p.append(form);
+  loadDrafts(p).catch(e=>p.append(mk('p',e.message,'error')));
+ }else if(next==='meetings'){
+  const content=book.minutes.slice().sort((a,b)=>(b.meeting_on||'').localeCompare(a.meeting_on||''));
+  for(const v of content){const details=mk('details'),summary=mk('summary',(v.meeting_on||'')+' — '+(v.title||'Minutes'));const body=mk('p',v.body||'');body.style.whiteSpace='pre-wrap';details.append(summary,body);p.append(details);}
+ }else if(next==='members'){
+  p.append(table(['Member','Membership'],book.members.map(m=>[m.display_name,m.member_role])));
+ }else if(next==='reconcile'){
+  renderReconciliation(p);
+ }else if(next==='access'){
+  renderMemberAccess(p).catch(e=>p.append(mk('p',e.message||'Could not load access queue','error')));
+ }else if(next==='qa'){
+  renderFinancialPostingLab(p).catch(e=>p.append(mk('p',e.message||'Could not load posting lab','error')));
+ }else if(next==='journal'){
+  renderPostingJournal(p).catch(e=>p.append(mk('p',e.message||'Could not load posting journal','error')));
+ }else if(next==='launch'){
+  renderLaunchConsole(p).catch(e=>p.append(mk('p',e.message||'Could not load launch controls','error')));
+ }else if(next==='readiness'){
+  renderReadinessChecks(p);
+ }
+}
+async function loadDrafts(p){
+ const [draftResp,reviewResp]=await Promise.all([
+  sb.from('sacco_staging_drafts').select('id,action_kind,payload,created_at,created_by').order('created_at',{ascending:false}).limit(40),
+  sb.from('sacco_staging_reviews').select('draft_id,decision,review_note,reviewed_at').order('reviewed_at',{ascending:false}).limit(150)
+ ]);
+ if(draftResp.error)throw draftResp.error;
+ if(reviewResp.error)throw reviewResp.error;
+ const reviews=new Map((reviewResp.data||[]).map(r=>[r.draft_id,r]));
+ let spot=$('#draftsHistory');if(!spot){spot=mk('div');spot.id='draftsHistory';p.append(spot);}
+ spot.replaceChildren();
+ const drafts=draftResp.data||[];
+ const pending=drafts.filter(d=>!reviews.has(d.id)).length;
+ spot.append(mk('h3','Draft approval queue ('+pending+' pending in the latest '+drafts.length+')'));
+ spot.append(mk('p','Approval records are immutable. Every decision is audited. Review approval never creates a financial entry by itself. The separate Launch controls remain locked until formal cutover.','alert'));
+ if(!drafts.length){spot.append(mk('p','No test drafts have been submitted. Use the form above to prepare one.'));return;}
+ for(const d of drafts){
+  const record=mk('details');record.style.cssText='border:1px solid #e1dacd;border-radius:9px;padding:12px;margin:9px 0;background:#fcfaf6';
+  const existing=reviews.get(d.id);
+  const state=existing?.decision||'PENDING';
+  const summary=mk('summary',d.action_kind+' · '+displayMember(d.payload?.member_id)+' · '+ugx(d.payload?.amount)+' · '+state);
+  summary.style.cursor='pointer';record.append(summary);
+  const meta=mk('p','Created '+new Date(d.created_at).toLocaleString('en-UG')+' · '+(d.payload?.entry_on||'')+' · '+(d.payload?.note||'No description'),'muted');
+  record.append(meta);
+  if(d.action_kind==='LOAN'){
+   record.append(mk('p','Loan type: '+(d.payload?.loan_type||'REGULAR')+
+    ' · Regular cap override requested: '+(d.payload?.override_regular_cap?'YES':'NO')+
+    ' · Unpaid-loan override requested: '+(d.payload?.override_unsettled_loan?'YES':'NO'),'muted'));
+  }
+  if(existing){record.append(mk('p', 'Decision: '+existing.decision+' at '+new Date(existing.reviewed_at).toLocaleString('en-UG')+(existing.review_note?' · '+existing.review_note:''),'success'));spot.append(record);continue;}
+  const validate=mk('button','Preview validation');validate.type='button';validate.style.margin='8px 0';
+  const result=mk('p');result.setAttribute('role','status');
+  const controls=mk('div');controls.className='controlrow';
+  validate.onclick=async()=>{
+   validate.disabled=true;result.textContent='Validating against imported financial records...';controls.replaceChildren();
+   try{
+    const {data,error}=await sb.rpc('sacco_preview_draft',{p_draft_id:d.id});
+    if(error)throw error;
+    if(data.review_status!=='PENDING'){result.textContent='This draft has already been reviewed. Refresh the queue.';return;}
+    const v=data.validation;
+    if(!v?.valid){result.className='error';result.textContent='Cannot approve: '+(v?.error||'Validation failed');}
+    else {
+     const errors=Number(v.duplicate_count||0);
+     result.className=errors?'error':'muted';
+     result.textContent='Validation passed · '+v.action_kind+' · '+ugx(v.amount_ugx)+' · '+v.entry_on+
+      (errors?' · BLOCKED: '+errors+' matching historical entries':' · no matching historical entries')+
+      ' · Financial posting disabled.';
+     if(Array.isArray(v.warnings)&&v.warnings.length)result.textContent+=' Warnings: '+v.warnings.join('; ');
+    }
+    const needsCap=v?.action_kind==='LOAN'&&v?.loan_type==='REGULAR'&&Number(v?.amount_ugx)>1000000;
+    const needsUnsettled=v?.action_kind==='LOAN'&&Number(v?.prior_unsettled_count)>0;
+    const lacksException=(needsCap&&!v?.cap_override_requested)||(needsUnsettled&&!v?.unsettled_override_requested);
+    const needsWrittenReason=needsCap||needsUnsettled;
+    if(lacksException)result.textContent+=' Approval blocked until a new draft explicitly requests all required policy overrides.';
+    const note=mk('input');note.type='text';note.placeholder=needsWrittenReason?'Required: documented loan exception justification (15+ characters)':'Review note (required for rejection)';
+    note.maxLength=500;note.style.minWidth='230px';
+    const accept=mk('button','Approve in sandbox');accept.type='button';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0||lacksException);
+    const decline=mk('button','Reject draft');decline.type='button';
+    const perform=async decision=>{
+     const message=decision==='APPROVED'?'Approve this draft FOR TESTING ONLY? No real transaction will be posted.':'Reject this draft permanently in the staging queue?';
+     if(!window.confirm(message))return;
+     if(decision==='REJECTED'&&note.value.trim().length<5){result.className='error';result.textContent='Enter a rejection reason of at least 5 characters.';return;}
+     if(decision==='APPROVED'&&needsWrittenReason&&note.value.trim().length<15){
+      result.className='error';result.textContent='An exception approval requires a documented reason of at least 15 characters.';return;
+     }
+     accept.disabled=true;decline.disabled=true;note.disabled=true;
+     try{
+      const {data:review,error:reviewError}=await sb.rpc('sacco_review_draft',{p_draft_id:d.id,p_decision:decision,p_note:note.value.trim()});
+      if(reviewError)throw reviewError;
+      result.className='success';result.textContent='Recorded '+review.decision+' (staging). Financial ledger unchanged.';
+      await loadDrafts(p);
+     }catch(ex){result.className='error';result.textContent=ex.message||'Review failed';accept.disabled=(!v?.valid||Number(v.duplicate_count||0)>0||lacksException);decline.disabled=false;note.disabled=false;}
+    };
+    accept.onclick=()=>perform('APPROVED');decline.onclick=()=>perform('REJECTED');
+    controls.append(note,accept,decline);
+   }catch(err){result.className='error';result.textContent='Could not validate: '+(err.message||'Unknown error');}
+   finally{validate.disabled=false;}
+  };
+  record.append(validate,result,controls);spot.append(record);
+ }
+}
+
+function initLedger(){
+ const nav=$('#ledgerTabs');nav.replaceChildren();
+ const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members'],['readiness','Readiness checks']];
+ if(book.me.member_role==='admin')tabs.push(['drafts','Draft reviews'],['access','Member access'],['journal','Posting & reversal journal'],['launch','Launch controls']);
+ for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
+ showTab('savings');
+}
+
+
+// Admin-only local comparison: no legacy backup, PINs, or images are ever uploaded.
+function reconcileNormName(v){
+ return String(v??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+}
+function reconcileMoney(v){
+ const n=Number(v);
+ return Number.isFinite(n)?n.toFixed(2):'INVALID';
+}
+function reconcileDate(v){return String(v??'').slice(0,10);}
+function reconcileCompare(snapshot){
+ if(!snapshot||typeof snapshot!=='object'||Array.isArray(snapshot)||!Array.isArray(snapshot.members)||
+    !Array.isArray(snapshot.expenses)||!Array.isArray(snapshot.investments)||
+    !Array.isArray(snapshot.cashIn)||!Array.isArray(snapshot.minutes)||
+    !Array.isArray(snapshot.membershipFees))
+  throw new Error('This is not a complete Elites SACCO JSON backup. Download Backup from the original website.');
+ const reportWarnings=[],oldRows=[],newRows=[];
+ const canonical=new Map(book.members.map(m=>[reconcileNormName(m.legacy_name||m.display_name),m.display_name]));
+ const seenNames=new Set();
+ const useName=n=>{
+  const key=reconcileNormName(n);
+  if(!key)return '(member missing)';
+  if(!canonical.has(key)&&!seenNames.has(key)){reportWarnings.push('Member name not found in Supabase: '+String(n).slice(0,80));seenNames.add(key);}
+  return key;
+ };
+ const build=(arr,category,member,on,amount,detail,display)=>{
+  const memberKey=useName(member);
+  const amountKey=reconcileMoney(amount);
+  const key=JSON.stringify([category,memberKey,reconcileDate(on),amountKey,String(detail??'').trim()]);
+  arr.push({category,key,member:canonical.get(memberKey)||String(member||'—').slice(0,80),
+   date:reconcileDate(on),amount:amountKey,detail:String(display??'').slice(0,130)});
+ };
+ const add=(arr,category,member,on,amount,detail,display)=>build(arr,category,member,on,amount,detail,display);
+ const loanInfo=(number,frozen,loanType,purpose,manual)=>JSON.stringify([
+  'loan-number:'+String(Number(number)||0),
+  'frozen:'+reconcileMoney(frozen||0),
+  'type:'+String(loanType||'REGULAR').trim().toUpperCase(),
+  'purpose:'+String(purpose||'').trim(),
+  'manual:'+String(manual||'').trim().toUpperCase()
+ ]);
+ const repaymentLink=x=>String(Number(x)||0);
+ const settingValue=(key,value)=>{
+  if(key==='monthlyTarget'||key==='membershipFee')return String(Number(value)||0);
+  if(key==='targetOverrides'){
+   if(!value||typeof value!=='object'||Array.isArray(value))return 'INVALID';
+   return JSON.stringify(Object.keys(value).sort().map(k=>[k,Number(value[k])||0]));
+  }
+  // Payment information may contain private bank details. Compare in memory, never display the value.
+  return String(value||'').trim();
+ };
+ for(const n of snapshot.members) add(oldRows,'Members',n,'',0,'roster','Member roster');
+ for(const n of book.members) add(newRows,'Members',n.legacy_name||n.display_name,'',0,'roster','Member roster');
+ let rawGroups=0;
+ for(const [name,v] of Object.entries(snapshot)){
+  if(v===null||typeof v!=='object'||Array.isArray(v)||!Array.isArray(v.contributions)||!Array.isArray(v.loans))continue;
+  rawGroups++;
+  for(const x of v.contributions){
+   add(oldRows,'Contributions',name,x.date,x.amt,String(x.month||''),'Month: '+String(x.month||''));
+  }
+  let loanNumber=0;
+  for(const x of v.loans){
+   if(x.type==='LOAN'){
+    loanNumber++;
+    add(oldRows,'Loans',name,x.date,x.amt,loanInfo(loanNumber,x.frozenTotal,x.loanType,x.purpose,x.manualStatus),
+     'Loan #'+loanNumber+' · Type '+String(x.loanType||'REGULAR')+' · Frozen '+reconcileMoney(x.frozenTotal||0));
+   }else if(x.type==='REPAYMENT'){
+    add(oldRows,'Repayments',name,x.date,x.amt,repaymentLink(x.loanId),
+     'Linked loan #'+repaymentLink(x.loanId));
+   }else reportWarnings.push('Unrecognized legacy loan event type; compare manually.');
+  }
+ }
+ if(rawGroups<book.members.length)reportWarnings.push('Some member records are absent from this backup.');
+ for(const x of book.contributions){
+  add(newRows,'Contributions',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.paid_on,x.amount,
+   String(x.contribution_month||'').slice(0,7),'Month: '+String(x.contribution_month||'').slice(0,7));
+ }
+ for(const x of book.loans){
+  add(newRows,'Loans',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.issued_on,x.principal,
+   loanInfo(x.loan_number,x.frozen_total,x.loan_type,x.source_record?.purpose,x.manual_status),
+   'Loan #'+x.loan_number+' · Type '+String(x.loan_type||'REGULAR')+' · Frozen '+reconcileMoney(x.frozen_total||0));
+ }
+ const loanById=new Map(book.loans.map(x=>[x.id,x]));
+ for(const x of book.repayments){
+  const originalLoan=loanById.get(x.loan_id);
+  const originalNumber=originalLoan?repaymentLink(originalLoan.loan_number):'MISSING-LOAN';
+  add(newRows,'Repayments',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.paid_on,x.amount,
+   originalNumber,'Linked loan #'+originalNumber);
+ }
+ if(!snapshot.settings||typeof snapshot.settings!=='object'||Array.isArray(snapshot.settings)){
+  reportWarnings.push('Original policy settings missing or malformed. Final source policy check cannot pass.');
+ }else{
+  for(const key of ['monthlyTarget','membershipFee','targetOverrides','paymentInfo']){
+   add(oldRows,'Settings','',null,0,key+'='+settingValue(key,snapshot.settings[key]),'Policy setting: '+key);
+   add(newRows,'Settings','',null,0,key+'='+settingValue(key,book.settings?.[key]),'Policy setting: '+key);
+  }
+ }
+ for(const x of snapshot.expenses)add(oldRows,'Expenses','',x.date,x.amt,String(x.reason||'').trim().toLowerCase(),'Expense');
+ for(const x of snapshot.investments)add(oldRows,'Investments','',x.date,x.amt,String(x.reason||'').trim().toLowerCase(),'Investment');
+ for(const x of snapshot.cashIn)add(oldRows,'Cash received','',x.date,x.amt,String(x.source||'').trim().toLowerCase(),'Cash received');
+ for(const x of book.financial){
+  const category={'expense':'Expenses','investment':'Investments','cash_in':'Cash received'}[x.entry_kind];
+  if(category)add(newRows,category,'',x.entry_on,x.amount,String(x.narrative||'').trim().toLowerCase(),category);
+ }
+ for(const x of snapshot.membershipFees)add(oldRows,'Membership fees',x.member,x.date,x.amt,'','Membership fee');
+ for(const x of book.fees)add(newRows,'Membership fees',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.paid_on,x.amount,'','Membership fee');
+ for(const x of snapshot.minutes){
+  add(oldRows,'Minutes','',x.date,0,JSON.stringify([String(x.title||'').trim(),String(x.body||'').trim()]),String(x.title||'Meeting'));
+ }
+ for(const x of book.minutes){
+  add(newRows,'Minutes','',x.meeting_on,0,JSON.stringify([String(x.title||'').trim(),String(x.body||'').trim()]),String(x.title||'Meeting'));
+ }
+ const importedWaiverRows=book.waivers||[];
+ if(snapshot.waivers?.length||importedWaiverRows.length){
+  const compatible=Array.isArray(snapshot.waivers)&&snapshot.waivers.every(x=>x&&typeof x==='object'&&x.member!=null&&x.month!=null);
+  if(!compatible)reportWarnings.push('Waiver format is not recognized: waiver records must be checked manually.');
+  else for(const x of snapshot.waivers)add(oldRows,'Waivers',x.member,x.month,0,'','Waiver');
+  for(const x of importedWaiverRows)add(newRows,'Waivers',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.contribution_month,0,'','Waiver');
+ }
+ if(Array.isArray(snapshot.requests)&&snapshot.requests.length)reportWarnings.push('Member requests are present in the export and need manual review before cutover.');
+ reportWarnings.push('Loan-number links, loan purpose/type and settings are compared. Photos/logo, member PINs, evidence files, and unstructured edit history are NOT compared.');
+ reportWarnings.push('This report cannot prove a backup is current or that transactions are ready to post.');
+ const counts=new Map(),first=new Map(),groups=new Map();
+ const allCats=['Members','Contributions','Loans','Repayments','Expenses','Investments','Cash received','Membership fees','Minutes','Waivers','Settings'];
+ for(const cat of allCats)groups.set(cat,{category:cat,exported:0,supabase:0,onlyExport:0,onlySupabase:0});
+ for(const [which,rows] of [['exported',oldRows],['supabase',newRows]]){
+  for(const x of rows){
+   const tag=which+'|'+x.key;counts.set(tag,(counts.get(tag)||0)+1);
+   if(!first.has(x.key))first.set(x.key,x);
+   groups.get(x.category)[which]++;
+  }
+ }
+ const differences=[];
+ for(const [key,item] of first){
+  const a=counts.get('exported|'+key)||0,b=counts.get('supabase|'+key)||0;
+  if(a===b)continue;
+  const direction=a>b?'Only in uploaded backup':'Only in Supabase';
+  const quantity=Math.abs(a-b);
+  const group=groups.get(item.category);
+  if(a>b)group.onlyExport+=quantity;else group.onlySupabase+=quantity;
+  differences.push({...item,direction,quantity});
+ }
+ differences.sort((a,b)=>a.category.localeCompare(b.category)||a.member.localeCompare(b.member)||a.date.localeCompare(b.date));
+ return {groups:[...groups.values()],differences,reportWarnings,
+    exportCount:oldRows.length,dbCount:newRows.length,discrepancyCount:differences.reduce((s,x)=>s+x.quantity,0)};
+}
+
+
+let lastQaPosting=null;
+async function renderFinancialPostingLab(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access required.'));return;}
+ p.replaceChildren(mk('h3','Financial posting lab · separate fictional ledger'));
+ p.append(mk('p','QA ONLY. Real database writes to isolated test tables, NOT historical SACCO records. The old SACCO website and actual financial books are unaffected. Use TEST_A and TEST_B — never real member identities.','alert'));
+ const {data,error}=await sb.from('sacco_qa_entries')
+   .select('id,request_key,kind,member_code,entry_on,amount,loan_id,contribution_month,note,reverses_id,created_at')
+   .order('created_at',{ascending:false}).limit(200);
+ if(error)throw error;
+ const entries=data||[],rev=new Set(entries.filter(x=>x.kind==='REVERSAL').map(x=>x.reverses_id));
+ const active=entries.filter(x=>x.kind!=='REVERSAL'&&!rev.has(x.id));
+ const loans=active.filter(x=>x.kind==='LOAN'),repays=active.filter(x=>x.kind==='REPAYMENT').map(x=>({loan_id:x.loan_id,paid_on:x.entry_on,amount:Number(x.amount)}));
+ const balanceOf=x=>loanBalance({id:x.id,issued_on:x.entry_on,principal:x.amount,manual_status:null,frozen_total:null},repays);
+ const loanTotals=loans.map(l=>({l,b:balanceOf(l)}));
+ const sum=k=>active.filter(x=>x.kind===k).reduce((a,x)=>a+Number(x.amount),0);
+ const cards=mk('div',undefined,'cards');
+ cards.append(stat('Fictional savings',ugx(sum('CONTRIBUTION')),'Test transactions'),
+  stat('Fictional loan balance',ugx(loanTotals.reduce((a,x)=>a+x.b.balance,0)),'Original 5% interest rules'),
+  stat('Fictional cash flow',ugx(sum('CONTRIBUTION')+sum('REPAYMENT')+sum('CASH_IN')-sum('LOAN')-sum('EXPENSE')-sum('INVESTMENT')),'Not actual SACCO cash'),
+  stat('QA transaction events',String(entries.length),'Including reversals'));
+ p.append(cards);
+ const form=mk('form');form.className='draft';form.style.cssText='border:1px solid #ddd;border-radius:10px;padding:14px;margin:15px 0';
+ function field(label,control){const wrap=mk('div');wrap.append(mk('label',label),control);form.append(wrap);return wrap;}
+ const kind=mk('select');for(const [k,name] of [['LOAN','Issue test loan'],['REPAYMENT','Post test repayment'],['CONTRIBUTION','Post test saving'],['EXPENSE','Post test expense'],['CASH_IN','Post test cash received'],['INVESTMENT','Post test investment']]){const opt=mk('option',name);opt.value=k;kind.append(opt);}field('Transaction type',kind);
+ const member=mk('select');for(const k of ['TEST_A','TEST_B']){const opt=mk('option','Fictional '+k);opt.value=k;member.append(opt);}field('Test member',member);
+ const date=mk('input');date.type='date';date.value=jubaToday();date.required=true;field('Date paid / issued',date);
+ const amount=mk('input');amount.type='number';amount.min='1';amount.step='.01';amount.required=true;amount.placeholder='1000000';field('Amount (UGX)',amount);
+ const loan=mk('select');const loanWrap=field('Loan to repay',loan);
+ const month=mk('input');month.type='month';month.value=jubaToday().slice(0,7);const monthWrap=field('Savings month',month);
+ const note=mk('input');note.type='text';note.maxLength=300;note.placeholder='Test note / reason';field('Description',note);
+ const help=mk('p',undefined,'muted');help.style.gridColumn='1/-1';
+ const sync=()=>{
+  loanWrap.hidden=kind.value!=='REPAYMENT';monthWrap.hidden=kind.value!=='CONTRIBUTION';
+  loan.replaceChildren();for(const x of loans.filter(z=>z.member_code===member.value)){
+   const o=mk('option',x.entry_on+' · '+ugx(x.amount)+' · due '+ugx(balanceOf(x).balance));o.value=x.id;loan.append(o);
+  }
+  help.textContent=kind.value==='REPAYMENT'?'Repay at any time, including same day as loan issue. The original monthly interest model is preserved.':
+   '5% interest starts on loan issue date; new loans from July 2026 use flat interest, older loans compound.';
+ };kind.onchange=sync;member.onchange=sync;sync();
+ const footer=mk('div');footer.style.gridColumn='1/-1';
+ const submit=mk('button','POST TEST TRANSACTION');submit.type='submit';submit.className='gold';
+ const result=mk('p');result.setAttribute('role','status');
+ footer.append(help,submit,result);form.append(footer);p.append(form);
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  if(kind.value==='REPAYMENT'&&!loan.value){result.textContent='First issue a fictional test loan.';result.className='error';return;}
+  const args={p_request_key:crypto.randomUUID(),p_kind:kind.value,p_member_code:member.value,p_entry_on:date.value,
+   p_amount:Number(amount.value),p_loan_id:kind.value==='REPAYMENT'?loan.value:null,
+   p_contribution_month:kind.value==='CONTRIBUTION'?month.value:null,p_note:note.value.trim()};
+  if(kind.value==='LOAN'){
+   if(args.p_amount>1000000&&!window.confirm('Original SACCO guideline: a regular loan above UGX 1,000,000 requires an explicit override. Continue in the fictional test lab?'))return;
+   const outstanding=loans.filter(x=>x.member_code===member.value&&balanceOf(x).balance>0);
+   if(outstanding.length&&!window.confirm('Original SACCO guideline: clear existing loans before taking a new loan. This fictional member has '+outstanding.length+' unpaid loan(s). Override for this QA test?'))return;
+  }
+  if(!window.confirm('Post '+kind.value+' '+ugx(args.p_amount)+' to FICTIONAL '+member.value+'? No real SACCO record will change.'))return;
+  submit.disabled=true;
+  try{
+   const {data:receipt,error:e}=await sb.rpc('sacco_qa_post',args);if(e)throw e;
+   lastQaPosting=args;await renderFinancialPostingLab(p);
+   p.prepend(mk('p','Test posting saved. Receipt: '+receipt.receipt_id+'. Original SACCO financial records unchanged.','success'));
+  }catch(e){result.className='error';result.textContent=e.message||'Test posting failed';submit.disabled=false;}
+ };
+ if(lastQaPosting){
+  const retry=mk('button','Verify idempotent retry of last posting');retry.type='button';
+  const report=mk('p');report.setAttribute('role','status');
+  retry.onclick=async()=>{retry.disabled=true;try{
+   const {data:receipt,error:e}=await sb.rpc('sacco_qa_post',lastQaPosting);if(e)throw e;
+   report.className='success';report.textContent=receipt.already_posted?'Passed: no second posting created. Receipt '+receipt.receipt_id:'New posting: check history.';
+  }catch(e){report.className='error';report.textContent=e.message||'Retry failed';}finally{retry.disabled=false;}};
+  p.append(retry,report);
+ }
+ p.append(mk('p','Loan testing: issue UGX 1,000,000 to TEST_A today, then repay UGX 200,000 on that same date. The original 5% first-month interest applies immediately, so the displayed outstanding balance should be UGX 850,000. Try another payment after a monthly anniversary to see the original flat-rate interest increase.','muted'));
+ p.append(mk('h3','Fictional loan balances using original SACCO rules'));
+ p.append(table(['Test member','Issue date','Principal','Repaid','Due incl. interest','Interest rule'],
+  loanTotals.map(x=>[x.l.member_code,x.l.entry_on,ugx(x.l.amount),ugx(x.b.paid),ugx(x.b.balance),x.b.rule])));
+ p.append(mk('h3','Posted QA transactions and reversals'));
+ const history=mk('div');
+ for(const x of entries){
+  const row=mk('div');row.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-bottom:1px solid #eee;padding:8px';
+  const label=x.kind+' · '+x.member_code+' · '+x.entry_on+' · '+ugx(x.amount)+(x.kind==='REVERSAL'?' (REVERSAL)':rev.has(x.id)?' (REVERSED)':'');
+  row.append(mk('span',label));
+  if(x.kind!=='REVERSAL'&&!rev.has(x.id)){
+   const undo=mk('button','Reverse test transaction');undo.type='button';
+   undo.onclick=async()=>{
+    const reason=window.prompt('Reason for TEST reversal (at least 5 characters):');
+    if(reason===null)return;
+    if(reason.trim().length<5){window.alert('Enter at least 5 characters.');return;}
+    if(!window.confirm('Reverse this fictional QA posting?'))return;
+    undo.disabled=true;
+    try{
+     const {data:receipt,error:e}=await sb.rpc('sacco_qa_reverse',{p_request_key:crypto.randomUUID(),p_entry_id:x.id,p_reason:reason.trim()});
+     if(e)throw e;await renderFinancialPostingLab(p);
+     p.prepend(mk('p','QA reversal recorded: '+receipt.receipt_id+'. Real books unchanged.','success'));
+    }catch(e){window.alert(e.message||'Reversal failed');undo.disabled=false;}
+   };row.append(undo);
+  }history.append(row);
+ }
+ if(!entries.length)history.append(mk('p','No test transactions yet.'));
+ p.append(history);
+ p.append(mk('p','You can post and reverse real test-database entries here. These test tables are not the real SACCO ledger, and testing them does not automatically certify the still-locked production posting engine.','muted'));
+}
+
+
+
+function renderReadinessChecks(p){
+ const admin=book.me.member_role==='admin';
+ p.append(mk('h3','Account and release acceptance checks'));
+ p.append(mk('p','The eight account checks are READ-ONLY. After a complete pass, you may record a member-owned acceptance receipt (non-financial). This is NOT approval to enable real posting or stop the original website.','alert'));
+ const run=mk('button','Run read-only checks now');run.className='gold';run.type='button';
+ const status=mk('p');status.setAttribute('role','status');status.className='muted';
+ const output=mk('div');p.append(run,status,output);
+ const acceptancePanel=mk('div');acceptancePanel.style.cssText='margin:17px 0;padding:12px;border:1px solid #e1dacd;border-radius:9px';
+ p.append(acceptancePanel);
+ const renderAcceptance=async()=>{
+  acceptancePanel.replaceChildren(mk('h3','Recorded member acceptance · 8/8'));
+  const {data,error}=await sb.from('sacco_member_readiness_signoffs')
+   .select('member_id,auth_user_id,checks_passed,checks_total,accepted_at')
+   .eq('checks_version','member-browser-v1')
+   .order('accepted_at',{ascending:false});
+  if(error){acceptancePanel.append(mk('p','Acceptance register unavailable: '+(error.message||'permission error'),'error'));return false;}
+  const records=data||[];
+  const recorded=new Map(records.map(x=>[x.member_id,x]));
+  if(admin){
+   const linked=book.members.filter(m=>!!m.auth_user_id);
+   acceptancePanel.append(mk('p','Signed-off accounts: '+linked.filter(m=>recorded.has(m.id)).length+' of '+linked.length+
+    ' linked. This register records member self-attestations, not independent browser automation.','muted'));
+   acceptancePanel.append(table(['Member','Account','8/8 acceptance'],
+    book.members.map(m=>[
+     m.display_name,
+     m.auth_user_id?'Linked':'Not yet linked',
+     recorded.has(m.id)?'RECORDED · '+new Date(recorded.get(m.id).accepted_at).toLocaleDateString('en-UG'):'Not recorded'
+    ])));
+  }else{
+   const receipt=recorded.get(book.me.id);
+   acceptancePanel.append(mk('p',receipt?
+    'Your 8/8 acceptance is recorded on '+new Date(receipt.accepted_at).toLocaleString('en-UG')+'.':
+    'You have not yet recorded your 8/8 acceptance. Run the checks below and record your result after a full pass.',
+    receipt?'success':'muted'));
+  }
+  return recorded.has(book.me.id);
+ };
+ renderAcceptance().catch(e=>acceptancePanel.append(mk('p',e.message||'Could not display acceptance register','error')));
+ const manual=mk('div');manual.style.marginTop='20px';
+ manual.append(mk('h3','Still required before any final cutover'));
+ for(const task of [
+  'Freeze financial writes on the ORIGINAL website only at an explicitly approved cutover.',
+  'Download a new original-site JSON backup after the freeze and run the upgraded Reconcile backup tool.',
+  'Confirm zero unmatched records, loan linkages, settings and inspect original photos and receipts separately.',
+  'The approved ordinary member must sign in personally and run these checks using their own session.',
+  'Verify password recovery, reports and rollback instructions. Rotate exposed legacy JSONBin credentials at cutover.'
+ ])manual.append(mk('p','○ '+task,'muted'));
+ if(admin){const open=mk('button','Open browser-local backup reconciliation');open.type='button';open.onclick=()=>showTab('reconcile');manual.append(open);}
+ p.append(manual);
+ run.onclick=async()=>{
+  run.disabled=true;status.className='muted';status.textContent='Checking your identity, database permissions and financial links...';output.replaceChildren();
+  const checks=[];const add=(name,ok,note)=>checks.push({name,ok:!!ok,note});
+  try{
+   const session=await sb.auth.getUser();if(session.error)throw session.error;
+   const user=session.data?.user;
+   add('Verified linked identity',!!user&&!!user.email_confirmed_at&&user.id===book.me.auth_user_id,
+     'The email-confirmed login matches the linked SACCO member');
+   const [roster,savings,loans,paid,fees,waivers,audits,qa,requests,posts,reversals]=await Promise.all([
+    sb.from('sacco_members').select('id,member_role,auth_user_id'),
+    sb.from('sacco_contributions').select('member_id,amount,paid_on,legacy_key').is('voided_at',null),
+    sb.from('sacco_loans').select('id,member_id,loan_number,issued_on,principal,legacy_key').is('voided_at',null),
+    sb.from('sacco_repayments').select('member_id,loan_id,amount,paid_on,legacy_key').is('voided_at',null),
+    sb.from('sacco_membership_fees').select('member_id,amount').is('voided_at',null),
+    sb.from('sacco_waivers').select('member_id,contribution_month').is('voided_at',null),
+    sb.from('sacco_audit_entries').select('id',{head:true,count:'exact'}),
+    sb.from('sacco_qa_entries').select('id',{head:true,count:'exact'}),
+    sb.from('sacco_access_requests').select('auth_user_id,status'),
+    sb.from('sacco_posting_receipts').select('id',{head:true,count:'exact'}),
+    sb.from('sacco_posting_reversals').select('id',{head:true,count:'exact'})
+   ]);
+   const r=[roster,savings,loans,paid,fees,waivers,audits,qa,requests,posts,reversals];
+   const issue=r.find(x=>x.error);if(issue)throw issue.error;
+   const members=roster.data||[],contributions=savings.data||[],allLoans=loans.data||[],repayments=paid.data||[];
+   const self=book.me.id;
+   add('Member roster isolation',admin?members.length===5:members.length===1&&members[0]?.id===self,
+    admin?'The administrator sees all five historical members':'The ordinary member sees only their own identity');
+   const own=rows=>admin||rows.every(x=>x.member_id===self);
+   add('Private member finances',own(contributions)&&own(allLoans)&&own(repayments)&&own(fees.data||[])&&own(waivers.data||[]),
+    'Savings, loans, repayments, fees and waivers are isolated to the ordinary member');
+   const loanMap=new Map(allLoans.map(x=>[x.id,x]));
+   add('Repayments linked correctly',repayments.every(x=>{
+     const l=loanMap.get(x.loan_id);return !!l&&l.member_id===x.member_id&&x.paid_on>=l.issued_on;
+   }),repayments.length+' repayments visible and associated with an issued loan belonging to the same member');
+   add('Administrator-only history',admin?Number(audits.count||0)>0:
+    Number(audits.count||0)===0&&Number(qa.count||0)===0,
+    admin?'Private audit records available to administrator':'Ordinary member cannot see private audit or financial QA events');
+   add('Membership approval privacy',(requests.data||[]).every(x=>admin||x.auth_user_id===user?.id),
+     'Ordinary members cannot read another account application');
+   if(!admin){
+    const denied=await sb.rpc('sacco_preview_draft',{p_draft_id:'00000000-0000-4000-8000-000000000000'});
+    add('Privileged function denied',!!denied.error &&
+      (denied.error.code==='42501'||/administrator|permission denied|forbidden/i.test(denied.error.message||'')),
+      'Ordinary member cannot invoke a private financial draft preview');
+   }else{
+    const original=x=>!String(x.legacy_key||'').startsWith('native:');
+    const initialContributions=contributions.filter(original),initialLoans=allLoans.filter(original);
+    const initialRepayments=repayments.filter(original);
+    const total=initialContributions.reduce((sum,x)=>sum+Number(x.amount||0),0);
+    add('Original import snapshot preserved',
+      initialContributions.length===133&&total===13965000&&
+      initialLoans.length===28&&initialRepayments.length===27,
+      'Original source: 133 savings contributions (UGX 13,965,000), 28 loans and 27 repayments. New entries are excluded from this baseline check.');
+   }
+   add(admin?'Native receipt audit integrity':'Posting audit privacy',
+    admin?Number(posts.count||0)>=Number(reversals.count||0):
+      Number(posts.count||0)===0&&Number(reversals.count||0)===0,
+    admin?'Native reversal receipts must never exceed original posting receipts.':
+      'Ordinary members cannot read private native posting or reversal receipts.');
+   const passing=checks.filter(x=>x.ok).length;
+   status.className=passing===checks.length?'success':'error';
+   status.textContent=passing+' of '+checks.length+' account checks passed. Manual cutover work remains outstanding.';
+   output.append(table(['Read-only check','Result','Details'],checks.map(x=>[x.name,x.ok?'PASS':'FAIL',x.note])));
+   output.append(mk('p','These checks do not confirm that the original website has stopped receiving financial transactions.','muted'));
+   if(passing===8&&checks.length===8){
+    const record=mk('button','Record my successful 8/8 check');record.type='button';record.className='gold';
+    const saveMsg=mk('p');saveMsg.setAttribute('role','status');saveMsg.className='muted';
+    output.append(mk('p','By recording, you attest that YOU personally completed all eight checks in this signed-in browser. This is not a production posting authorization.','muted'),record,saveMsg);
+    record.onclick=async()=>{
+     if(!window.confirm('Confirm you personally ran and passed all 8 checks. This creates a non-financial, member-owned acceptance record.'))return;
+     record.disabled=true;saveMsg.textContent='Recording member acceptance...';
+     const {error}=await sb.from('sacco_member_readiness_signoffs').insert({
+      member_id:book.me.id,auth_user_id:user.id,checks_passed:8,checks_total:8,
+      checks_version:'member-browser-v1',
+      attestation:'I personally ran and passed all eight checks in my signed-in browser.'
+     });
+     if(error && error.code!=='23505'){
+      saveMsg.className='error';saveMsg.textContent=error.message||'Acceptance receipt failed';record.disabled=false;return;
+     }
+     saveMsg.className='success';saveMsg.textContent=error?'Your 8/8 acceptance was already recorded.':'Your 8/8 acceptance receipt has been saved.';
+     await renderAcceptance();
+    };
+   }
+  }catch(err){status.className='error';status.textContent='Unable to complete checks: '+(err.message||'Database read failed');}
+  finally{run.disabled=false;}
+ };
+}
+
+
+async function renderLaunchConsole(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Verified SACCO administrator required.','error'));return;}
+ p.append(mk('h3','Controlled SACCO launch console'));
+ const {data:state,error}=await sb.rpc('sacco_release_status');
+ if(error)throw error;
+ const live=!!state?.operational&&!!state?.posting_gate_enabled&&!!state?.posting_rpc_enabled&&
+  !!state?.cutover_reference&&!!state?.cutover_at;
+ p.append(mk('p',live?
+  'LIVE TRANSACTION MODE. Every posting affects real SACCO savings, loans or the cashbook. Verify each reviewed entry before confirming.':
+  'LOCKED. The old website remains authoritative. There are NO posting or reversal actions while the server gate and permissions are disabled.',
+  'alert'));
+ const cards=mk('div',undefined,'cards');
+ cards.append(
+  stat('Posting gate',state?.posting_gate_enabled?'ENABLED':'LOCKED','Database-controlled; cannot be enabled in this browser'),
+  stat('Native receipts',String(state?.native_posting_receipts||0),'Actual SACCO transactions posted through new system'),
+  stat('Recorded 8/8 signoffs',String(Number(state?.admin_signoffs||0)+Number(state?.ordinary_signoffs||0))+'/'+String(state?.linked_members||0),
+   'Other members may onboard later by verified individual accounts'),
+  stat('Source archive',state?.historical_evidence_manifest?'Verified':'Missing','Chairperson-attested November 6 snapshot')
+ );
+ p.append(cards);
+ p.append(mk('p','This console cannot enable cutover, change database permissions, rotate old credentials or shut down GitHub Pages. Those require a separately authorized operator transition.','muted'));
+ const instructions=mk('div');instructions.style.cssText='border:1px solid #e2dacb;border-radius:9px;padding:12px;margin:12px 0';
+ instructions.append(mk('h3','Release handover checks'));
+ for(const str of [
+  'Confirm the original site is no longer accepting new financial entries; keep an offline backup for audit.',
+  'Record a precise cutover timestamp and reference after reviewing the historical manifest.',
+  'Verify the new portal, administrator access and independent member-only privacy checks.',
+  'Enable posting permissions and the server gate only in the separately approved cutover SQL transaction.',
+  'After go-live, enter and approve a NEW draft. Post it here, verify the receipt and resulting financial balance before wider use.'
+ ])instructions.append(mk('p','○ '+str,'muted'));
+ p.append(instructions);
+ if(!live){
+  p.append(mk('p','Native posting controls stay completely hidden. No financial write can be initiated from this console while locked.','muted'));
+  return;
+ }
+ const [draftResult,reviewResult,receiptResult,reverseResult]=await Promise.all([
+  sb.from('sacco_staging_drafts').select('id,created_at,action_kind,payload').order('created_at',{ascending:false}).limit(100),
+  sb.from('sacco_staging_reviews').select('id,draft_id,decision,reviewed_at').order('reviewed_at',{ascending:false}).limit(100),
+  sb.from('sacco_posting_receipts').select('id,draft_id,ledger_table,posted_at').order('posted_at',{ascending:false}).limit(100),
+  sb.from('sacco_posting_reversals').select('id,posting_receipt_id,reversed_at').limit(100)
+ ]);
+ for(const result of [draftResult,reviewResult,receiptResult,reverseResult])if(result.error)throw result.error;
+ const reviews=new Map((reviewResult.data||[]).map(x=>[x.draft_id,x]));
+ const posted=new Set((receiptResult.data||[]).map(x=>x.draft_id));
+ const reversed=new Set((reverseResult.data||[]).map(x=>x.posting_receipt_id));
+ const cutoff=Date.parse(state.cutover_at);
+ const approved=(draftResult.data||[]).filter(d=>
+  reviews.get(d.id)?.decision==='APPROVED'&&!posted.has(d.id)&&
+  Date.parse(d.created_at)>=cutoff&&Date.parse(reviews.get(d.id).reviewed_at)>=cutoff);
+ p.append(mk('h3','Post individually reviewed, NEW financial drafts'));
+ p.append(mk('p','Only drafts created and approved AFTER the cutover timestamp appear. Old sandbox approvals cannot be posted. A final duplicate check is performed on the server.','muted'));
+ if(!approved.length)p.append(mk('p','No approved post-cutover drafts awaiting posting. Use Draft approvals to create and approve a NEW draft, then return here.'));
+ for(const d of approved){
+  const panel=mk('div');panel.style.cssText='padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px';
+  const member=displayMember(d.payload?.member_id);
+  panel.append(mk('p',d.action_kind+' · '+member+' · '+ugx(d.payload?.amount||0)+' · '+String(d.payload?.entry_on||'')));
+  const action=mk('button','POST REAL SACCO TRANSACTION');action.type='button';action.className='gold';
+  const msg=mk('p');msg.setAttribute('role','status');panel.append(action,msg);p.append(panel);
+  action.onclick=async()=>{
+   const typed=window.prompt('REAL MONEY LEDGER ACTION: '+d.action_kind+' for '+member+
+    ' amount '+ugx(d.payload?.amount||0)+'. Type POST REAL SACCO TRANSACTION to confirm.');
+   if(typed!=='POST REAL SACCO TRANSACTION')return;
+   action.disabled=true;msg.textContent='Rechecking live cutover gate...';
+   try{
+    const status=await sb.rpc('sacco_release_status');if(status.error)throw status.error;
+    if(!status.data?.operational)throw new Error('Real posting gate is now disabled. No transaction sent.');
+    const receipt=await sb.rpc('sacco_post_approved_draft',{p_draft_id:d.id});
+    if(receipt.error)throw receipt.error;
+    msg.className='success';msg.textContent='Posted: receipt '+receipt.data?.receipt_id+
+     (receipt.data?.already_posted?' (existing receipt reused)':' (new ledger entry)');
+    await boot();showTab('launch');
+   }catch(e){msg.className='error';msg.textContent=e.message||'Unable to confirm posting';action.disabled=false;}
+  };
+ }
+ p.append(mk('h3','Audited reversals of native receipts'));
+ if(!state.reversal_rpc_enabled){
+  p.append(mk('p','Reversal permission is separately disabled. No reversal action is available.','muted'));
+  return;
+ }
+ const eligible=(receiptResult.data||[]).filter(x=>!reversed.has(x.id));
+ for(const r of eligible){
+  const line=mk('div');line.style.cssText='padding:10px;border-bottom:1px solid #ddd';
+  line.append(mk('p',r.ledger_table.replace('sacco_','')+' · original receipt '+r.id+' · '+new Date(r.posted_at).toLocaleString('en-UG')));
+  const undo=mk('button','Request audited reversal');undo.type='button';
+  const msg=mk('p');msg.setAttribute('role','status');line.append(undo,msg);p.append(line);
+  const retryKey=crypto.randomUUID();
+  undo.onclick=async()=>{
+   const reason=window.prompt('Enter a specific documented reason (15–500 characters). Original entry will remain in audit history.');
+   if(!reason||reason.trim().length<15||reason.trim().length>500){msg.className='error';msg.textContent='Reason must be 15–500 characters.';return;}
+   const confirmation=window.prompt('Type REVERSE POSTED TRANSACTION to explicitly authorize this financial correction.');
+   if(confirmation!=='REVERSE POSTED TRANSACTION')return;
+   undo.disabled=true;msg.textContent='Checking reversal gate...';
+   try{
+    const status=await sb.rpc('sacco_release_status');if(status.error)throw status.error;
+    if(!status.data?.operational||!status.data?.reversal_rpc_enabled)throw new Error('Reversal gate is locked.');
+    const reversal=await sb.rpc('sacco_reverse_posted_entry',{
+     p_receipt_id:r.id,p_request_key:retryKey,p_reason:reason.trim(),p_confirmation:confirmation
+    });
+    if(reversal.error)throw reversal.error;
+    msg.className='success';msg.textContent='Audited reversal recorded: '+reversal.data?.reversal_id;
+    await boot();showTab('launch');
+   }catch(e){msg.className='error';msg.textContent=e.message||'Reversal was not confirmed';undo.disabled=false;}
+  };
+ }
+}
+
+async function renderPostingJournal(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access required.'));return;}
+ p.append(mk('h3','Native posting and reversal audit journal'));
+ const status=await sb.rpc('sacco_release_status');
+ if(status.error)throw status.error;
+ p.append(mk('p',status.data?.operational?
+  'This is the read-only transaction and reversal audit journal. For authorized changes use Launch controls, and do not delete original receipts.':
+  'REAL POSTING AND REVERSALS ARE DISABLED. This is a read-only audit screen for the future controlled cutover. No records are posted or reversed from this screen. Fictional tests belong in Financial posting lab.',
+  'alert'));
+ const [posts,undo]=await Promise.all([
+  sb.from('sacco_posting_receipts').select('id,ledger_table,posted_record_id,posted_at').order('posted_at',{ascending:false}).limit(100),
+  sb.from('sacco_posting_reversals').select('id,posting_receipt_id,reversed_at,reason').order('reversed_at',{ascending:false}).limit(100)
+ ]);
+ if(posts.error)throw posts.error;
+ if(undo.error)throw undo.error;
+ const receipts=posts.data||[],reversals=undo.data||[];
+ const reversed=new Map(reversals.map(x=>[x.posting_receipt_id,x]));
+ const box=mk('div',undefined,'cards');
+ box.append(
+  stat('Native posting receipts',String(receipts.length),'Read-only, up to 100 most recent'),
+  stat('Native reversals',String(reversals.length),'Original transactions preserved')
+ );
+ p.append(box);
+ if(!receipts.length){p.append(mk('p','No real posting receipts or reversals exist yet. The original SACCO website remains the operating system.'));return;}
+ p.append(table(['Transaction type','Posted','Status','Reversed on','Reversal reason'],
+  receipts.map(r=>{
+   const v=reversed.get(r.id);
+   return [r.ledger_table.replace(/^sacco_/,''),new Date(r.posted_at).toLocaleString('en-UG'),
+    v?'REVERSED':'POSTED',v?new Date(v.reversed_at).toLocaleString('en-UG'):'—',v?.reason||'—'];
+  })
+ ));
+ p.append(mk('p','Reversed native transactions remain stored for audit, but do not contribute to savings, loans, arrears, repayment totals or cashflow.','muted'));
+}
+
+async function renderMemberAccess(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access required.'));return;}
+ p.append(mk('p','Member access is separate from financial postings. Approve only after independently confirming the applicant controls the verified email and is the named SACCO member.','alert'));
+ p.append(mk('p','An account with an administrator role can access more SACCO records. The existing finance-secretary administrator role is preserved, but requires an extra confirmation before linking.','muted'));
+ const {data,error}=await sb.from('sacco_access_requests')
+  .select('id,verified_email,status,requested_at,reviewed_at,target_member_id,verification_note')
+  .order('requested_at',{ascending:false}).limit(100);
+ if(error)throw error;
+ const pending=(data||[]).filter(r=>r.status==='PENDING');
+ p.append(mk('h3','Membership requests · '+pending.length+' pending'));
+ if(!data?.length){p.append(mk('p','No access requests yet. Each member must register with their own email, confirm it, sign in, then select Request membership review.'));return;}
+ const available=book.members.filter(x=>!x.auth_user_id);
+ for(const r of data){
+  const panel=mk('div');panel.style.cssText='border:1px solid #dfd6c6;border-radius:10px;padding:14px;margin:10px 0;background:#fcfaf7';
+  const head=mk('h3',r.verified_email+' · '+r.status);panel.append(head);
+  panel.append(mk('p','Requested '+new Date(r.requested_at).toLocaleString('en-UG'),'muted'));
+  if(r.status!=='PENDING'){
+   const matched=book.members.find(m=>m.id===r.target_member_id);
+   panel.append(mk('p','Decision: '+r.status+(matched?' · '+matched.display_name:'')+(r.reviewed_at?' · '+new Date(r.reviewed_at).toLocaleString('en-UG'):'') ));
+   p.append(panel);continue;
+  }
+  const chooseLabel=mk('label','Match to a verified existing member');
+  const select=mk('select');select.style.cssText='width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;max-width:500px';
+  const blank=mk('option','Select verified SACCO member');blank.value='';select.append(blank);
+  for(const m of available){const opt=mk('option',m.display_name+' · '+(m.member_role==='admin'?'ADMIN':'Member'));opt.value=m.id;select.append(opt);}
+  const noteLabel=mk('label','How did you independently verify this person? (minimum 15 characters)');
+  const note=mk('textarea');note.rows=2;note.maxLength=500;
+  note.placeholder='Example: Confirmed identity by calling the member using our existing SACCO contact records';
+  note.style.cssText='display:block;width:100%;max-width:670px;border:1px solid #ccc;border-radius:8px;padding:9px;margin-bottom:8px';
+  const verifyLine=mk('label');
+  verifyLine.style.cssText='display:flex;align-items:center;gap:8px;max-width:620px;font-size:13px;font-weight:normal';
+  const verified=mk('input');verified.type='checkbox';verified.style.width='auto';
+  verifyLine.append(verified,mk('span','I verified this person independently; the email alone is not proof of membership.'));
+  const adminLine=mk('label');
+  adminLine.style.cssText='display:none;align-items:center;gap:8px;max-width:620px;font-size:13px;font-weight:bold;color:#92400e';
+  const adminCheck=mk('input');adminCheck.type='checkbox';adminCheck.style.width='auto';
+  adminLine.append(adminCheck,mk('span','I explicitly authorize administrator-level access for this account.'));
+  select.onchange=()=>{
+   adminLine.style.display=available.find(m=>m.id===select.value)?.member_role==='admin'?'flex':'none';
+   adminCheck.checked=false;
+  };
+  const actions=mk('div');actions.className='controlrow';
+  const approve=mk('button','Approve verified member');approve.type='button';
+  const reject=mk('button','Reject request');reject.type='button';
+  const result=mk('p');result.setAttribute('role','status');
+  const decide=async decision=>{
+   const target=available.find(m=>m.id===select.value);
+   if(decision==='APPROVED'&&!target){result.className='error';result.textContent='Select the exact member whose identity you verified.';return;}
+   if(note.value.trim().length<15){result.className='error';result.textContent='A verification or rejection note of at least 15 characters is required.';return;}
+   if(decision==='APPROVED'&&!verified.checked){result.className='error';result.textContent='You must confirm independent identity verification.';return;}
+   if(decision==='APPROVED'&&target.member_role==='admin'&&!adminCheck.checked){
+    result.className='error';result.textContent='Administrator access requires a separate explicit confirmation.';return;
+   }
+   const msg=decision==='APPROVED'?
+    'Link '+r.verified_email+' to '+target.display_name+' with '+target.member_role.toUpperCase()+' privileges? This grants access to their existing SACCO records.':
+    'Reject membership request from '+r.verified_email+'?';
+   if(!window.confirm(msg))return;
+   approve.disabled=true;reject.disabled=true;
+   try{
+    const confirmation=decision==='APPROVED'?(target.member_role==='admin'?'AUTHORIZE ADMIN ACCESS':'I VERIFIED THIS PERSON'):'';
+    const {data:response,error:rpcError}=await sb.rpc('sacco_review_access_request',{
+     p_request_id:r.id,p_decision:decision,p_member_id:decision==='APPROVED'?target.id:null,
+     p_verification_note:note.value.trim(),p_confirmation:confirmation
+    });
+    if(rpcError)throw rpcError;
+    result.className='success';result.textContent='Recorded '+response.status+'. The member can refresh the portal and sign in.';
+    p.replaceChildren();await renderMemberAccess(p);
+   }catch(e){result.className='error';result.textContent=e.message||'Could not review member access';approve.disabled=false;reject.disabled=false;}
+  };
+  approve.onclick=()=>decide('APPROVED');
+  reject.onclick=()=>decide('REJECTED');
+  actions.append(approve,reject);
+  panel.append(chooseLabel,select,noteLabel,note,verifyLine,adminLine,actions,result);
+  p.append(panel);
+ }
+}
+
+function renderReconciliation(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access is required.'));return;}
+ p.append(mk('p','Reconciliation is READ-ONLY. Upload a fresh JSON backup downloaded from the original SACCO website. The file stays in your browser: no file contents, PINs, photos or secrets are sent to Supabase, Vercel or GitHub.','alert'));
+ const step=mk('div');step.style.cssText='padding:12px 0;max-width:660px';
+ step.append(mk('p','Original SACCO website → Admin → Settings → Download Backup (JSON). Select that newly downloaded file below.'));
+ const upload=mk('input');upload.type='file';upload.accept='.json,application/json';upload.setAttribute('aria-label','Choose a local SACCO JSON backup');
+ const status=mk('p');status.setAttribute('role','status');
+ step.append(upload,status);p.append(step);
+ const results=mk('div');p.append(results);
+ upload.onchange=async()=>{
+  results.replaceChildren();status.textContent='';const file=upload.files?.[0];if(!file)return;
+  if(file.size>10*1024*1024){status.className='error';status.textContent='File exceeds 10 MB. Select a normal SACCO JSON backup.';return;}
+  try{
+   const raw=JSON.parse(await file.text());
+   const check=reconcileCompare(raw);
+   const difference=check.discrepancyCount;
+   status.className=difference?'error':'success';
+   const checkedAt=new Date(file.lastModified).toLocaleString('en-UG');
+   status.textContent='Compared '+file.name+' (file last modified '+checkedAt+'). '+difference+' unmatched record(s). A zero count does not verify that this is the latest backup.';
+   const total=mk('div',undefined,'cards');
+   total.append(stat('Records in selected export',String(check.exportCount),'Local browser comparison'));
+   total.append(stat('Records in Supabase',String(check.dbCount),'Read-only import snapshot'));
+   total.append(stat('Unmatched records',String(difference),difference?'Investigate before migration':'No tuple differences identified'));
+   results.append(total);
+   const rows=check.groups.map(x=>[x.category,String(x.exported),String(x.supabase),String(x.onlyExport),String(x.onlySupabase)]);
+   results.append(mk('h3','Record-by-record reconciliation'));
+   results.append(table(['Category','Export','Supabase','Only in export','Only in Supabase'],rows));
+   const legacyAssets=[
+    ['Original SACCO logo',raw.logo?1:0,'Unverified'],
+    ['Member profile photos',raw.photos&&typeof raw.photos==='object'&&!Array.isArray(raw.photos)?Object.keys(raw.photos).length:0,'Unverified'],
+    ['Historical loan/repayment edit events',Array.isArray(raw.editLog)?raw.editLog.length:0,'Unverified']
+   ];
+   const [brand,photo,edits,manifest]=await Promise.all([
+    sb.from('sacco_branding').select('logo_data').eq('singleton',true).maybeSingle(),
+    sb.from('sacco_members').select('legacy_name,photo_data').not('photo_data','is',null),
+    sb.from('sacco_audit_entries').select('source_record').eq('event_kind','LEGACY_LOG'),
+    sb.from('sacco_source_manifest').select('backup_sha256,snapshot_date,status').eq('singleton',true).maybeSingle()
+   ]);
+   const assetIssues=[brand,photo,edits,manifest].filter(x=>x.error).map(x=>x.error.message);
+   const originals=Object.entries(raw.photos||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+   const importedPhotos=(photo.data||[]).filter(x=>x.photo_data).map(x=>[x.legacy_name,x.photo_data]).sort((a,b)=>a[0].localeCompare(b[0]));
+   const photoMatch=JSON.stringify(originals)===JSON.stringify(importedPhotos);
+   const auditKeys=['when','by','action','category','member','before','after'];
+   const normalizeLog=x=>JSON.stringify(auditKeys.map(k=>x?.[k]==null?'':String(x[k])));
+   const originalEdit=(raw.editLog||[]).map(normalizeLog).sort();
+   const importedEdit=(edits.data||[]).map(x=>normalizeLog(x.source_record)).sort();
+   const editsMatch=JSON.stringify(originalEdit)===JSON.stringify(importedEdit);
+   const logoMatch=!!raw.logo&&brand.data?.logo_data===raw.logo;
+   legacyAssets[0][2]=brand.error?'UNVERIFIED':logoMatch?'VERIFIED MATCH':'MISMATCH';
+   legacyAssets[1][2]=photo.error?'UNVERIFIED':photoMatch?'VERIFIED MATCH':'MISMATCH';
+   legacyAssets[2][2]=edits.error?'UNVERIFIED':editsMatch?'VERIFIED MATCH':'MISMATCH';
+   results.append(mk('h3','Confidential historical evidence integrity'));
+   results.append(table(['Evidence type','In local backup','Preservation status'],
+     legacyAssets.map(x=>[x[0],String(x[1]),x[2]])));
+   if(assetIssues.length)results.append(mk('p','Some evidence checks were unavailable: '+assetIssues.join('; '),'error'));
+   let hashMatch=false,hashAvailable=false;
+   if(!manifest.error&&manifest.data?.backup_sha256&&crypto.subtle){
+    const digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());
+    const localHash=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    hashAvailable=true;hashMatch=localHash===manifest.data.backup_sha256;
+    results.append(mk('p','Original full-backup fingerprint: '+(hashMatch?'VERIFIED — matches chairperson-attested November 6 snapshot':'DOES NOT MATCH the attested November 6 snapshot'),'alert'));
+   }
+   if(!hashAvailable)results.append(mk('p','Source-backup SHA-256 verification unavailable; do not claim full export parity.','muted'));
+   if(!logoMatch||!photoMatch||!editsMatch||!hashMatch){
+    status.className='error';
+    status.textContent+=' Evidence and/or source fingerprint verification requires attention before final cutover.';
+   }
+   results.append(mk('p','All evidence comparison happens inside your browser. The original data stays in your local backup; no raw PINs, photos, logo data or edit-log contents are uploaded from the file. Store your full backup safely offline.','muted'));
+   if(check.differences.length){
+    results.append(mk('h3','Discrepancies ('+check.differences.length+' groups)'));
+    const diffRows=check.differences.map(x=>[x.category,x.direction,String(x.quantity),x.member,x.date,x.amount,x.detail]);
+    results.append(table(['Category','Difference','Count','Member','Date','UGX','Details'],diffRows.slice(0,100)));
+    if(diffRows.length>100)results.append(mk('p','First 100 discrepancies displayed. Export the full CSV report.'));
+    const btn=mk('button','Download sanitized reconciliation CSV');btn.type='button';
+    btn.onclick=()=>csv('elites-sacco-reconciliation.csv',['Category','Difference','Count','Member','Date','UGX','Details'],diffRows);
+    results.append(btn);
+   }
+   const warning=mk('div',undefined,'alert');
+   warning.append(mk('strong','Important limitations'));
+   for(const item of check.reportWarnings)warning.append(mk('p',item));
+   warning.append(mk('p','This screen never posts transactions or enables the disabled production posting engine.'));
+   results.append(warning);
+  }catch(err){status.className='error';status.textContent=err.message||'Could not read the JSON backup. No changes were made.';}
+  finally{upload.value='';}
+ };
+}
+
+async function boot(){
+ const sess=await sb.auth.getSession();
+ if(!sess.data?.session){show('auth');return;}
+ if(isPasswordRecovery||recoveryLink){show('newpassword');return;}
+ const id=sess.data.session.user.id;
+ const {data:me,error}=await sb.from('sacco_members').select('id,display_name,legacy_name,member_role,auth_user_id').eq('auth_user_id',id).maybeSingle();
+ if(error)throw error;
+ if(!me){await showWaiting();return;}
+ const [members,contributions,loans,repayments,minutes,waivers,financial,fees,settingsRow]=await Promise.all([
+  fetchTable('sacco_members','id,display_name,legacy_name,member_role,auth_user_id'),
+  fetchTable('sacco_contributions','member_id,amount,contribution_month,paid_on'),
+  fetchTable('sacco_loans','id,member_id,principal,issued_on,loan_type,loan_number,frozen_total,manual_status,source_record'),
+  fetchTable('sacco_repayments','loan_id,member_id,amount,paid_on'),
+  fetchTable('sacco_minutes','title,meeting_on,body'),
+  fetchTable('sacco_waivers','member_id,contribution_month'),
+  fetchTable('sacco_financial_entries','entry_kind,entry_on,amount,narrative'),
+  fetchTable('sacco_membership_fees','member_id,amount,paid_on'),
+  fetchTable('sacco_settings','value')
+ ]);
+ const mname=new Map(members.map(m=>[m.id,m.display_name]));
+ $('#welcome').textContent='Welcome, '+me.display_name;
+ $('#identity').textContent=me.member_role==='admin'?'Administrator · Verified membership':'Member · Verified membership';
+ book={me,members,contributions,loans,repayments,minutes,waivers,financial,fees,settings:settingsRow[0]?.value||{}};
+ // Branding and profile media come only from member-restricted database rows after login.
+ const [brandingResponse,profileResponse]=await Promise.all([
+  sb.from('sacco_branding').select('logo_data').eq('singleton',true).maybeSingle(),
+  sb.from('sacco_members').select('photo_data').eq('id',me.id).maybeSingle()
+ ]);
+ if(!brandingResponse.error&&brandingResponse.data?.logo_data?.startsWith('data:image/')){
+  $('#saccoLogo').src=brandingResponse.data.logo_data;$('#saccoLogo').hidden=false;
+ }
+ if(!profileResponse.error&&profileResponse.data?.photo_data?.startsWith('data:image/')){
+  $('#memberPhoto').src=profileResponse.data.photo_data;$('#memberPhoto').hidden=false;
+ }
+ const sum=arr=>arr.reduce((a,x)=>a+pg(x.amount),0);
+ const currentLoanBalances=loans.map(l=>loanBalance(l,repayments));
+ const unpaid=currentLoanBalances.reduce((a,l)=>a+l.balance,0);
+ const shortfalls=savingsSummary().reduce((a,x)=>a+x.arrears+x.fine,0);
+ $('#summary').replaceChildren(
+  stat('Recorded savings',fmt(sum(contributions)),contributions.length+' contributions'),
+  stat('Outstanding loans',fmt(unpaid),currentLoanBalances.filter(x=>x.balance>0).length+' loans with balances · interest included'),
+  stat('Savings arrears & fines',fmt(shortfalls),'Policy-calculated through '+jubaToday()),
+  stat('Members visible',String(members.length),'Access restricted by member role')
+ );
+ contributions.sort((a,b)=>(b.paid_on||'').localeCompare(a.paid_on||''));
+ loans.sort((a,b)=>(b.issued_on||'').localeCompare(a.issued_on||''));
+ tableRows('contribRows',contributions.slice(0,25),r=>[mname.get(r.member_id)||'Member',r.contribution_month?.slice(0,7)||'',date(r.paid_on),Number(r.amount).toLocaleString('en-UG')]);
+ tableRows('loanRows',loans.slice(0,25),r=>{const bal=loanBalance(r,repayments);const status=bal.balance===0?'PAID':bal.paid>0?'PARTIAL':'OUTSTANDING';return [mname.get(r.member_id)||'Member',date(r.issued_on),bal.rule,status,Number(bal.balance).toLocaleString('en-UG')];});
+ const list=$('#minutes');list.replaceChildren();
+ for(const m of minutes.sort((a,b)=>(b.meeting_on||'').localeCompare(a.meeting_on||''))){const d=document.createElement('details'),s=document.createElement('summary'),p=document.createElement('p');s.textContent=(m.meeting_on||'')+' — '+(m.title||'Meeting');p.textContent=m.body||'';p.style.whiteSpace='pre-wrap';d.append(s,p);list.append(d);}
+ initLedger();
+ show('portal');
+}
+boot().catch(e=>{$('#authMsg').textContent=e.message||'Could not load portal';show('auth');});
+</script></body></html>
