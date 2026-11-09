@@ -37,7 +37,7 @@
 <div class="row"><button class="gold" type="button" id="requestAccess">Request membership review</button><button type="button" id="checkAccess">Check status again</button><button type="button" id="waitingOut">Sign out</button></div>
 </section>
 <section id="portal" hidden>
- <div class="row panel"><div><h2 id="welcome">Member portal</h2><div class="muted" id="identity"></div></div><button id="signOut">Sign out</button></div>
+ <div class="row panel"><img id="saccoLogo" alt="The Elites SACCO original logo" hidden style="max-width:72px;max-height:72px;object-fit:contain;border-radius:8px"><div style="flex:1"><h2 id="welcome">Member portal</h2><div class="muted" id="identity"></div></div><img id="memberPhoto" alt="Your profile photograph" hidden style="width:55px;height:55px;object-fit:cover;border-radius:50%"><button id="signOut">Sign out</button></div>
  <div class="alert"><b>TEST SITE / HISTORICAL SNAPSHOT.</b> The live SACCO website still uses JSONBin. Only verified members can view actual Supabase data. Draft approvals do not post to the ledger.</div>
 <div class="cards" id="summary"></div>
 <div class="panel"><h3>Detailed books of accounts</h3><div id="ledgerTabs" class="tabs" role="tablist"></div><div id="ledgerBody" role="tabpanel"></div></div>
@@ -118,7 +118,9 @@ $('#authForm').onsubmit=async e=>{e.preventDefault();$('#submit').disabled=true;
  if(!signUp)await boot();
  }catch(err){$('#authMsg').className='error';$('#authMsg').textContent=err.message||'Authentication failed';}
  finally{$('#submit').disabled=false;}};
-async function logout(){await sb.auth.signOut();book=null;$('#summary').replaceChildren();$('#ledgerBody').replaceChildren();show('auth');$('#password').value='';}
+async function logout(){await sb.auth.signOut();book=null;
+ for(const id of ['saccoLogo','memberPhoto']){const img=$('#'+id);img.hidden=true;img.removeAttribute('src');}
+ $('#summary').replaceChildren();$('#ledgerBody').replaceChildren();show('auth');$('#password').value='';}
 $('#waitingOut').onclick=logout;$('#signOut').onclick=logout;
 $('#requestAccess').onclick=async()=>{
  const button=$('#requestAccess');button.disabled=true;$('#waitingMsg').textContent='Submitting review request...';
@@ -964,14 +966,46 @@ function renderReconciliation(p){
    results.append(mk('h3','Record-by-record reconciliation'));
    results.append(table(['Category','Export','Supabase','Only in export','Only in Supabase'],rows));
    const legacyAssets=[
-     ['Original SACCO logo',raw.logo?1:0,'Verify preservation in the new branded site'],
-     ['Member profile photos',raw.photos&&typeof raw.photos==='object'&&!Array.isArray(raw.photos)?Object.keys(raw.photos).length:0,'Private images require explicit safe storage/access review'],
-     ['Original edit/audit log events',Array.isArray(raw.editLog)?raw.editLog.length:0,'Preserve original adjustment history; never silently discard']
+    ['Original SACCO logo',raw.logo?1:0,'Unverified'],
+    ['Member profile photos',raw.photos&&typeof raw.photos==='object'&&!Array.isArray(raw.photos)?Object.keys(raw.photos).length:0,'Unverified'],
+    ['Historical loan/repayment edit events',Array.isArray(raw.editLog)?raw.editLog.length:0,'Unverified']
    ];
-   results.append(mk('h3','Historical evidence inventory — NOT imported into ledger tables'));
-   results.append(table(['Evidence type','In local backup','Review required'],
+   const [brand,photo,edits,manifest]=await Promise.all([
+    sb.from('sacco_branding').select('logo_data').eq('singleton',true).maybeSingle(),
+    sb.from('sacco_members').select('legacy_name,photo_data').not('photo_data','is',null),
+    sb.from('sacco_audit_entries').select('source_record').eq('event_kind','LEGACY_LOG'),
+    sb.from('sacco_source_manifest').select('backup_sha256,snapshot_date,status').eq('singleton',true).maybeSingle()
+   ]);
+   const assetIssues=[brand,photo,edits,manifest].filter(x=>x.error).map(x=>x.error.message);
+   const originals=Object.entries(raw.photos||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+   const importedPhotos=(photo.data||[]).filter(x=>x.photo_data).map(x=>[x.legacy_name,x.photo_data]).sort((a,b)=>a[0].localeCompare(b[0]));
+   const photoMatch=JSON.stringify(originals)===JSON.stringify(importedPhotos);
+   const auditKeys=['when','by','action','category','member','before','after'];
+   const normalizeLog=x=>JSON.stringify(auditKeys.map(k=>x?.[k]==null?'':String(x[k])));
+   const originalEdit=(raw.editLog||[]).map(normalizeLog).sort();
+   const importedEdit=(edits.data||[]).map(x=>normalizeLog(x.source_record)).sort();
+   const editsMatch=JSON.stringify(originalEdit)===JSON.stringify(importedEdit);
+   const logoMatch=!!raw.logo&&brand.data?.logo_data===raw.logo;
+   legacyAssets[0][2]=brand.error?'UNVERIFIED':logoMatch?'VERIFIED MATCH':'MISMATCH';
+   legacyAssets[1][2]=photo.error?'UNVERIFIED':photoMatch?'VERIFIED MATCH':'MISMATCH';
+   legacyAssets[2][2]=edits.error?'UNVERIFIED':editsMatch?'VERIFIED MATCH':'MISMATCH';
+   results.append(mk('h3','Confidential historical evidence integrity'));
+   results.append(table(['Evidence type','In local backup','Preservation status'],
      legacyAssets.map(x=>[x[0],String(x[1]),x[2]])));
-   results.append(mk('p','The local comparator only counts these evidence items. It does not upload, open, publish, or reconcile the underlying images and edit-log contents. Retain the complete original backup securely until the evidence migration is independently accepted.','alert'));
+   if(assetIssues.length)results.append(mk('p','Some evidence checks were unavailable: '+assetIssues.join('; '),'error'));
+   let hashMatch=false,hashAvailable=false;
+   if(!manifest.error&&manifest.data?.backup_sha256&&crypto.subtle){
+    const digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());
+    const localHash=Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    hashAvailable=true;hashMatch=localHash===manifest.data.backup_sha256;
+    results.append(mk('p','Original full-backup fingerprint: '+(hashMatch?'VERIFIED — matches chairperson-attested November 6 snapshot':'DOES NOT MATCH the attested November 6 snapshot'),'alert'));
+   }
+   if(!hashAvailable)results.append(mk('p','Source-backup SHA-256 verification unavailable; do not claim full export parity.','muted'));
+   if(!logoMatch||!photoMatch||!editsMatch||!hashMatch){
+    status.className='error';
+    status.textContent+=' Evidence and/or source fingerprint verification requires attention before final cutover.';
+   }
+   results.append(mk('p','All evidence comparison happens inside your browser. The original data stays in your local backup; no raw PINs, photos, logo data or edit-log contents are uploaded from the file. Store your full backup safely offline.','muted'));
    if(check.differences.length){
     results.append(mk('h3','Discrepancies ('+check.differences.length+' groups)'));
     const diffRows=check.differences.map(x=>[x.category,x.direction,String(x.quantity),x.member,x.date,x.amount,x.detail]);
@@ -1014,6 +1048,17 @@ async function boot(){
  $('#welcome').textContent='Welcome, '+me.display_name;
  $('#identity').textContent=me.member_role==='admin'?'Administrator · Verified membership':'Member · Verified membership';
  book={me,members,contributions,loans,repayments,minutes,waivers,financial,fees,settings:settingsRow[0]?.value||{}};
+ // Branding and profile media come only from member-restricted database rows after login.
+ const [brandingResponse,profileResponse]=await Promise.all([
+  sb.from('sacco_branding').select('logo_data').eq('singleton',true).maybeSingle(),
+  sb.from('sacco_members').select('photo_data').eq('id',me.id).maybeSingle()
+ ]);
+ if(!brandingResponse.error&&brandingResponse.data?.logo_data?.startsWith('data:image/')){
+  $('#saccoLogo').src=brandingResponse.data.logo_data;$('#saccoLogo').hidden=false;
+ }
+ if(!profileResponse.error&&profileResponse.data?.photo_data?.startsWith('data:image/')){
+  $('#memberPhoto').src=profileResponse.data.photo_data;$('#memberPhoto').hidden=false;
+ }
  const sum=arr=>arr.reduce((a,x)=>a+pg(x.amount),0);
  const currentLoanBalances=loans.map(l=>loanBalance(l,repayments));
  const unpaid=currentLoanBalances.reduce((a,l)=>a+l.balance,0);
