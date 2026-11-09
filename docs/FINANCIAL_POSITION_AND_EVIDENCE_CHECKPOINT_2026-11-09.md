@@ -1,3 +1,5 @@
+**CORRECTION — 9 November 2026:** Subsequent exact integrity checks confirm the historical profile photo and all 13 original loan/repayment edit events **had already been imported** into member/audit tables; the logo has now been restored privately in `sacco_branding`. All match the original source. See [verified source evidence archive](SOURCE_EVIDENCE_PRESERVED_2026-11-09.md). Previous statements below about evidence not being migrated reflect the earlier provisional inventory, not the verified final state.
+
 # The Elites SACCO — Financial position acceptance & historical evidence inventory
 **Checkpoint:** 9 November 2026  
 **Plan:** Supabase Free; isolated Vercel staging project  
