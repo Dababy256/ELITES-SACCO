@@ -341,7 +341,7 @@ function showTab(next){
   exportButton.onclick=()=>csv('elites-sacco-cashbook.csv',['Date','Category','Reason','Amount UGX'],rows);
  }else if(next==='drafts'){
   if(!admin){p.append(mk('p','Only administrators can prepare test drafts.'));return;}
-  p.append(mk('p','SANDBOX REVIEW ONLY. Save a draft, preview its validation, then approve or reject it. Even an APPROVED draft is NOT posted to member savings, loans or the cashbook.','alert'));
+  p.append(mk('p','REVIEW ONLY. Saving or approving a draft does not post any financial entry. After a separately authorized cutover, approved NEW drafts can be posted one at a time through Launch controls.','alert'));
   const form=mk('form',undefined,'draft');
   function select(choices){const e=mk('select');for(const [v,n] of choices){const o=mk('option',n);o.value=v;e.append(o);}return e;}
   function field(label,input,full){const block=mk('div');if(full)block.style.gridColumn='1/-1';block.append(mk('label',label),input);form.append(block);return input;}
@@ -428,7 +428,7 @@ async function loadDrafts(p){
  const drafts=draftResp.data||[];
  const pending=drafts.filter(d=>!reviews.has(d.id)).length;
  spot.append(mk('h3','Draft approval queue ('+pending+' pending in the latest '+drafts.length+')'));
- spot.append(mk('p','Approval records are immutable. Every decision is audited. A staging approval does not create, change or settle any real financial entry.','alert'));
+ spot.append(mk('p','Approval records are immutable. Every decision is audited. Review approval never creates a financial entry by itself. The separate Launch controls remain locked until formal cutover.','alert'));
  if(!drafts.length){spot.append(mk('p','No test drafts have been submitted. Use the form above to prepare one.'));return;}
  for(const d of drafts){
   const record=mk('details');record.style.cssText='border:1px solid #e1dacd;border-radius:9px;padding:12px;margin:9px 0;background:#fcfaf6';
@@ -499,7 +499,7 @@ async function loadDrafts(p){
 function initLedger(){
  const nav=$('#ledgerTabs');nav.replaceChildren();
  const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members'],['readiness','Readiness checks']];
- if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup'],['access','Member access'],['qa','Financial posting lab'],['journal','Posting & reversal journal'],['launch','Launch controls']);
+ if(book.me.member_role==='admin')tabs.push(['drafts','Draft reviews'],['reconcile','Reconcile backup'],['access','Member access'],['qa','Financial posting lab'],['journal','Posting & reversal journal'],['launch','Launch controls']);
  for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
  showTab('savings');
 }
@@ -994,7 +994,12 @@ async function renderLaunchConsole(p){
 async function renderPostingJournal(p){
  if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access required.'));return;}
  p.append(mk('h3','Native posting and reversal audit journal'));
- p.append(mk('p','REAL POSTING AND REVERSALS ARE DISABLED. This is a read-only audit screen for the future controlled cutover. No records are posted or reversed from this screen. Fictional tests belong in Financial posting lab.','alert'));
+ const status=await sb.rpc('sacco_release_status');
+ if(status.error)throw status.error;
+ p.append(mk('p',status.data?.operational?
+  'This is the read-only transaction and reversal audit journal. For authorized changes use Launch controls, and do not delete original receipts.':
+  'REAL POSTING AND REVERSALS ARE DISABLED. This is a read-only audit screen for the future controlled cutover. No records are posted or reversed from this screen. Fictional tests belong in Financial posting lab.',
+  'alert'));
  const [posts,undo]=await Promise.all([
   sb.from('sacco_posting_receipts').select('id,ledger_table,posted_record_id,posted_at').order('posted_at',{ascending:false}).limit(100),
   sb.from('sacco_posting_reversals').select('id,posting_receipt_id,reversed_at,reason').order('reversed_at',{ascending:false}).limit(100)
