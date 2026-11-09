@@ -409,6 +409,8 @@ function showTab(next){
   renderFinancialPostingLab(p).catch(e=>p.append(mk('p',e.message||'Could not load posting lab','error')));
  }else if(next==='journal'){
   renderPostingJournal(p).catch(e=>p.append(mk('p',e.message||'Could not load posting journal','error')));
+ }else if(next==='launch'){
+  renderLaunchConsole(p).catch(e=>p.append(mk('p',e.message||'Could not load launch controls','error')));
  }else if(next==='readiness'){
   renderReadinessChecks(p);
  }
@@ -497,7 +499,7 @@ async function loadDrafts(p){
 function initLedger(){
  const nav=$('#ledgerTabs');nav.replaceChildren();
  const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members'],['readiness','Readiness checks']];
- if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup'],['access','Member access'],['qa','Financial posting lab'],['journal','Posting & reversal journal']);
+ if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup'],['access','Member access'],['qa','Financial posting lab'],['journal','Posting & reversal journal'],['launch','Launch controls']);
  for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
  showTab('savings');
 }
@@ -880,6 +882,113 @@ function renderReadinessChecks(p){
   }catch(err){status.className='error';status.textContent='Unable to complete checks: '+(err.message||'Database read failed');}
   finally{run.disabled=false;}
  };
+}
+
+
+async function renderLaunchConsole(p){
+ if(book.me.member_role!=='admin'){p.append(mk('p','Verified SACCO administrator required.','error'));return;}
+ p.append(mk('h3','Controlled SACCO launch console'));
+ const {data:state,error}=await sb.rpc('sacco_release_status');
+ if(error)throw error;
+ const live=!!state?.operational&&!!state?.posting_gate_enabled&&!!state?.posting_rpc_enabled&&
+  !!state?.cutover_reference&&!!state?.cutover_at;
+ p.append(mk('p',live?
+  'LIVE TRANSACTION MODE. Every posting affects real SACCO savings, loans or the cashbook. Verify each reviewed entry before confirming.':
+  'LOCKED. The old website remains authoritative. There are NO posting or reversal actions while the server gate and permissions are disabled.',
+  'alert'));
+ const cards=mk('div',undefined,'cards');
+ cards.append(
+  stat('Posting gate',state?.posting_gate_enabled?'ENABLED':'LOCKED','Database-controlled; cannot be enabled in this browser'),
+  stat('Native receipts',String(state?.native_posting_receipts||0),'Actual SACCO transactions posted through new system'),
+  stat('Recorded 8/8 signoffs',String(Number(state?.admin_signoffs||0)+Number(state?.ordinary_signoffs||0))+'/'+String(state?.linked_members||0),
+   'Other members may onboard later by verified individual accounts'),
+  stat('Source archive',state?.historical_evidence_manifest?'Verified':'Missing','Chairperson-attested November 6 snapshot')
+ );
+ p.append(cards);
+ p.append(mk('p','This console cannot enable cutover, change database permissions, rotate old credentials or shut down GitHub Pages. Those require a separately authorized operator transition.','muted'));
+ const instructions=mk('div');instructions.style.cssText='border:1px solid #e2dacb;border-radius:9px;padding:12px;margin:12px 0';
+ instructions.append(mk('h3','Release handover checks'));
+ for(const str of [
+  'Confirm the original site is no longer accepting new financial entries; keep an offline backup for audit.',
+  'Record a precise cutover timestamp and reference after reviewing the historical manifest.',
+  'Verify the new portal, administrator access and independent member-only privacy checks.',
+  'Enable posting permissions and the server gate only in the separately approved cutover SQL transaction.',
+  'After go-live, enter and approve a NEW draft. Post it here, verify the receipt and resulting financial balance before wider use.'
+ ])instructions.append(mk('p','○ '+str,'muted'));
+ p.append(instructions);
+ if(!live){
+  p.append(mk('p','Native posting controls stay completely hidden. No financial write can be initiated from this console while locked.','muted'));
+  return;
+ }
+ const [draftResult,reviewResult,receiptResult,reverseResult]=await Promise.all([
+  sb.from('sacco_staging_drafts').select('id,created_at,action_kind,payload').order('created_at',{ascending:false}).limit(100),
+  sb.from('sacco_staging_reviews').select('id,draft_id,decision,reviewed_at').order('reviewed_at',{ascending:false}).limit(100),
+  sb.from('sacco_posting_receipts').select('id,draft_id,ledger_table,posted_at').order('posted_at',{ascending:false}).limit(100),
+  sb.from('sacco_posting_reversals').select('id,posting_receipt_id,reversed_at').limit(100)
+ ]);
+ for(const result of [draftResult,reviewResult,receiptResult,reverseResult])if(result.error)throw result.error;
+ const reviews=new Map((reviewResult.data||[]).map(x=>[x.draft_id,x]));
+ const posted=new Set((receiptResult.data||[]).map(x=>x.draft_id));
+ const reversed=new Set((reverseResult.data||[]).map(x=>x.posting_receipt_id));
+ const cutoff=Date.parse(state.cutover_at);
+ const approved=(draftResult.data||[]).filter(d=>
+  reviews.get(d.id)?.decision==='APPROVED'&&!posted.has(d.id)&&
+  Date.parse(d.created_at)>=cutoff&&Date.parse(reviews.get(d.id).reviewed_at)>=cutoff);
+ p.append(mk('h3','Post individually reviewed, NEW financial drafts'));
+ p.append(mk('p','Only drafts created and approved AFTER the cutover timestamp appear. Old sandbox approvals cannot be posted. A final duplicate check is performed on the server.','muted'));
+ if(!approved.length)p.append(mk('p','No approved post-cutover drafts awaiting posting. Use Draft approvals to create and approve a NEW draft, then return here.'));
+ for(const d of approved){
+  const panel=mk('div');panel.style.cssText='padding:12px;margin:8px 0;border:1px solid #ddd;border-radius:8px';
+  const member=displayMember(d.payload?.member_id);
+  panel.append(mk('p',d.action_kind+' · '+member+' · '+ugx(d.payload?.amount||0)+' · '+String(d.payload?.entry_on||'')));
+  const action=mk('button','POST REAL SACCO TRANSACTION');action.type='button';action.className='gold';
+  const msg=mk('p');msg.setAttribute('role','status');panel.append(action,msg);p.append(panel);
+  action.onclick=async()=>{
+   const typed=window.prompt('REAL MONEY LEDGER ACTION: '+d.action_kind+' for '+member+
+    ' amount '+ugx(d.payload?.amount||0)+'. Type POST REAL SACCO TRANSACTION to confirm.');
+   if(typed!=='POST REAL SACCO TRANSACTION')return;
+   action.disabled=true;msg.textContent='Rechecking live cutover gate...';
+   try{
+    const status=await sb.rpc('sacco_release_status');if(status.error)throw status.error;
+    if(!status.data?.operational)throw new Error('Real posting gate is now disabled. No transaction sent.');
+    const receipt=await sb.rpc('sacco_post_approved_draft',{p_draft_id:d.id});
+    if(receipt.error)throw receipt.error;
+    msg.className='success';msg.textContent='Posted: receipt '+receipt.data?.receipt_id+
+     (receipt.data?.already_posted?' (existing receipt reused)':' (new ledger entry)');
+    await boot();showTab('launch');
+   }catch(e){msg.className='error';msg.textContent=e.message||'Unable to confirm posting';action.disabled=false;}
+  };
+ }
+ p.append(mk('h3','Audited reversals of native receipts'));
+ if(!state.reversal_rpc_enabled){
+  p.append(mk('p','Reversal permission is separately disabled. No reversal action is available.','muted'));
+  return;
+ }
+ const eligible=(receiptResult.data||[]).filter(x=>!reversed.has(x.id));
+ for(const r of eligible){
+  const line=mk('div');line.style.cssText='padding:10px;border-bottom:1px solid #ddd';
+  line.append(mk('p',r.ledger_table.replace('sacco_','')+' · original receipt '+r.id+' · '+new Date(r.posted_at).toLocaleString('en-UG')));
+  const undo=mk('button','Request audited reversal');undo.type='button';
+  const msg=mk('p');msg.setAttribute('role','status');line.append(undo,msg);p.append(line);
+  const retryKey=crypto.randomUUID();
+  undo.onclick=async()=>{
+   const reason=window.prompt('Enter a specific documented reason (15–500 characters). Original entry will remain in audit history.');
+   if(!reason||reason.trim().length<15||reason.trim().length>500){msg.className='error';msg.textContent='Reason must be 15–500 characters.';return;}
+   const confirmation=window.prompt('Type REVERSE POSTED TRANSACTION to explicitly authorize this financial correction.');
+   if(confirmation!=='REVERSE POSTED TRANSACTION')return;
+   undo.disabled=true;msg.textContent='Checking reversal gate...';
+   try{
+    const status=await sb.rpc('sacco_release_status');if(status.error)throw status.error;
+    if(!status.data?.operational||!status.data?.reversal_rpc_enabled)throw new Error('Reversal gate is locked.');
+    const reversal=await sb.rpc('sacco_reverse_posted_entry',{
+     p_receipt_id:r.id,p_request_key:retryKey,p_reason:reason.trim(),p_confirmation:confirmation
+    });
+    if(reversal.error)throw reversal.error;
+    msg.className='success';msg.textContent='Audited reversal recorded: '+reversal.data?.reversal_id;
+    await boot();showTab('launch');
+   }catch(e){msg.className='error';msg.textContent=e.message||'Reversal was not confirmed';undo.disabled=false;}
+  };
+ }
 }
 
 async function renderPostingJournal(p){
