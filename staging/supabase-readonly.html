@@ -194,6 +194,31 @@ function savingsSummary(){
   output.push({id:m.id,name:m.display_name,month,paid,due,arrears:Math.max(0,due-paid),fine});
  }return output;
 }
+function originalSourceFinancialPosition(b){
+ // Algebraic equivalent of original getGlobalStats() using only active ledger rows.
+ const total=arr=>(arr||[]).reduce((sum,row)=>sum+pg(row.amount),0);
+ const savings=total(b.contributions),fees=total(b.fees);
+ const cashIn=(b.financial||[]).filter(x=>x.entry_kind==='cash_in').reduce((sum,x)=>sum+pg(x.amount),0);
+ const expenses=(b.financial||[]).filter(x=>x.entry_kind==='expense').reduce((sum,x)=>sum+pg(x.amount),0);
+ const investments=(b.financial||[]).filter(x=>x.entry_kind==='investment').reduce((sum,x)=>sum+pg(x.amount),0);
+ const paidByLoan=new Map();
+ for(const r of b.repayments||[])paidByLoan.set(r.loan_id,(paidByLoan.get(r.loan_id)||0)+pg(r.amount));
+ let issued=0,interestCollected=0,activeLoanPrincipal=0;
+ for(const l of b.loans||[]){
+  const principal=pg(l.principal),repaid=paidByLoan.get(l.id)||0;
+  const principalPaid=Math.min(repaid,principal);
+  issued+=principal;
+  interestCollected+=Math.max(0,repaid-principalPaid);
+  activeLoanPrincipal+=Math.max(0,principal-principalPaid);
+ }
+ const repayments=total(b.repayments);
+ const netCash=savings+fees+cashIn+interestCollected-expenses-investments-activeLoanPrincipal;
+ const directCash=savings+fees+cashIn+repayments-issued-expenses-investments;
+ return {savings,fees,cashIn,expenses,investments,issued,repayments,
+  interestCollected,activeLoanPrincipal,netCash,directCash,
+  consistent:Math.abs(netCash-directCash)<0.01};
+}
+
 function loanBalance(loan,repayments){
  const principal=pg(loan.principal),start=new Date(loan.issued_on+'T00:00:00'),at=new Date(jubaToday()+'T23:59:59');
  const rp=repayments.filter(x=>x.loan_id===loan.id).map(x=>({date:new Date(x.paid_on+'T00:00:00'),amount:pg(x.amount)})).sort((a,b)=>a.date-b.date);
@@ -278,11 +303,40 @@ function showTab(next){
   };chosen.onchange=render;render();
  }else if(next==='cashbook'){
   if(!admin){p.append(mk('p','Cashbook requires administrator permissions.'));return;}
-  const entries=book.financial.sort((a,b)=>(b.entry_on||'').localeCompare(a.entry_on||''));
-  const subtotals={};for(const x of entries)subtotals[x.entry_kind]=(subtotals[x.entry_kind]||0)+pg(x.amount);
-  p.append(mk('p','Investments: '+ugx(subtotals.investment)+' · Expenses: '+ugx(subtotals.expense)+' · Cash inflows: '+ugx(subtotals.cash_in)+' · Fees: '+ugx(book.fees.reduce((s,f)=>s+pg(f.amount),0)),'alert'));
+  const f=originalSourceFinancialPosition(book);
+  p.append(mk('h3','All-time SACCO financial position'));
+  const reportCards=mk('div',undefined,'cards');
+  reportCards.append(
+   stat('Ledger net cash position',ugx(f.netCash),'Original SACCO formula; not bank-confirmed'),
+   stat('Interest actually collected',ugx(f.interestCollected),'Total repayments above principal recovered'),
+   stat('Loan principal circulating',ugx(f.activeLoanPrincipal),'Principal issued less principal recovered'),
+   stat('Recorded membership fees',ugx(f.fees),'Savings and interest tracked separately')
+  );
+  p.append(reportCards);
+  p.append(mk('p','Original source formula: (Gross Savings + Membership Fees + Interest Collected + Cash In) − (Expenses + Active Loan Principal + Investments). This is the imported ledger position, NOT a confirmation of current cash held or bank balance.','muted'));
+  if(!f.consistent)p.append(mk('p','RECONCILIATION WARNING: source formula and direct cashflow do not agree. Check orphaned repayments before cutover.','error'));
+  const breakdown=[
+   ['Member contributions',f.savings,'Inflow'],
+   ['Loan repayments',f.repayments,'Inflow'],
+   ['Other cash received',f.cashIn,'Inflow'],
+   ['Membership fees',f.fees,'Inflow'],
+   ['Loan disbursements',f.issued,'Outflow'],
+   ['Expenses',f.expenses,'Outflow'],
+   ['Investments',f.investments,'Outflow']
+  ];
+  p.append(table(['Cashflow category','Amount UGX','Direction'],
+   breakdown.map(x=>[x[0],formatMoney(x[1]),x[2]])));
+  const summary=mk('p','Historical net cash: '+ugx(f.netCash)+' · Source-formula cross-check: '+(f.consistent?'PASS':'FAIL'),'alert');p.append(summary);
+  const csvSummary=mk('button','Export financial position CSV');csvSummary.type='button';
+  csvSummary.onclick=()=>csv('elites-sacco-financial-position.csv',
+    ['Cashflow category','Amount UGX','Direction'],
+    [...breakdown.map(x=>[x[0],String(x[1]),x[2]]),['NET CASH',String(f.netCash),'Ledger estimate']]);
+  p.append(csvSummary,mk('h3','Other cashbook transactions'));
+  const entries=book.financial.slice().sort((a,b)=>(b.entry_on||'').localeCompare(a.entry_on||''));
   const rows=entries.map(x=>[x.entry_on,x.entry_kind,x.narrative||'',formatMoney(x.amount)]);
-  p.append(table(['Date','Category','Reason','Amount UGX'],rows));const exportButton=mk('button','Export cashbook CSV');p.append(exportButton);exportButton.onclick=()=>csv('elites-sacco-cashbook.csv',['Date','Category','Reason','Amount UGX'],rows);
+  p.append(table(['Date','Category','Reason','Amount UGX'],rows));
+  const exportButton=mk('button','Export other cashbook entries CSV');exportButton.type='button';p.append(exportButton);
+  exportButton.onclick=()=>csv('elites-sacco-cashbook.csv',['Date','Category','Reason','Amount UGX'],rows);
  }else if(next==='drafts'){
   if(!admin){p.append(mk('p','Only administrators can prepare test drafts.'));return;}
   p.append(mk('p','SANDBOX REVIEW ONLY. Save a draft, preview its validation, then approve or reject it. Even an APPROVED draft is NOT posted to member savings, loans or the cashbook.','alert'));
