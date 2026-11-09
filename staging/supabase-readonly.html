@@ -477,6 +477,23 @@ function reconcileCompare(snapshot){
    date:reconcileDate(on),amount:amountKey,detail:String(display??'').slice(0,130)});
  };
  const add=(arr,category,member,on,amount,detail,display)=>build(arr,category,member,on,amount,detail,display);
+ const loanInfo=(number,frozen,loanType,purpose,manual)=>JSON.stringify([
+  'loan-number:'+String(Number(number)||0),
+  'frozen:'+reconcileMoney(frozen||0),
+  'type:'+String(loanType||'REGULAR').trim().toUpperCase(),
+  'purpose:'+String(purpose||'').trim(),
+  'manual:'+String(manual||'').trim().toUpperCase()
+ ]);
+ const repaymentLink=x=>String(Number(x)||0);
+ const settingValue=(key,value)=>{
+  if(key==='monthlyTarget'||key==='membershipFee')return String(Number(value)||0);
+  if(key==='targetOverrides'){
+   if(!value||typeof value!=='object'||Array.isArray(value))return 'INVALID';
+   return JSON.stringify(Object.keys(value).sort().map(k=>[k,Number(value[k])||0]));
+  }
+  // Payment information may contain private bank details. Compare in memory, never display the value.
+  return String(value||'').trim();
+ };
  for(const n of snapshot.members) add(oldRows,'Members',n,'',0,'roster','Member roster');
  for(const n of book.members) add(newRows,'Members',n.legacy_name||n.display_name,'',0,'roster','Member roster');
  let rawGroups=0;
@@ -486,11 +503,16 @@ function reconcileCompare(snapshot){
   for(const x of v.contributions){
    add(oldRows,'Contributions',name,x.date,x.amt,String(x.month||''),'Month: '+String(x.month||''));
   }
+  let loanNumber=0;
   for(const x of v.loans){
-   if(x.type==='LOAN') add(oldRows,'Loans',name,x.date,x.amt,reconcileMoney(x.frozenTotal||0),
-    'Frozen total: '+reconcileMoney(x.frozenTotal||0));
-   else if(x.type==='REPAYMENT') add(oldRows,'Repayments',name,x.date,x.amt,'','Loan link: manual verification');
-   else reportWarnings.push('Unrecognized legacy loan event type; compare manually.');
+   if(x.type==='LOAN'){
+    loanNumber++;
+    add(oldRows,'Loans',name,x.date,x.amt,loanInfo(loanNumber,x.frozenTotal,x.loanType,x.purpose,x.manualStatus),
+     'Loan #'+loanNumber+' · Type '+String(x.loanType||'REGULAR')+' · Frozen '+reconcileMoney(x.frozenTotal||0));
+   }else if(x.type==='REPAYMENT'){
+    add(oldRows,'Repayments',name,x.date,x.amt,repaymentLink(x.loanId),
+     'Linked loan #'+repaymentLink(x.loanId));
+   }else reportWarnings.push('Unrecognized legacy loan event type; compare manually.');
   }
  }
  if(rawGroups<book.members.length)reportWarnings.push('Some member records are absent from this backup.');
@@ -500,11 +522,23 @@ function reconcileCompare(snapshot){
  }
  for(const x of book.loans){
   add(newRows,'Loans',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.issued_on,x.principal,
-   reconcileMoney(x.frozen_total||0),'Frozen total: '+reconcileMoney(x.frozen_total||0));
+   loanInfo(x.loan_number,x.frozen_total,x.loan_type,x.source_record?.purpose,x.manual_status),
+   'Loan #'+x.loan_number+' · Type '+String(x.loan_type||'REGULAR')+' · Frozen '+reconcileMoney(x.frozen_total||0));
  }
+ const loanById=new Map(book.loans.map(x=>[x.id,x]));
  for(const x of book.repayments){
-  add(newRows,'Repayments',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.paid_on,x.amount,'',
-   'Loan link: manual verification');
+  const originalLoan=loanById.get(x.loan_id);
+  const originalNumber=originalLoan?repaymentLink(originalLoan.loan_number):'MISSING-LOAN';
+  add(newRows,'Repayments',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.paid_on,x.amount,
+   originalNumber,'Linked loan #'+originalNumber);
+ }
+ if(!snapshot.settings||typeof snapshot.settings!=='object'||Array.isArray(snapshot.settings)){
+  reportWarnings.push('Original policy settings missing or malformed. Final source policy check cannot pass.');
+ }else{
+  for(const key of ['monthlyTarget','membershipFee','targetOverrides','paymentInfo']){
+   add(oldRows,'Settings','',null,0,key+'='+settingValue(key,snapshot.settings[key]),'Policy setting: '+key);
+   add(newRows,'Settings','',null,0,key+'='+settingValue(key,book.settings?.[key]),'Policy setting: '+key);
+  }
  }
  for(const x of snapshot.expenses)add(oldRows,'Expenses','',x.date,x.amt,String(x.reason||'').trim().toLowerCase(),'Expense');
  for(const x of snapshot.investments)add(oldRows,'Investments','',x.date,x.amt,String(x.reason||'').trim().toLowerCase(),'Investment');
@@ -529,10 +563,10 @@ function reconcileCompare(snapshot){
   for(const x of importedWaiverRows)add(newRows,'Waivers',book.members.find(m=>m.id===x.member_id)?.legacy_name||'Unknown',x.contribution_month,0,'','Waiver');
  }
  if(Array.isArray(snapshot.requests)&&snapshot.requests.length)reportWarnings.push('Member requests are present in the export and need manual review before cutover.');
- reportWarnings.push('Repayment-to-loan links, attachments, member PINs, and changes to unstructured notes are NOT compared.');
+ reportWarnings.push('Loan-number links, loan purpose/type and settings are compared. Photos/logo, member PINs, evidence files, and unstructured edit history are NOT compared.');
  reportWarnings.push('This report cannot prove a backup is current or that transactions are ready to post.');
  const counts=new Map(),first=new Map(),groups=new Map();
- const allCats=['Members','Contributions','Loans','Repayments','Expenses','Investments','Cash received','Membership fees','Minutes','Waivers'];
+ const allCats=['Members','Contributions','Loans','Repayments','Expenses','Investments','Cash received','Membership fees','Minutes','Waivers','Settings'];
  for(const cat of allCats)groups.set(cat,{category:cat,exported:0,supabase:0,onlyExport:0,onlySupabase:0});
  for(const [which,rows] of [['exported',oldRows],['supabase',newRows]]){
   for(const x of rows){
@@ -823,7 +857,7 @@ async function boot(){
  const [members,contributions,loans,repayments,minutes,waivers,financial,fees,settingsRow]=await Promise.all([
   fetchTable('sacco_members','id,display_name,legacy_name,member_role,auth_user_id'),
   fetchTable('sacco_contributions','member_id,amount,contribution_month,paid_on'),
-  fetchTable('sacco_loans','id,member_id,principal,issued_on,loan_type,loan_number,frozen_total,manual_status'),
+  fetchTable('sacco_loans','id,member_id,principal,issued_on,loan_type,loan_number,frozen_total,manual_status,source_record'),
   fetchTable('sacco_repayments','loan_id,member_id,amount,paid_on'),
   fetchTable('sacco_minutes','title,meeting_on,body'),
   fetchTable('sacco_waivers','member_id,contribution_month'),
