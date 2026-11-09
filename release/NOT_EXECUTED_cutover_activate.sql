@@ -66,7 +66,6 @@ set enabled=true,
 where singleton=true and enabled=false;
 do $assert_row$
 begin
- if not found then null;end if;
  if (select count(*) from sacco_private.posting_control where singleton
    and enabled and source_reconciled_at is not null
    and cutover_reference=current_setting('sacco.release_reference'))<>1 then
