@@ -814,9 +814,9 @@ function renderReadinessChecks(p){
      'The email-confirmed login matches the linked SACCO member');
    const [roster,savings,loans,paid,fees,waivers,audits,qa,requests,posts,reversals]=await Promise.all([
     sb.from('sacco_members').select('id,member_role,auth_user_id'),
-    sb.from('sacco_contributions').select('member_id,amount,paid_on').is('voided_at',null),
-    sb.from('sacco_loans').select('id,member_id,loan_number,issued_on,principal').is('voided_at',null),
-    sb.from('sacco_repayments').select('member_id,loan_id,amount,paid_on').is('voided_at',null),
+    sb.from('sacco_contributions').select('member_id,amount,paid_on,legacy_key').is('voided_at',null),
+    sb.from('sacco_loans').select('id,member_id,loan_number,issued_on,principal,legacy_key').is('voided_at',null),
+    sb.from('sacco_repayments').select('member_id,loan_id,amount,paid_on,legacy_key').is('voided_at',null),
     sb.from('sacco_membership_fees').select('member_id,amount').is('voided_at',null),
     sb.from('sacco_waivers').select('member_id,contribution_month').is('voided_at',null),
     sb.from('sacco_audit_entries').select('id',{head:true,count:'exact'}),
@@ -849,12 +849,20 @@ function renderReadinessChecks(p){
       (denied.error.code==='42501'||/administrator|permission denied|forbidden/i.test(denied.error.message||'')),
       'Ordinary member cannot invoke a private financial draft preview');
    }else{
-    const total=contributions.reduce((sum,x)=>sum+Number(x.amount||0),0);
-    add('Historical import snapshot',contributions.length===133&&total===13965000&&allLoans.length===28&&repayments.length===27,
-      '133 contributions (UGX 13,965,000), 28 loans and 27 repayments in the imported snapshot');
+    const original=x=>!String(x.legacy_key||'').startsWith('native:');
+    const initialContributions=contributions.filter(original),initialLoans=allLoans.filter(original);
+    const initialRepayments=repayments.filter(original);
+    const total=initialContributions.reduce((sum,x)=>sum+Number(x.amount||0),0);
+    add('Original import snapshot preserved',
+      initialContributions.length===133&&total===13965000&&
+      initialLoans.length===28&&initialRepayments.length===27,
+      'Original source: 133 savings contributions (UGX 13,965,000), 28 loans and 27 repayments. New entries are excluded from this baseline check.');
    }
-   add('No native financial posting',Number(posts.count||0)===0&&Number(reversals.count||0)===0,
-    'No real posting or reversal receipt exists in the new SACCO financial ledger');
+   add(admin?'Native receipt audit integrity':'Posting audit privacy',
+    admin?Number(posts.count||0)>=Number(reversals.count||0):
+      Number(posts.count||0)===0&&Number(reversals.count||0)===0,
+    admin?'Native reversal receipts must never exceed original posting receipts.':
+      'Ordinary members cannot read private native posting or reversal receipts.');
    const passing=checks.filter(x=>x.ok).length;
    status.className=passing===checks.length?'success':'error';
    status.textContent=passing+' of '+checks.length+' account checks passed. Manual cutover work remains outstanding.';
