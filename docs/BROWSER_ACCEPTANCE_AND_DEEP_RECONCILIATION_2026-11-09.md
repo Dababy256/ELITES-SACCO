@@ -9,7 +9,7 @@
 - An administrator additionally checks the imported November 6 financial baseline: **133 contributions totalling UGX 13,965,000, 28 loans, 27 repayments**.
 - The tab contains explicit manual **cutover blockers**: source write freeze, fresh backup, detailed reconciliation, real member-browser login test, evidence/photos and password recovery, and old-key rotation.
 - This is a local display. The results are not persisted to Supabase. A logged-in member must run the test in their own session; database simulations alone are not a substitute.
-- The source code passed JavaScript syntax parsing. **Vercel deployment is awaiting renewed access approval to the existing Vercel team**; do not claim the new tab is already visible until a READY deployment is verified at the stable alias.
+- The source code passed JavaScript syntax parsing. **Vercel deployment `dpl_54RFgLBhBc8CewtDksVuQEsh4Rwt` is READY** and the stable staging alias `https://elites-sacco-auth-preview.vercel.app/` was verified. The new tab is deployed but each member must still run browser acceptance using their own sign-in.
 
 ## Browser-local backup comparison now covers more than amounts
 Previously the private browser comparison showed 0 unmatched records but did not differentiate the links between repayments and their original loans.
