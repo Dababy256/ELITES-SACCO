@@ -66,7 +66,7 @@ declare
  saving_draft uuid; expense_draft uuid; fee_draft uuid; cash_draft uuid;
  extra_draft uuid; denied_draft uuid; cap_draft uuid; cap_denied_draft uuid;
  a jsonb; b jsonb; rev_a jsonb; rev_b jsonb; native_loan_receipt uuid; native_repayment_receipt uuid;
- v_count integer; v_errors integer:=0;
+ v_count integer; v_errors integer:=0; guard_draft uuid;
 begin
  select auth_user_id into actor from public.sacco_members
  where member_role='admin' and auth_user_id is not null order by created_at limit 1;
@@ -76,7 +76,7 @@ begin
  insert into sacco_validation_clone.sacco_members(legacy_name,display_name,member_role)
  values('TEST_B','Fictional member B','member') returning id into member_b;
  insert into sacco_validation_clone.posting_control(singleton,enabled,source_reconciled_at,cutover_reference)
- values(true,true,now(),'ROLLBACK_CLONE_TEST_ONLY');
+ values(true,true,'2026-11-08T00:00:00+03'::timestamptz,'ROLLBACK_CLONE_TEST_ONLY');
  perform pg_catalog.set_config('request.jwt.claim.sub',actor::text,true);
  -- Issue a fictional loan on 8 November 2026.
  insert into sacco_validation_clone.sacco_staging_drafts(created_by,action_kind,payload)
@@ -182,6 +182,53 @@ begin
   raise exception 'Incorrect receipt count after seven distinct synthetic postings';end if;
  if (select count(*) from sacco_validation_clone.sacco_audit_entries where event_kind='NATIVE_POST')<>7 then
   raise exception 'Explicit posting audit trail incomplete';end if;
+
+ -- Cutover boundaries: a pre-cutover draft/review cannot become a live posting.
+ insert into sacco_validation_clone.sacco_staging_drafts
+  (created_by,action_kind,created_at,payload)
+ values(actor,'CASH_IN','2026-11-07T12:00:00+03'::timestamptz,
+  jsonb_build_object('member_id',member_a,'amount',77771,'entry_on','2026-11-08',
+  'note','Old test draft intentionally blocked'))
+ returning id into guard_draft;
+ insert into sacco_validation_clone.sacco_staging_reviews
+  (draft_id,decision,reviewed_by,validation_snapshot)
+ values(guard_draft,'APPROVED',actor,'{}'::jsonb);
+ begin
+  perform sacco_validation_clone.post_approved_draft(guard_draft);
+  raise exception 'FAILED: pre-cutover draft accepted';
+ exception when others then
+  if sqlerrm not like '%draft predates financial cutover%' then raise;end if;
+ end;
+ insert into sacco_validation_clone.sacco_staging_drafts
+  (created_by,action_kind,payload)
+ values(actor,'CASH_IN',jsonb_build_object('member_id',member_a,'amount',77772,
+  'entry_on','2026-11-08','note','Old review intentionally blocked'))
+ returning id into guard_draft;
+ insert into sacco_validation_clone.sacco_staging_reviews
+  (draft_id,decision,reviewed_by,reviewed_at,validation_snapshot)
+ values(guard_draft,'APPROVED',actor,'2026-11-07T12:00:00+03'::timestamptz,'{}'::jsonb);
+ begin
+  perform sacco_validation_clone.post_approved_draft(guard_draft);
+  raise exception 'FAILED: pre-cutover review accepted';
+ exception when others then
+  if sqlerrm not like '%approval predates financial cutover%' then raise;end if;
+ end;
+ insert into sacco_validation_clone.sacco_staging_drafts
+  (created_by,action_kind,payload)
+ values(actor,'CASH_IN',jsonb_build_object('member_id',member_a,'amount',77773,
+  'entry_on','2026-11-07','note','Old backdated cash entry intentionally blocked'))
+ returning id into guard_draft;
+ insert into sacco_validation_clone.sacco_staging_reviews
+  (draft_id,decision,reviewed_by,validation_snapshot)
+ values(guard_draft,'APPROVED',actor,'{}'::jsonb);
+ begin
+  perform sacco_validation_clone.post_approved_draft(guard_draft);
+  raise exception 'FAILED: pre-cutover entry date accepted';
+ exception when others then
+  if sqlerrm not like '%Posting date predates the Juba-local financial cutover day%' then raise;end if;
+ end;
+ if (select count(*) from sacco_validation_clone.sacco_posting_receipts)<>7 then
+  raise exception 'FAILED: attempted stale postings changed financial receipts';end if;
 
  -- Native posting is immutable even before reversal.
  begin
