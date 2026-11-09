@@ -44,10 +44,12 @@ begin
    'sacco_private.is_sacco_admin()'::regprocedure,
    'sacco_private.validate_staging_draft(text,jsonb)'::regprocedure,
    'sacco_private.loan_due_as_of(uuid,date)'::regprocedure,
-   'public.sacco_post_approved_draft(uuid)'::regprocedure,
-   'public.sacco_reverse_posted_entry(uuid,uuid,text,text)'::regprocedure
+   'sacco_private.sacco_post_approved_draft(uuid)'::regprocedure,
+   'sacco_private.sacco_reverse_posted_entry(uuid,uuid,text,text)'::regprocedure
  ] loop
   s:=pg_catalog.pg_get_functiondef(fn);
+  s:=replace(s,'FUNCTION sacco_private.sacco_post_approved_draft','FUNCTION sacco_parallel_qa.post_approved_draft');
+  s:=replace(s,'FUNCTION sacco_private.sacco_reverse_posted_entry','FUNCTION sacco_parallel_qa.sacco_reverse_posted_entry');
   s:=replace(s,'public.sacco_','sacco_parallel_qa.sacco_');
   s:=replace(s,'sacco_private.is_sacco_admin','sacco_parallel_qa.is_sacco_admin');
   s:=replace(s,'sacco_private.validate_staging_draft','sacco_parallel_qa.validate_staging_draft');
@@ -68,8 +70,8 @@ values(true,true,now(),'FICTIONAL_PARALLEL_CLONE_QA');
 with tester as (select id as member_id,auth_user_id from sacco_parallel_qa.sacco_members limit 1)
 insert into sacco_parallel_qa.sacco_staging_drafts(created_by,action_kind,payload)
 select t.auth_user_id,'CONTRIBUTION',pg_catalog.jsonb_build_object(
- 'member_id',t.member_id,'amount',111117,'month','2026-11',
- 'entry_on','2026-11-09','note','PARALLEL_'||g.s)
+ 'member_id',t.member_id,'amount',111117,'month',to_char((now() at time zone 'Africa/Juba')::date,'YYYY-MM'),
+ 'entry_on',to_char((now() at time zone 'Africa/Juba')::date,'YYYY-MM-DD'),'note','PARALLEL_'||g.s)
 from tester t cross join (values('A'),('B')) g(s);
 insert into sacco_parallel_qa.sacco_staging_reviews(draft_id,decision,reviewed_by,review_note,validation_snapshot)
 select d.id,'APPROVED',d.created_by,'Approved for fictional concurrency only','{}'::jsonb
