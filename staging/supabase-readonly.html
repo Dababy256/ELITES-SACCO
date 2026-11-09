@@ -963,6 +963,15 @@ function renderReconciliation(p){
    const rows=check.groups.map(x=>[x.category,String(x.exported),String(x.supabase),String(x.onlyExport),String(x.onlySupabase)]);
    results.append(mk('h3','Record-by-record reconciliation'));
    results.append(table(['Category','Export','Supabase','Only in export','Only in Supabase'],rows));
+   const legacyAssets=[
+     ['Original SACCO logo',raw.logo?1:0,'Verify preservation in the new branded site'],
+     ['Member profile photos',raw.photos&&typeof raw.photos==='object'&&!Array.isArray(raw.photos)?Object.keys(raw.photos).length:0,'Private images require explicit safe storage/access review'],
+     ['Original edit/audit log events',Array.isArray(raw.editLog)?raw.editLog.length:0,'Preserve original adjustment history; never silently discard']
+   ];
+   results.append(mk('h3','Historical evidence inventory — NOT imported into ledger tables'));
+   results.append(table(['Evidence type','In local backup','Review required'],
+     legacyAssets.map(x=>[x[0],String(x[1]),x[2]])));
+   results.append(mk('p','The local comparator only counts these evidence items. It does not upload, open, publish, or reconcile the underlying images and edit-log contents. Retain the complete original backup securely until the evidence migration is independently accepted.','alert'));
    if(check.differences.length){
     results.append(mk('h3','Discrepancies ('+check.differences.length+' groups)'));
     const diffRows=check.differences.map(x=>[x.category,x.direction,String(x.quantity),x.member,x.date,x.amount,x.detail]);
