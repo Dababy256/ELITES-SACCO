@@ -76,7 +76,7 @@ begin
  insert into sacco_validation_clone.sacco_members(legacy_name,display_name,member_role)
  values('TEST_B','Fictional member B','member') returning id into member_b;
  insert into sacco_validation_clone.posting_control(singleton,enabled,source_reconciled_at,cutover_reference)
- values(true,true,'2026-11-08T00:00:00+03'::timestamptz,'ROLLBACK_CLONE_TEST_ONLY');
+ values(true,true,('2026-11-08 00:00:00'::timestamp at time zone 'Africa/Juba'),'ROLLBACK_CLONE_TEST_ONLY');
  perform pg_catalog.set_config('request.jwt.claim.sub',actor::text,true);
  -- Issue a fictional loan on 8 November 2026.
  insert into sacco_validation_clone.sacco_staging_drafts(created_by,action_kind,payload)
