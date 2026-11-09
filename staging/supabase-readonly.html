@@ -353,6 +353,8 @@ function showTab(next){
   renderFinancialPostingLab(p).catch(e=>p.append(mk('p',e.message||'Could not load posting lab','error')));
  }else if(next==='journal'){
   renderPostingJournal(p).catch(e=>p.append(mk('p',e.message||'Could not load posting journal','error')));
+ }else if(next==='readiness'){
+  renderReadinessChecks(p);
  }
 }
 async function loadDrafts(p){
@@ -438,7 +440,7 @@ async function loadDrafts(p){
 
 function initLedger(){
  const nav=$('#ledgerTabs');nav.replaceChildren();
- const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members']];
+ const tabs=[['savings','Savings & arrears'],['loans','Loans & interest'],['cashbook','Cashbook'],['meetings','Meetings'],['members','Members'],['readiness','Readiness checks']];
  if(book.me.member_role==='admin')tabs.push(['drafts','Draft approvals (sandbox)'],['reconcile','Reconcile backup'],['access','Member access'],['qa','Financial posting lab'],['journal','Posting & reversal journal']);
  for(const [id,label] of tabs){const b=mk('button',label);b.dataset.tab=id;b.setAttribute('aria-selected','false');b.onclick=()=>showTab(id);nav.append(b);}
  showTab('savings');
@@ -693,6 +695,86 @@ async function renderFinancialPostingLab(p){
  p.append(mk('p','You can post and reverse real test-database entries here. These test tables are not the real SACCO ledger, and testing them does not automatically certify the still-locked production posting engine.','muted'));
 }
 
+
+
+function renderReadinessChecks(p){
+ const admin=book.me.member_role==='admin';
+ p.append(mk('h3','Account and release acceptance checks'));
+ p.append(mk('p','READ-ONLY. This tests your own authenticated session. The original SACCO website remains authoritative and real posting/reversals remain locked.','alert'));
+ const run=mk('button','Run read-only checks now');run.className='gold';run.type='button';
+ const status=mk('p');status.setAttribute('role','status');status.className='muted';
+ const output=mk('div');p.append(run,status,output);
+ const manual=mk('div');manual.style.marginTop='20px';
+ manual.append(mk('h3','Still required before any final cutover'));
+ for(const task of [
+  'Freeze financial writes on the ORIGINAL website only at an explicitly approved cutover.',
+  'Download a new original-site JSON backup after the freeze and run the upgraded Reconcile backup tool.',
+  'Confirm zero unmatched records, loan linkages, settings and inspect original photos and receipts separately.',
+  'The approved ordinary member must sign in personally and run these checks using their own session.',
+  'Verify password recovery, reports and rollback instructions. Rotate exposed legacy JSONBin credentials at cutover.'
+ ])manual.append(mk('p','○ '+task,'muted'));
+ if(admin){const open=mk('button','Open browser-local backup reconciliation');open.type='button';open.onclick=()=>showTab('reconcile');manual.append(open);}
+ p.append(manual);
+ run.onclick=async()=>{
+  run.disabled=true;status.className='muted';status.textContent='Checking your identity, database permissions and financial links...';output.replaceChildren();
+  const checks=[];const add=(name,ok,note)=>checks.push({name,ok:!!ok,note});
+  try{
+   const session=await sb.auth.getUser();if(session.error)throw session.error;
+   const user=session.data?.user;
+   add('Verified linked identity',!!user&&!!user.email_confirmed_at&&user.id===book.me.auth_user_id,
+     'The email-confirmed login matches the linked SACCO member');
+   const [roster,savings,loans,paid,fees,waivers,audits,qa,requests,posts,reversals]=await Promise.all([
+    sb.from('sacco_members').select('id,member_role,auth_user_id'),
+    sb.from('sacco_contributions').select('member_id,amount,paid_on').is('voided_at',null),
+    sb.from('sacco_loans').select('id,member_id,loan_number,issued_on,principal').is('voided_at',null),
+    sb.from('sacco_repayments').select('member_id,loan_id,amount,paid_on').is('voided_at',null),
+    sb.from('sacco_membership_fees').select('member_id,amount').is('voided_at',null),
+    sb.from('sacco_waivers').select('member_id,contribution_month').is('voided_at',null),
+    sb.from('sacco_audit_entries').select('id',{head:true,count:'exact'}),
+    sb.from('sacco_qa_entries').select('id',{head:true,count:'exact'}),
+    sb.from('sacco_access_requests').select('auth_user_id,status'),
+    sb.from('sacco_posting_receipts').select('id',{head:true,count:'exact'}),
+    sb.from('sacco_posting_reversals').select('id',{head:true,count:'exact'})
+   ]);
+   const r=[roster,savings,loans,paid,fees,waivers,audits,qa,requests,posts,reversals];
+   const issue=r.find(x=>x.error);if(issue)throw issue.error;
+   const members=roster.data||[],contributions=savings.data||[],allLoans=loans.data||[],repayments=paid.data||[];
+   const self=book.me.id;
+   add('Member roster isolation',admin?members.length===5:members.length===1&&members[0]?.id===self,
+    admin?'The administrator sees all five historical members':'The ordinary member sees only their own identity');
+   const own=rows=>admin||rows.every(x=>x.member_id===self);
+   add('Private member finances',own(contributions)&&own(allLoans)&&own(repayments)&&own(fees.data||[])&&own(waivers.data||[]),
+    'Savings, loans, repayments, fees and waivers are isolated to the ordinary member');
+   const loanMap=new Map(allLoans.map(x=>[x.id,x]));
+   add('Repayments linked correctly',repayments.every(x=>{
+     const l=loanMap.get(x.loan_id);return !!l&&l.member_id===x.member_id&&x.paid_on>=l.issued_on;
+   }),repayments.length+' repayments visible and associated with an issued loan belonging to the same member');
+   add('Administrator-only history',admin?Number(audits.count||0)>0:
+    Number(audits.count||0)===0&&Number(qa.count||0)===0,
+    admin?'Private audit records available to administrator':'Ordinary member cannot see private audit or financial QA events');
+   add('Membership approval privacy',(requests.data||[]).every(x=>admin||x.auth_user_id===user?.id),
+     'Ordinary members cannot read another account application');
+   if(!admin){
+    const denied=await sb.rpc('sacco_preview_draft',{p_draft_id:'00000000-0000-4000-8000-000000000000'});
+    add('Privileged function denied',!!denied.error &&
+      (denied.error.code==='42501'||/administrator|permission denied|forbidden/i.test(denied.error.message||'')),
+      'Ordinary member cannot invoke a private financial draft preview');
+   }else{
+    const total=contributions.reduce((sum,x)=>sum+Number(x.amount||0),0);
+    add('Historical import snapshot',contributions.length===133&&total===13965000&&allLoans.length===28&&repayments.length===27,
+      '133 contributions (UGX 13,965,000), 28 loans and 27 repayments in the imported snapshot');
+   }
+   add('No native financial posting',Number(posts.count||0)===0&&Number(reversals.count||0)===0,
+    'No real posting or reversal receipt exists in the new SACCO financial ledger');
+   const passing=checks.filter(x=>x.ok).length;
+   status.className=passing===checks.length?'success':'error';
+   status.textContent=passing+' of '+checks.length+' account checks passed. Manual cutover work remains outstanding.';
+   output.append(table(['Read-only check','Result','Details'],checks.map(x=>[x.name,x.ok?'PASS':'FAIL',x.note])));
+   output.append(mk('p','These checks do not confirm that the original website has stopped receiving financial transactions.','muted'));
+  }catch(err){status.className='error';status.textContent='Unable to complete checks: '+(err.message||'Database read failed');}
+  finally{run.disabled=false;}
+ };
+}
 
 async function renderPostingJournal(p){
  if(book.me.member_role!=='admin'){p.append(mk('p','Administrator access required.'));return;}
